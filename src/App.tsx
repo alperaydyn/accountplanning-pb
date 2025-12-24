@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
+import ActionsAgenda from "./pages/ActionsAgenda";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Dashboard />} />
           <Route path="/customers" element={<Customers />} />
           <Route path="/customers/:customerId" element={<CustomerDetail />} />
+          <Route path="/agenda" element={<ActionsAgenda />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
