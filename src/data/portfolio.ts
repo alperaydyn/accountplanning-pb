@@ -34,14 +34,14 @@ export const getProductPerformance = (): ProductPerformance[] => {
     const productActions = actions.filter(a => a.productId === product.id);
     const planned = productActions.filter(a => a.status === 'planned' || a.status === 'completed').length;
     const notPlanned = productActions.filter(a => a.status === 'pending').length;
-    const yoyChange = (Math.random() * 20) - 5; // -5% to +15%
-    const momChange = (Math.random() * 8) - 2; // -2% to +6%
+    const customerYoy = (Math.random() * 20) - 5; // -5% to +15%
+    const customerMom = (Math.random() * 8) - 2; // -2% to +6%
     const volumeYoy = (Math.random() * 30) - 10; // -10% to +20%
     const volumeMom = (Math.random() * 10) - 3; // -3% to +7%
     
     let status: 'on_track' | 'at_risk' | 'critical' = 'on_track';
-    if (yoyChange < 0) status = 'critical';
-    else if (yoyChange < 5) status = 'at_risk';
+    if (customerYoy < 0) status = 'critical';
+    else if (customerYoy < 5) status = 'at_risk';
     
     return {
       productId: product.id,
@@ -49,12 +49,12 @@ export const getProductPerformance = (): ProductPerformance[] => {
       category: product.category,
       customerCount: Math.floor(Math.random() * 30) + 10,
       customerTargetPercent: Math.round((Math.random() * 40) + 60), // 60-100%
+      customerYoy: Math.round(customerYoy * 10) / 10,
+      customerMom: Math.round(customerMom * 10) / 10,
       totalVolume: Math.round((Math.random() * 50 + 10) * 100) / 100, // 10-60M
       volumeYoy: Math.round(volumeYoy * 10) / 10,
       volumeMom: Math.round(volumeMom * 10) / 10,
       volumeTargetPercent: Math.round((Math.random() * 50) + 50), // 50-100%
-      yoyChange: Math.round(yoyChange * 10) / 10,
-      momChange: Math.round(momChange * 10) / 10,
       actionsPlanned: planned,
       actionsNotPlanned: notPlanned,
       status,
