@@ -61,22 +61,28 @@ export function ProductPerformanceTable() {
       <CardContent>
         <Table>
           <TableHeader>
+            <TableRow className="border-border border-b-0">
+              <TableHead rowSpan={2} className="text-muted-foreground align-bottom border-r border-border">Product</TableHead>
+              <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Customer Count</TableHead>
+              <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Volume</TableHead>
+              <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Actions</TableHead>
+              <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom">Status</TableHead>
+            </TableRow>
             <TableRow className="border-border">
-              <TableHead className="text-muted-foreground">Product</TableHead>
-              <TableHead className="text-muted-foreground text-center">Customers</TableHead>
-              <TableHead className="text-muted-foreground text-center">Cust. Target %</TableHead>
-              <TableHead className="text-muted-foreground text-center">Volume (M)</TableHead>
-              <TableHead className="text-muted-foreground text-center">Vol. YoY</TableHead>
-              <TableHead className="text-muted-foreground text-center">Vol. MoM</TableHead>
-              <TableHead className="text-muted-foreground text-center">Vol. Target %</TableHead>
-              <TableHead className="text-muted-foreground text-center">Actions</TableHead>
-              <TableHead className="text-muted-foreground text-center">Status</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
+              <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product) => (
               <TableRow key={product.productId} className="border-border">
-                <TableCell>
+                <TableCell className="border-r border-border">
                   <div>
                     <span className="font-medium text-card-foreground">{product.productName}</span>
                     <span className="block text-xs text-muted-foreground capitalize">
@@ -90,19 +96,25 @@ export function ProductPerformanceTable() {
                 <TableCell className="text-center text-card-foreground">
                   {product.customerTargetPercent}%
                 </TableCell>
+                <TableCell className="text-center">
+                  {renderChange(product.customerYoy)}
+                </TableCell>
+                <TableCell className="text-center border-r border-border">
+                  {renderChange(product.customerMom)}
+                </TableCell>
                 <TableCell className="text-center text-card-foreground">
-                  {product.totalVolume.toFixed(1)}
-                </TableCell>
-                <TableCell className="text-center">
-                  {renderChange(product.volumeYoy)}
-                </TableCell>
-                <TableCell className="text-center">
-                  {renderChange(product.volumeMom)}
+                  {product.totalVolume.toFixed(1)}M
                 </TableCell>
                 <TableCell className="text-center text-card-foreground">
                   {product.volumeTargetPercent}%
                 </TableCell>
                 <TableCell className="text-center">
+                  {renderChange(product.volumeYoy)}
+                </TableCell>
+                <TableCell className="text-center border-r border-border">
+                  {renderChange(product.volumeMom)}
+                </TableCell>
+                <TableCell className="text-center border-r border-border">
                   <span className="text-success">{product.actionsPlanned}</span>
                   <span className="text-muted-foreground"> / </span>
                   <span className="text-warning">{product.actionsNotPlanned}</span>

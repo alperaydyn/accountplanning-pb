@@ -70,12 +70,12 @@ export interface ProductPerformance {
   category: ProductCategory;
   customerCount: number;
   customerTargetPercent: number;
+  customerYoy: number;
+  customerMom: number;
   totalVolume: number;
   volumeYoy: number;
   volumeMom: number;
   volumeTargetPercent: number;
-  yoyChange: number;
-  momChange: number;
   actionsPlanned: number;
   actionsNotPlanned: number;
   status: 'on_track' | 'at_risk' | 'critical';
