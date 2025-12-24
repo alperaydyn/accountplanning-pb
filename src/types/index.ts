@@ -69,6 +69,11 @@ export interface ProductPerformance {
   productName: string;
   category: ProductCategory;
   customerCount: number;
+  customerTargetPercent: number;
+  totalVolume: number;
+  volumeYoy: number;
+  volumeMom: number;
+  volumeTargetPercent: number;
   yoyChange: number;
   momChange: number;
   actionsPlanned: number;
