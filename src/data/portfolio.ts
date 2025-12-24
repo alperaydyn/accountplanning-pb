@@ -36,6 +36,8 @@ export const getProductPerformance = (): ProductPerformance[] => {
     const notPlanned = productActions.filter(a => a.status === 'pending').length;
     const yoyChange = (Math.random() * 20) - 5; // -5% to +15%
     const momChange = (Math.random() * 8) - 2; // -2% to +6%
+    const volumeYoy = (Math.random() * 30) - 10; // -10% to +20%
+    const volumeMom = (Math.random() * 10) - 3; // -3% to +7%
     
     let status: 'on_track' | 'at_risk' | 'critical' = 'on_track';
     if (yoyChange < 0) status = 'critical';
@@ -46,6 +48,11 @@ export const getProductPerformance = (): ProductPerformance[] => {
       productName: product.name,
       category: product.category,
       customerCount: Math.floor(Math.random() * 30) + 10,
+      customerTargetPercent: Math.round((Math.random() * 40) + 60), // 60-100%
+      totalVolume: Math.round((Math.random() * 50 + 10) * 100) / 100, // 10-60M
+      volumeYoy: Math.round(volumeYoy * 10) / 10,
+      volumeMom: Math.round(volumeMom * 10) / 10,
+      volumeTargetPercent: Math.round((Math.random() * 50) + 50), // 50-100%
       yoyChange: Math.round(yoyChange * 10) / 10,
       momChange: Math.round(momChange * 10) / 10,
       actionsPlanned: planned,

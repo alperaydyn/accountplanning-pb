@@ -64,8 +64,11 @@ export function ProductPerformanceTable() {
             <TableRow className="border-border">
               <TableHead className="text-muted-foreground">Product</TableHead>
               <TableHead className="text-muted-foreground text-center">Customers</TableHead>
-              <TableHead className="text-muted-foreground text-center">YoY</TableHead>
-              <TableHead className="text-muted-foreground text-center">MoM</TableHead>
+              <TableHead className="text-muted-foreground text-center">Cust. Target %</TableHead>
+              <TableHead className="text-muted-foreground text-center">Volume (M)</TableHead>
+              <TableHead className="text-muted-foreground text-center">Vol. YoY</TableHead>
+              <TableHead className="text-muted-foreground text-center">Vol. MoM</TableHead>
+              <TableHead className="text-muted-foreground text-center">Vol. Target %</TableHead>
               <TableHead className="text-muted-foreground text-center">Actions</TableHead>
               <TableHead className="text-muted-foreground text-center">Status</TableHead>
             </TableRow>
@@ -84,11 +87,20 @@ export function ProductPerformanceTable() {
                 <TableCell className="text-center text-card-foreground">
                   {product.customerCount}
                 </TableCell>
-                <TableCell className="text-center">
-                  {renderChange(product.yoyChange)}
+                <TableCell className="text-center text-card-foreground">
+                  {product.customerTargetPercent}%
+                </TableCell>
+                <TableCell className="text-center text-card-foreground">
+                  {product.totalVolume.toFixed(1)}
                 </TableCell>
                 <TableCell className="text-center">
-                  {renderChange(product.momChange)}
+                  {renderChange(product.volumeYoy)}
+                </TableCell>
+                <TableCell className="text-center">
+                  {renderChange(product.volumeMom)}
+                </TableCell>
+                <TableCell className="text-center text-card-foreground">
+                  {product.volumeTargetPercent}%
                 </TableCell>
                 <TableCell className="text-center">
                   <span className="text-success">{product.actionsPlanned}</span>
