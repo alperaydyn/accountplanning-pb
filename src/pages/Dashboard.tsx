@@ -19,18 +19,11 @@ const Dashboard = () => {
         {/* Summary Cards */}
         <SummaryCards />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          {/* Product Performance - Takes 2 columns */}
-          <div className="xl:col-span-2">
-            <ProductPerformanceTable />
-          </div>
+        {/* AI Insights Panel */}
+        <InsightsPanel />
 
-          {/* Insights Panel - Takes 1 column */}
-          <div className="xl:col-span-1">
-            <InsightsPanel />
-          </div>
-        </div>
+        {/* Product Performance Table */}
+        <ProductPerformanceTable />
       </div>
     </AppLayout>
   );
