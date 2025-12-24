@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -58,7 +58,14 @@ export default function ActionsAgenda() {
     }
   }, [currentDate, viewMode]);
 
-  const days = useMemo(() => eachDayOfInterval(dateRange), [dateRange]);
+  const days = useMemo(() => {
+    const allDays = eachDayOfInterval(dateRange);
+    // Hide weekends for weekly view
+    if (viewMode === "weekly") {
+      return allDays.filter(day => !isWeekend(day));
+    }
+    return allDays;
+  }, [dateRange, viewMode]);
 
   const filteredActions = useMemo(() => {
     let result = actions;
@@ -198,8 +205,59 @@ export default function ActionsAgenda() {
               );
             })}
           </div>
+        ) : viewMode === "weekly" ? (
+          /* Weekly View - Vertical days, compact layout, no weekends */
+          <Card>
+            <CardContent className="p-0 divide-y divide-border">
+              {days.map(day => {
+                const dayActions = getActionsForDay(day);
+                return (
+                  <div 
+                    key={day.toISOString()} 
+                    className={`flex ${isToday(day) ? "bg-primary/5" : ""}`}
+                  >
+                    {/* Day label */}
+                    <div className={`w-24 shrink-0 p-3 border-r border-border ${isToday(day) ? "bg-primary/10" : "bg-muted/30"}`}>
+                      <p className={`text-xs font-medium ${isToday(day) ? "text-primary" : "text-muted-foreground"}`}>
+                        {format(day, "EEE")}
+                      </p>
+                      <p className={`text-lg font-semibold ${isToday(day) ? "text-primary" : "text-foreground"}`}>
+                        {format(day, "d")}
+                      </p>
+                    </div>
+                    {/* Actions */}
+                    <div className="flex-1 p-2 min-h-[60px]">
+                      {dayActions.length === 0 ? (
+                        <p className="text-xs text-muted-foreground italic py-2">No actions</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {dayActions.map(action => (
+                            <div 
+                              key={action.id} 
+                              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs ${priorityColors[action.priority]}`}
+                              title={`${action.name} - ${getProductName(action.productId)}`}
+                            >
+                              <span className="font-medium truncate max-w-[120px]">
+                                {getCustomerName(action.customerId)}
+                              </span>
+                              <span className="text-muted-foreground">•</span>
+                              <span className="truncate max-w-[150px]">{action.name}</span>
+                              <Badge variant={statusConfig[action.status].variant} className="text-[10px] px-1 py-0 h-4">
+                                {statusConfig[action.status].label}
+                              </Badge>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
         ) : (
-          <div className={`grid ${viewMode === "daily" ? "grid-cols-1" : "grid-cols-7"} gap-4`}>
+          /* Daily View */
+          <div className="grid grid-cols-1 gap-4">
             {days.map(day => {
               const dayActions = getActionsForDay(day);
               return (
@@ -209,7 +267,7 @@ export default function ActionsAgenda() {
                 >
                   <CardHeader className="pb-2">
                     <CardTitle className={`text-sm ${isToday(day) ? "text-primary" : ""}`}>
-                      {format(day, viewMode === "daily" ? "EEEE, MMMM d" : "EEE d")}
+                      {format(day, "EEEE, MMMM d")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
@@ -238,11 +296,9 @@ export default function ActionsAgenda() {
                                 {statusConfig[action.status].label}
                               </Badge>
                             </div>
-                            {viewMode === "daily" && (
-                              <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                                {action.description}
-                              </p>
-                            )}
+                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
+                              {action.description}
+                            </p>
                           </div>
                         );
                       })
