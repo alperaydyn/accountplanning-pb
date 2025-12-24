@@ -1,26 +1,25 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Filter } from "lucide-react";
+import { Search } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { customers } from "@/data/customers";
 import { products } from "@/data/products";
 import { customerProducts } from "@/data/customerProducts";
-import { Sector, Segment } from "@/types";
+import { actions } from "@/data/actions";
+import { ActionStatus } from "@/types";
 
 const Customers = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [sector, setSector] = useState<string>("all");
-  const [segment, setSegment] = useState<string>("all");
   const [primaryBank, setPrimaryBank] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
+  const [actionStatusFilter, setActionStatusFilter] = useState<string>("all");
 
   // Initialize product filter from URL params
   useEffect(() => {
@@ -36,14 +35,20 @@ const Customers = () => {
     return new Set(customerProducts.filter(cp => cp.productId === productId).map(cp => cp.customerId));
   };
 
+  // Get customer IDs that have actions with the selected status
+  const getCustomerIdsWithActionStatus = (status: string): Set<string> => {
+    if (status === "all") return new Set(customers.map(c => c.id));
+    return new Set(actions.filter(a => a.status === status).map(a => a.customerId));
+  };
+
   const customerIdsWithProduct = getCustomerIdsWithProduct(productFilter);
+  const customerIdsWithActionStatus = getCustomerIdsWithActionStatus(actionStatusFilter);
 
   const filteredCustomers = customers.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (sector !== "all" && c.sector !== sector) return false;
-    if (segment !== "all" && c.segment !== segment) return false;
     if (primaryBank !== "all" && c.isPrimaryBank !== (primaryBank === "true")) return false;
     if (productFilter !== "all" && !customerIdsWithProduct.has(c.id)) return false;
+    if (actionStatusFilter !== "all" && !customerIdsWithActionStatus.has(c.id)) return false;
     return true;
   });
 
@@ -63,24 +68,6 @@ const Customers = () => {
                 <Input placeholder="Search customers..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Select value={sector} onValueChange={setSector}>
-                  <SelectTrigger className="w-36"><SelectValue placeholder="Sector" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Sectors</SelectItem>
-                    {["Agriculture", "Manufacturing", "Services", "Technology", "Healthcare", "Retail", "Energy"].map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={segment} onValueChange={setSegment}>
-                  <SelectTrigger className="w-36"><SelectValue placeholder="Segment" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Segments</SelectItem>
-                    {["Small", "Medium", "Large Enterprise"].map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
                 <Select value={primaryBank} onValueChange={setPrimaryBank}>
                   <SelectTrigger className="w-36"><SelectValue placeholder="Primary Bank" /></SelectTrigger>
                   <SelectContent>
@@ -104,6 +91,15 @@ const Customers = () => {
                     {products.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+                <Select value={actionStatusFilter} onValueChange={setActionStatusFilter}>
+                  <SelectTrigger className="w-40"><SelectValue placeholder="Action Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="planned">Planned</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
