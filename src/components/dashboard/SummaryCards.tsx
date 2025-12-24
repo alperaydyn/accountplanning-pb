@@ -1,8 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Clock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPortfolioSummary } from "@/data/portfolio";
 
 export function SummaryCards() {
+  const navigate = useNavigate();
   const summary = getPortfolioSummary();
 
   const cards = [
@@ -13,12 +15,14 @@ export function SummaryCards() {
       changeLabel: "YoY",
       icon: Building,
       positive: summary.primaryBankScoreYoY > 0,
+      onClick: undefined,
     },
     {
       title: "Total Customers",
       value: summary.totalCustomers,
       subtitle: `${summary.primaryBankCustomers} Primary | ${summary.nonPrimaryCustomers} Non-Primary`,
       icon: Users,
+      onClick: () => navigate("/customers"),
     },
     {
       title: "Actions Planned",
@@ -27,19 +31,25 @@ export function SummaryCards() {
       changeLabel: "Completed",
       icon: ClipboardCheck,
       positive: true,
+      onClick: () => navigate("/agenda?status=planned"),
     },
     {
       title: "Pending Actions",
       value: summary.totalActionsPending,
       subtitle: "Awaiting response",
       icon: Clock,
+      onClick: () => navigate("/agenda?status=pending"),
     },
   ];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       {cards.map((card, index) => (
-        <Card key={index} className="bg-card border-border">
+        <Card 
+          key={index} 
+          className={`bg-card border-border ${card.onClick ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
+          onClick={card.onClick}
+        >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {card.title}
