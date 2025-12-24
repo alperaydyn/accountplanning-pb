@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Filter } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { Input } from "@/components/ui/input";
@@ -9,20 +9,41 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { customers } from "@/data/customers";
+import { products } from "@/data/products";
+import { customerProducts } from "@/data/customerProducts";
 import { Sector, Segment } from "@/types";
 
 const Customers = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [sector, setSector] = useState<string>("all");
   const [segment, setSegment] = useState<string>("all");
   const [primaryBank, setPrimaryBank] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
+
+  // Initialize product filter from URL params
+  useEffect(() => {
+    const productId = searchParams.get("product");
+    if (productId) {
+      setProductFilter(productId);
+    }
+  }, [searchParams]);
+
+  // Get customer IDs that have the selected product
+  const getCustomerIdsWithProduct = (productId: string): Set<string> => {
+    if (productId === "all") return new Set(customers.map(c => c.id));
+    return new Set(customerProducts.filter(cp => cp.productId === productId).map(cp => cp.customerId));
+  };
+
+  const customerIdsWithProduct = getCustomerIdsWithProduct(productFilter);
 
   const filteredCustomers = customers.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
     if (sector !== "all" && c.sector !== sector) return false;
     if (segment !== "all" && c.segment !== segment) return false;
     if (primaryBank !== "all" && c.isPrimaryBank !== (primaryBank === "true")) return false;
+    if (productFilter !== "all" && !customerIdsWithProduct.has(c.id)) return false;
     return true;
   });
 
@@ -66,6 +87,23 @@ const Customers = () => {
                     <SelectItem value="all">All</SelectItem>
                     <SelectItem value="true">Primary Bank</SelectItem>
                     <SelectItem value="false">Non-Primary</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={productFilter} onValueChange={(value) => {
+                  setProductFilter(value);
+                  if (value === "all") {
+                    searchParams.delete("product");
+                  } else {
+                    searchParams.set("product", value);
+                  }
+                  setSearchParams(searchParams);
+                }}>
+                  <SelectTrigger className="w-44"><SelectValue placeholder="Product" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Products</SelectItem>
+                    {products.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

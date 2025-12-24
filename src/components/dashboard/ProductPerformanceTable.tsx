@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,7 @@ const statusLabels = {
 };
 
 export function ProductPerformanceTable() {
+  const navigate = useNavigate();
   const products = getProductPerformance();
 
   const renderChange = (value: number) => {
@@ -81,7 +83,11 @@ export function ProductPerformanceTable() {
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.productId} className="border-border">
+              <TableRow 
+                key={product.productId} 
+                className="border-border cursor-pointer hover:bg-muted/50"
+                onClick={() => navigate(`/customers?product=${product.productId}`)}
+              >
                 <TableCell className="border-r border-border">
                   <div>
                     <span className="font-medium text-card-foreground">{product.productName}</span>
