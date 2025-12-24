@@ -62,6 +62,8 @@ export interface Action {
   explanation?: string;
   timeToReady: number; // days
   createdAt: string;
+  actionResponse?: string; // Response/feedback from customer
+  estimatedActionTime?: number; // Estimated time to complete action in days
 }
 
 export interface ProductPerformance {

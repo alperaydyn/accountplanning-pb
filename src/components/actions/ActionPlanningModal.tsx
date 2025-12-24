@@ -86,16 +86,37 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>Ready in {action.timeToReady} days</span>
+                  {/* Action Details */}
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 rounded-md text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Estimated Time:</span>
+                      <span className="ml-2 font-medium">{action.estimatedActionTime} days</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Time to Ready:</span>
+                      <span className="ml-2 font-medium">{action.timeToReady} days</span>
+                    </div>
                     {action.targetValue && (
-                      <>
-                        <span className="mx-2">·</span>
-                        <span>Target: ₺{action.targetValue.toLocaleString()}</span>
-                      </>
+                      <div>
+                        <span className="text-muted-foreground">Target Value:</span>
+                        <span className="ml-2 font-medium">₺{action.targetValue.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {action.actionResponse && (
+                      <div className="col-span-2">
+                        <span className="text-muted-foreground">Response:</span>
+                        <span className="ml-2 font-medium">{action.actionResponse}</span>
+                      </div>
                     )}
                   </div>
+                  
+                  {/* Explanation */}
+                  {action.explanation && (
+                    <div className="text-sm p-2 bg-info/5 border border-info/20 rounded-md">
+                      <span className="text-muted-foreground">Explanation: </span>
+                      <span>{action.explanation}</span>
+                    </div>
+                  )}
 
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => handleAction(action.id, 'planned')} className="gap-1">
