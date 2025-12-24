@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { AppLayout } from "@/components/layout";
@@ -237,9 +237,13 @@ export default function ActionsAgenda() {
                               className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs ${priorityColors[action.priority]}`}
                               title={`${action.name} - ${getProductName(action.productId)}`}
                             >
-                              <span className="font-medium truncate max-w-[120px]">
+                              <Link 
+                                to={`/customers/${action.customerId}`}
+                                className="font-medium truncate max-w-[120px] hover:underline hover:text-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              >
                                 {getCustomerName(action.customerId)}
-                              </span>
+                              </Link>
                               <span className="text-muted-foreground">•</span>
                               <span className="truncate max-w-[150px]">{action.name}</span>
                               <Badge variant={statusConfig[action.status].variant} className="text-[10px] px-1 py-0 h-4">
@@ -284,9 +288,12 @@ export default function ActionsAgenda() {
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm truncate">{action.name}</p>
-                                <p className="text-xs text-muted-foreground truncate">
+                                <Link 
+                                  to={`/customers/${action.customerId}`}
+                                  className="text-xs text-muted-foreground truncate hover:underline hover:text-primary block"
+                                >
                                   {getCustomerName(action.customerId)}
-                                </p>
+                                </Link>
                                 <p className="text-xs text-muted-foreground truncate">
                                   {getProductName(action.productId)}
                                 </p>
