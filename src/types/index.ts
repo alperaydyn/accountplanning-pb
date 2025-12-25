@@ -2,6 +2,7 @@
 
 export type Sector = 'Agriculture' | 'Manufacturing' | 'Services' | 'Technology' | 'Healthcare' | 'Retail' | 'Energy';
 export type Segment = 'Small' | 'Medium' | 'Large Enterprise';
+export type CustomerStatus = 'inactive' | 'active' | 'target' | 'strong_target' | 'primary';
 export type ActionStatus = 'pending' | 'planned' | 'completed' | 'postponed' | 'not_interested' | 'not_possible';
 export type ActionType = 'model_based' | 'ad_hoc';
 export type Priority = 'high' | 'medium' | 'low';
@@ -25,7 +26,7 @@ export interface Customer {
   name: string;
   sector: Sector;
   segment: Segment;
-  isPrimaryBank: boolean;
+  status: CustomerStatus;
   principalityScore: number; // 0-100
   lastActivityDate: string;
   portfolioManagerId: string;

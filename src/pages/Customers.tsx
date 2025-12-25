@@ -11,15 +11,36 @@ import { customers, customerGroups, getGroupById } from "@/data/customers";
 import { products } from "@/data/products";
 import { customerProducts } from "@/data/customerProducts";
 import { actions } from "@/data/actions";
-import { ActionStatus } from "@/types";
+import { ActionStatus, CustomerStatus } from "@/types";
+
+const getStatusLabel = (status: CustomerStatus): string => {
+  const labels: Record<CustomerStatus, string> = {
+    inactive: "Inactive",
+    active: "Active",
+    target: "Target",
+    strong_target: "Strong Target",
+    primary: "Primary",
+  };
+  return labels[status];
+};
+
+const getStatusBadgeVariant = (status: CustomerStatus) => {
+  switch (status) {
+    case "primary": return "default";
+    case "strong_target": return "default";
+    case "target": return "secondary";
+    case "active": return "outline";
+    case "inactive": return "secondary";
+  }
+};
 
 const Customers = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const [primaryBank, setPrimaryBank] = useState<string>("all");
-  const [productFilter, setProductFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionStatusFilter, setActionStatusFilter] = useState<string>("all");
+  const [productFilter, setProductFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
 
   // Initialize filters from URL params
@@ -51,7 +72,7 @@ const Customers = () => {
 
   const filteredCustomers = customers.filter(c => {
     if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (primaryBank !== "all" && c.isPrimaryBank !== (primaryBank === "true")) return false;
+    if (statusFilter !== "all" && c.status !== statusFilter) return false;
     if (productFilter !== "all" && !customerIdsWithProduct.has(c.id)) return false;
     if (actionStatusFilter !== "all" && !customerIdsWithActionStatus.has(c.id)) return false;
     if (groupFilter !== "all" && c.groupId !== groupFilter) return false;
@@ -92,12 +113,15 @@ const Customers = () => {
                 <Input placeholder="Search customers..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Select value={primaryBank} onValueChange={setPrimaryBank}>
-                  <SelectTrigger className="w-36"><SelectValue placeholder="Primary Bank" /></SelectTrigger>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="true">Primary Bank</SelectItem>
-                    <SelectItem value="false">Non-Primary</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="target">Target</SelectItem>
+                    <SelectItem value="strong_target">Strong Target</SelectItem>
+                    <SelectItem value="primary">Primary</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={productFilter} onValueChange={(value) => {
@@ -174,8 +198,8 @@ const Customers = () => {
                       <TableCell>{customer.sector}</TableCell>
                       <TableCell>{customer.segment}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={customer.isPrimaryBank ? "default" : "secondary"}>
-                          {customer.isPrimaryBank ? "Primary" : "Non-Primary"}
+                        <Badge variant={getStatusBadgeVariant(customer.status)}>
+                          {getStatusLabel(customer.status)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">

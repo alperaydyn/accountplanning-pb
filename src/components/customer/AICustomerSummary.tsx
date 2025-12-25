@@ -18,7 +18,8 @@ const generateCustomerSummary = (customer: Customer, customerProducts: CustomerP
   const productsAboveThreshold = customerProducts.filter(cp => cp.currentValue >= cp.threshold).length;
   const productsBelowThreshold = customerProducts.length - productsAboveThreshold;
   
-  const statusSummary = customer.isPrimaryBank
+  const isPrimary = customer.status === 'primary';
+  const statusSummary = isPrimary
     ? `${customer.name} is a primary bank customer with a principality score of ${customer.principalityScore}%. The customer has ${customerProducts.length} active products with a total volume of ₺${totalVolume.toLocaleString()}. ${productsAboveThreshold} products are performing above threshold while ${productsBelowThreshold} require attention.`
     : `${customer.name} is currently using competitor banks as their primary provider. With a principality score of ${customer.principalityScore}%, there is significant opportunity to increase wallet share. Focus on ${productsBelowThreshold} underperforming product areas to strengthen the relationship.`;
 
@@ -44,7 +45,7 @@ const generateCustomerSummary = (customer: Customer, customerProducts: CustomerP
     { name: "Bank A", products: ["FX", "Trade Finance"], strength: "Competitive FX rates" },
     { name: "Bank B", products: ["Loans", "Deposits"], strength: "Higher deposit rates" },
     { name: "Bank C", products: ["Cards", "Payment"], strength: "Lower card fees" },
-  ].slice(0, customer.isPrimaryBank ? 1 : 3);
+  ].slice(0, isPrimary ? 1 : 3);
 
   return { statusSummary, visitNotes, recentActivity, competitors };
 };
