@@ -5,19 +5,58 @@ import { AppLayout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { getCustomerById } from "@/data/customers";
 import { getCustomerProducts } from "@/data/customerProducts";
-import { getProductById } from "@/data/products";
+import { getProductById, products } from "@/data/products";
+import { getActionsByCustomerId } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { cn } from "@/lib/utils";
+import { Action } from "@/types";
+
+type ViewMode = "products" | "actions";
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>("products");
 
   const customer = getCustomerById(customerId || "");
   const customerProducts = getCustomerProducts(customerId || "");
+  const customerActions = getActionsByCustomerId(customerId || "");
+
+  // Sort actions by product criticality (gap) and priority
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  const sortedActions = [...customerActions].sort((a, b) => {
+    const productA = customerProducts.find(cp => cp.productId === a.productId);
+    const productB = customerProducts.find(cp => cp.productId === b.productId);
+    const gapA = productA ? Math.abs(productA.gap) : 0;
+    const gapB = productB ? Math.abs(productB.gap) : 0;
+    
+    // First sort by product gap (descending - larger gap = more critical)
+    if (gapB !== gapA) return gapB - gapA;
+    
+    // Then by action priority
+    return priorityOrder[a.priority] - priorityOrder[b.priority];
+  });
+
+  const getPriorityBadgeVariant = (priority: Action["priority"]) => {
+    switch (priority) {
+      case "high": return "destructive";
+      case "medium": return "default";
+      case "low": return "secondary";
+    }
+  };
+
+  const getStatusBadgeVariant = (status: Action["status"]) => {
+    switch (status) {
+      case "completed": return "default";
+      case "planned": return "outline";
+      case "pending": return "secondary";
+      default: return "secondary";
+    }
+  };
 
   if (!customer) {
     return <AppLayout><div className="text-center py-12">Customer not found</div></AppLayout>;
@@ -46,50 +85,126 @@ const CustomerDetail = () => {
         </div>
 
         <div>
-          <h2 className="text-lg font-semibold mb-4">Products & Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {customerProducts.map((cp) => {
-              const product = getProductById(cp.productId);
-              if (!product) return null;
-              const isAboveThreshold = cp.currentValue >= cp.threshold;
-              
-              return (
-                <Card 
-                  key={cp.id} 
-                  className={cn("cursor-pointer transition-all hover:shadow-md", cp.actionsCount > 0 && "border-info/50")}
-                  onClick={() => setSelectedProductId(cp.productId)}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-sm font-medium">{product.name}</CardTitle>
-                      {cp.actionsCount > 0 && (
-                        <Badge variant="outline" className="bg-info/10 text-info border-info/20">
-                          {cp.actionsCount} actions
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-xs text-muted-foreground capitalize">{product.category}</span>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Current</span>
-                        <span className="font-medium">₺{cp.currentValue.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Threshold</span>
-                        <span>₺{cp.threshold.toLocaleString()}</span>
-                      </div>
-                      <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
-                        {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                        <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(cp.gap).toLocaleString()}`}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+          <div className="flex items-center gap-4 mb-4">
+            <h2 
+              className={cn(
+                "text-lg font-semibold cursor-pointer transition-colors",
+                viewMode === "products" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setViewMode("products")}
+            >
+              Products
+            </h2>
+            <span className="text-muted-foreground">|</span>
+            <h2 
+              className={cn(
+                "text-lg font-semibold cursor-pointer transition-colors",
+                viewMode === "actions" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setViewMode("actions")}
+            >
+              Actions
+            </h2>
           </div>
+
+          {viewMode === "products" ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {customerProducts.map((cp) => {
+                const product = getProductById(cp.productId);
+                if (!product) return null;
+                const isAboveThreshold = cp.currentValue >= cp.threshold;
+                
+                return (
+                  <Card 
+                    key={cp.id} 
+                    className={cn("cursor-pointer transition-all hover:shadow-md", cp.actionsCount > 0 && "border-info/50")}
+                    onClick={() => setSelectedProductId(cp.productId)}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <CardTitle className="text-sm font-medium">{product.name}</CardTitle>
+                        {cp.actionsCount > 0 && (
+                          <Badge variant="outline" className="bg-info/10 text-info border-info/20">
+                            {cp.actionsCount} actions
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="text-xs text-muted-foreground capitalize">{product.category}</span>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Current</span>
+                          <span className="font-medium">₺{cp.currentValue.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-muted-foreground">Threshold</span>
+                          <span>₺{cp.threshold.toLocaleString()}</span>
+                        </div>
+                        <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
+                          {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                          <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(cp.gap).toLocaleString()}`}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Action Name</TableHead>
+                    <TableHead>Priority</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Gap</TableHead>
+                    <TableHead>Planned Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedActions.map((action) => {
+                    const product = getProductById(action.productId);
+                    const customerProduct = customerProducts.find(cp => cp.productId === action.productId);
+                    
+                    return (
+                      <TableRow 
+                        key={action.id} 
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => setSelectedProductId(action.productId)}
+                      >
+                        <TableCell className="font-medium">{product?.name || "Unknown"}</TableCell>
+                        <TableCell>{action.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={getPriorityBadgeVariant(action.priority)} className="capitalize">
+                            {action.priority}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(action.status)} className="capitalize">
+                            {action.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className={customerProduct && customerProduct.gap < 0 ? "text-destructive" : "text-success"}>
+                          {customerProduct ? `₺${Math.abs(customerProduct.gap).toLocaleString()}` : "-"}
+                        </TableCell>
+                        <TableCell>{action.plannedDate || "-"}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {sortedActions.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No actions for this customer
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
         </div>
       </div>
 
