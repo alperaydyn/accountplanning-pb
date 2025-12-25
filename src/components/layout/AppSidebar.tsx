@@ -37,12 +37,12 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-lg bg-sidebar-primary flex items-center justify-center">
+      <SidebarHeader className="p-2 border-b border-sidebar-border group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          <div className="h-10 w-10 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
             <Building2 className="h-6 w-6 text-sidebar-primary-foreground" />
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-sidebar-foreground text-sm">Account Planning</span>
             <span className="text-xs text-sidebar-foreground/70">Banking Suite</span>
           </div>
@@ -51,7 +51,7 @@ export function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider">
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider group-data-[collapsible=icon]:hidden">
             Main Menu
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -76,7 +76,7 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider">
+          <SidebarGroupLabel className="text-sidebar-foreground/60 text-xs uppercase tracking-wider group-data-[collapsible=icon]:hidden">
             System
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -100,14 +100,14 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center">
+      <SidebarFooter className="p-2 border-t border-sidebar-border group-data-[collapsible=icon]:p-2">
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center">
+          <div className="h-9 w-9 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
             <span className="text-sm font-medium text-sidebar-accent-foreground">
               {currentUser.name.split(' ').map(n => n[0]).join('')}
             </span>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-medium text-sidebar-foreground">{currentUser.name}</span>
             <span className="text-xs text-sidebar-foreground/70">{currentUser.portfolioName}</span>
           </div>
