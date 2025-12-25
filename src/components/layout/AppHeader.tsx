@@ -1,7 +1,8 @@
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Link } from "react-router-dom";
 
 export function AppHeader() {
   return (
@@ -18,6 +19,11 @@ export function AppHeader() {
       </div>
       
       <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" asChild>
+          <Link to="/settings">
+            <Settings className="h-5 w-5" />
+          </Link>
+        </Button>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="h-5 w-5" />
           <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-destructive text-destructive-foreground text-xs flex items-center justify-center">
