@@ -72,18 +72,23 @@ export interface Action {
   estimatedActionTime?: number; // Estimated time to complete action in days
 }
 
+export interface ProductPerformanceRow {
+  count: number;
+  targetPercent: number;
+  yoy: number;
+  mom: number;
+  volume: number;
+  volumeTargetPercent: number;
+  volumeYoy: number;
+  volumeMom: number;
+}
+
 export interface ProductPerformance {
   productId: string;
   productName: string;
   category: ProductCategory;
-  customerCount: number;
-  customerTargetPercent: number;
-  customerYoy: number;
-  customerMom: number;
-  totalVolume: number;
-  volumeYoy: number;
-  volumeMom: number;
-  volumeTargetPercent: number;
+  stock: ProductPerformanceRow;
+  flow: ProductPerformanceRow;
   actionsPlanned: number;
   actionsNotPlanned: number;
   status: 'on_track' | 'at_risk' | 'critical';

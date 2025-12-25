@@ -145,7 +145,7 @@ export function InsightsPanel() {
                         <div>
                           <p className="font-medium text-foreground">{product.productName}</p>
                           <p className="text-sm text-muted-foreground">
-                            {product.customerCount} müşteri • YoY: {product.customerYoy > 0 ? '+' : ''}{product.customerYoy}%
+                            {product.stock.count} müşteri • YoY: {product.stock.yoy > 0 ? '+' : ''}{product.stock.yoy}
                           </p>
                         </div>
                       </div>
