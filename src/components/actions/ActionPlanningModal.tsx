@@ -82,16 +82,16 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
           <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
             <div>
               <span className="text-xs text-muted-foreground">Current Value</span>
-              <p className="text-lg font-semibold">₺{Math.floor(customerProduct.currentValue * 10000) / 10000}</p>
+              <p className="text-lg font-semibold">₺{customerProduct.currentValue.toLocaleString()}</p>
             </div>
             <div>
               <span className="text-xs text-muted-foreground">Threshold</span>
-              <p className="text-lg font-semibold">₺{Math.floor(customerProduct.threshold * 10000) / 10000}</p>
+              <p className="text-lg font-semibold">₺{customerProduct.threshold.toLocaleString()}</p>
             </div>
             <div>
               <span className="text-xs text-muted-foreground">Gap</span>
               <p className={cn("text-lg font-semibold", customerProduct.gap > 0 ? "text-destructive" : "text-success")}>
-                {customerProduct.gap > 0 ? `-₺${Math.floor(customerProduct.gap * 10000) / 10000}` : "On Target"}
+                {customerProduct.gap > 0 ? `-₺${customerProduct.gap.toLocaleString()}` : "On Target"}
               </p>
             </div>
           </div>
