@@ -12,6 +12,7 @@ import { getCustomerProducts } from "@/data/customerProducts";
 import { getProductById } from "@/data/products";
 import { getActionsByCustomerId } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
+import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { cn } from "@/lib/utils";
 import { Action, ActionStatus, Priority } from "@/types";
 
@@ -92,6 +93,13 @@ const CustomerDetail = () => {
             <div className="text-2xl font-bold text-foreground">{customer.principalityScore}%</div>
           </div>
         </div>
+
+        {/* AI Customer Summary */}
+        <AICustomerSummary 
+          customer={customer} 
+          customerProducts={customerProducts} 
+          actionsCount={customerActions.length} 
+        />
 
         <div>
           <div className="flex items-center gap-4 mb-4">
