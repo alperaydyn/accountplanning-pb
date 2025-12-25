@@ -13,6 +13,7 @@ import { getProductById } from "@/data/products";
 import { getActionsByCustomerId } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
+import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
 import { cn } from "@/lib/utils";
 import { Action, ActionStatus, Priority } from "@/types";
 
@@ -25,12 +26,14 @@ const CustomerDetail = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("products");
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ActionStatus | "all">("all");
+  const [showPrincipalityModal, setShowPrincipalityModal] = useState(false);
 
   const customer = getCustomerById(customerId || "");
   const customerProducts = getCustomerProducts(customerId || "");
   const customerActions = getActionsByCustomerId(customerId || "");
 
-  // Filter and sort actions
+  // Calculate total balance for principality modal
+  const totalBalance = customerProducts.reduce((sum, cp) => sum + cp.currentValue, 0);
   const priorityOrder = { high: 0, medium: 1, low: 2 };
   const filteredActions = customerActions.filter(action => {
     if (priorityFilter !== "all" && action.priority !== priorityFilter) return false;
@@ -88,9 +91,12 @@ const CustomerDetail = () => {
             </div>
             <p className="text-muted-foreground">{customer.sector} · {customer.segment}</p>
           </div>
-          <div className="text-right">
+          <div 
+            className="text-right cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => setShowPrincipalityModal(true)}
+          >
             <div className="text-sm text-muted-foreground">Principality Score</div>
-            <div className="text-2xl font-bold text-foreground">{customer.principalityScore}%</div>
+            <div className="text-2xl font-bold text-primary underline decoration-dotted underline-offset-4">{customer.principalityScore}%</div>
           </div>
         </div>
 
@@ -259,6 +265,13 @@ const CustomerDetail = () => {
         onOpenChange={(open) => !open && setSelectedProductId(null)}
         customerId={customerId || ""}
         productId={selectedProductId || ""}
+      />
+
+      <PrincipalityScoreModal
+        open={showPrincipalityModal}
+        onOpenChange={setShowPrincipalityModal}
+        customer={customer}
+        totalBalance={totalBalance}
       />
     </AppLayout>
   );
