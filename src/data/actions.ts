@@ -2,7 +2,7 @@ import { Action, ActionType, Priority, ActionStatus } from '@/types';
 import { customers } from './customers';
 import { products } from './products';
 
-const actionNames = [
+export const actionNames = [
   'Increase credit limit',
   'Cross-sell deposit product',
   'Renew loan facility',

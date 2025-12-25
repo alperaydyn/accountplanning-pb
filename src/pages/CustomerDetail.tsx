@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertCircle } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { getCustomerById } from "@/data/customers";
 import { getCustomerProducts } from "@/data/customerProducts";
 import { getProductById } from "@/data/products";
-import { getActionsByCustomerId } from "@/data/actions";
+import { getActionsByCustomerId, actionNames } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
@@ -27,6 +27,9 @@ const CustomerDetail = () => {
   const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
   const [statusFilter, setStatusFilter] = useState<ActionStatus | "all">("all");
   const [showPrincipalityModal, setShowPrincipalityModal] = useState(false);
+  const [showAddAction, setShowAddAction] = useState(false);
+  const [newActionName, setNewActionName] = useState<string>("");
+  const [newActionProduct, setNewActionProduct] = useState<string>("");
 
   const customer = getCustomerById(customerId || "");
   const customerProducts = getCustomerProducts(customerId || "");
@@ -174,39 +177,108 @@ const CustomerDetail = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="flex gap-4">
-                <Select value={priorityFilter} onValueChange={(val) => setPriorityFilter(val as Priority | "all")}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Priorities</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as ActionStatus | "all")}>
-                  <SelectTrigger className="w-[150px]">
-                    <SelectValue placeholder="Status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="planned">Planned</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                    <SelectItem value="postponed">Postponed</SelectItem>
-                    <SelectItem value="not_interested">Not Interested</SelectItem>
-                    <SelectItem value="not_possible">Not Possible</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-4 items-center justify-between">
+                <div className="flex gap-4">
+                  <Select value={priorityFilter} onValueChange={(val) => setPriorityFilter(val as Priority | "all")}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="low">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as ActionStatus | "all")}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="planned">Planned</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="postponed">Postponed</SelectItem>
+                      <SelectItem value="not_interested">Not Interested</SelectItem>
+                      <SelectItem value="not_possible">Not Possible</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowAddAction(!showAddAction)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add New Action
+                </Button>
               </div>
+
+              {showAddAction && (
+                <Card className="border-primary/30 bg-primary/5">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium">Add New Action</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-4 items-end">
+                      <div className="flex-1 space-y-1">
+                        <label className="text-xs text-muted-foreground">Product</label>
+                        <Select value={newActionProduct} onValueChange={setNewActionProduct}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select product" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customerProducts.map((cp) => {
+                              const product = getProductById(cp.productId);
+                              return product ? (
+                                <SelectItem key={cp.productId} value={cp.productId}>
+                                  {product.name}
+                                </SelectItem>
+                              ) : null;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <label className="text-xs text-muted-foreground">Action</label>
+                        <Select value={newActionName} onValueChange={setNewActionName}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select action" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {actionNames.map((name) => (
+                              <SelectItem key={name} value={name}>
+                                {name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button 
+                        size="sm"
+                        disabled={!newActionName || !newActionProduct}
+                        onClick={() => {
+                          // In a real app, this would add to the database
+                          setShowAddAction(false);
+                          setNewActionName("");
+                          setNewActionProduct("");
+                        }}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Product</TableHead>
                     <TableHead>Action Name</TableHead>
+                    <TableHead>Type</TableHead>
                     <TableHead>Priority</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Gap</TableHead>
@@ -227,6 +299,11 @@ const CustomerDetail = () => {
                         <TableCell className="font-medium">{product?.name || "Unknown"}</TableCell>
                         <TableCell>{action.name}</TableCell>
                         <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {action.type === 'model_based' ? 'Model' : 'Ad-hoc'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
                           <Badge variant={getPriorityBadgeVariant(action.priority)} className="capitalize">
                             {action.priority}
                           </Badge>
@@ -245,7 +322,7 @@ const CustomerDetail = () => {
                   })}
                   {sortedActions.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         No actions for this customer
                       </TableCell>
                     </TableRow>
