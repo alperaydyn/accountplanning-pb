@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getCustomerById } from "@/data/customers";
 import { getCustomerProducts } from "@/data/customerProducts";
-import { getProductById, products } from "@/data/products";
+import { getProductById } from "@/data/products";
 import { getActionsByCustomerId } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { cn } from "@/lib/utils";
-import { Action } from "@/types";
+import { Action, ActionStatus, Priority } from "@/types";
 
 type ViewMode = "products" | "actions";
 
@@ -21,14 +22,22 @@ const CustomerDetail = () => {
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("products");
+  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ActionStatus | "all">("all");
 
   const customer = getCustomerById(customerId || "");
   const customerProducts = getCustomerProducts(customerId || "");
   const customerActions = getActionsByCustomerId(customerId || "");
 
-  // Sort actions by product criticality (gap) and priority
+  // Filter and sort actions
   const priorityOrder = { high: 0, medium: 1, low: 2 };
-  const sortedActions = [...customerActions].sort((a, b) => {
+  const filteredActions = customerActions.filter(action => {
+    if (priorityFilter !== "all" && action.priority !== priorityFilter) return false;
+    if (statusFilter !== "all" && action.status !== statusFilter) return false;
+    return true;
+  });
+
+  const sortedActions = [...filteredActions].sort((a, b) => {
     const productA = customerProducts.find(cp => cp.productId === a.productId);
     const productB = customerProducts.find(cp => cp.productId === b.productId);
     const gapA = productA ? Math.abs(productA.gap) : 0;
@@ -152,8 +161,36 @@ const CustomerDetail = () => {
               })}
             </div>
           ) : (
-            <Card>
-              <Table>
+            <div className="space-y-4">
+              <div className="flex gap-4">
+                <Select value={priorityFilter} onValueChange={(val) => setPriorityFilter(val as Priority | "all")}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Priority" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Priorities</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as ActionStatus | "all")}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="planned">Planned</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="postponed">Postponed</SelectItem>
+                    <SelectItem value="not_interested">Not Interested</SelectItem>
+                    <SelectItem value="not_possible">Not Possible</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Card>
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Product</TableHead>
@@ -204,6 +241,7 @@ const CustomerDetail = () => {
                 </TableBody>
               </Table>
             </Card>
+          </div>
           )}
         </div>
       </div>
