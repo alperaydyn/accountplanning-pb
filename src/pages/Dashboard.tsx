@@ -1,4 +1,4 @@
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { SummaryCards, ProductPerformanceTable, InsightsPanel, RepresentativeBadges } from "@/components/dashboard";
 import { currentUser } from "@/data/portfolio";
 
@@ -9,6 +9,7 @@ const Dashboard = () => {
         {/* Page Header with Badges */}
         <div className="flex items-start justify-between gap-4">
           <div>
+            <PageBreadcrumb items={[]} />
             <h1 className="text-2xl font-bold text-foreground">
               Portfolio Dashboard
             </h1>
