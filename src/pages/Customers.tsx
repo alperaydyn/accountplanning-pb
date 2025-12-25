@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Users } from "lucide-react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -79,6 +79,7 @@ const Customers = () => {
     <AppLayout>
       <div className="space-y-6">
         <div>
+          <PageBreadcrumb items={[{ label: "Customers" }]} />
           <h1 className="text-2xl font-bold text-foreground">Customers</h1>
           <p className="text-muted-foreground mt-1">Manage your customer portfolio and plan actions.</p>
         </div>

@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -120,6 +120,7 @@ export default function ActionsAgenda() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
+            <PageBreadcrumb items={[{ label: "Actions Agenda" }]} />
             <h1 className="text-2xl font-bold text-foreground">Actions Agenda</h1>
             <p className="text-muted-foreground">
               {filterStatus === "planned" ? "Planned actions" : filterStatus === "pending" ? "Pending actions" : "All planned & pending actions"} 

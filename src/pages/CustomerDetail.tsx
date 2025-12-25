@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, TrendingUp, AlertCircle } from "lucide-react";
-import { AppLayout } from "@/components/layout";
+import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,6 +83,7 @@ const CustomerDetail = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
+            <PageBreadcrumb items={[{ label: "Customers", href: "/customers" }, { label: customer.name }]} />
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
               <Badge variant={customer.isPrimaryBank ? "default" : "secondary"}>
