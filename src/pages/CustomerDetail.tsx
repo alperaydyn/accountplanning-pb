@@ -29,13 +29,13 @@ const getStatusLabel = (status: CustomerStatus): string => {
   return labels[status];
 };
 
-const getStatusBadgeVariantForCustomer = (status: CustomerStatus) => {
+const getStatusBadgeClass = (status: CustomerStatus): string => {
   switch (status) {
-    case "primary": return "default";
-    case "strong_target": return "default";
-    case "target": return "secondary";
-    case "active": return "outline";
-    case "inactive": return "secondary";
+    case "primary": return "bg-emerald-600 text-white hover:bg-emerald-600";
+    case "strong_target": return "bg-amber-500 text-white hover:bg-amber-500";
+    case "target": return "bg-sky-500 text-white hover:bg-sky-500";
+    case "active": return "bg-slate-400 text-white hover:bg-slate-400";
+    case "inactive": return "bg-slate-200 text-slate-600 hover:bg-slate-200";
   }
 };
 
@@ -108,7 +108,7 @@ const CustomerDetail = () => {
             <PageBreadcrumb items={[{ label: "Customers", href: "/customers" }, { label: customer.name }]} />
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
-              <Badge variant={getStatusBadgeVariantForCustomer(customer.status)}>
+              <Badge className={getStatusBadgeClass(customer.status)}>
                 {getStatusLabel(customer.status)}
               </Badge>
             </div>
