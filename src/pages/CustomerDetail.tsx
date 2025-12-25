@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, AlertCircle } from "lucide-react";
+import { TrendingUp, AlertCircle } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -78,11 +78,8 @@ const CustomerDetail = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/customers")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex-1">
+        <div className="flex items-start justify-between gap-4">
+          <div>
             <PageBreadcrumb items={[{ label: "Customers", href: "/customers" }, { label: customer.name }]} />
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
