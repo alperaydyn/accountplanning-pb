@@ -15,7 +15,8 @@ customers.forEach(customer => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
-    const threshold = Math.floor(Math.random() * 1000000) + 100000;
+    const rawThreshold = Math.floor(Math.random() * 1000000) + 100000;
+    const threshold = Math.floor(rawThreshold / 10000) * 10000;
     const currentValue = Math.floor(Math.random() * threshold * 1.3); // Can exceed threshold
     const customerActions = actions.filter(
       a => a.customerId === customer.id && a.productId === productId
