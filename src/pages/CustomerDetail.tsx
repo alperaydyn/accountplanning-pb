@@ -316,9 +316,9 @@ const CustomerDetail = () => {
               </div>
 
               {showAddAction && (
-                <Card className="border-emerald-300 bg-emerald-50/50">
+                <Card className="border-emerald-200 bg-slate-50/80">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium text-emerald-800">Add New Action</CardTitle>
+                    <CardTitle className="text-sm font-medium">Add New Action</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
