@@ -29,26 +29,27 @@ export function ProductPerformanceTable() {
   const navigate = useNavigate();
   const products = getProductPerformance();
 
-  const renderChange = (value: number) => {
+  const renderChange = (value: number, isVolume: boolean = false) => {
+    const displayValue = isVolume ? `${Math.abs(value).toFixed(1)}M` : Math.abs(value).toString();
     if (value > 0) {
       return (
-        <span className="flex items-center gap-1 text-success">
+        <span className="flex items-center justify-center gap-1 text-success">
           <TrendingUp className="h-4 w-4" />
-          +{value}%
+          +{displayValue}
         </span>
       );
     } else if (value < 0) {
       return (
-        <span className="flex items-center gap-1 text-destructive">
+        <span className="flex items-center justify-center gap-1 text-destructive">
           <TrendingDown className="h-4 w-4" />
-          {value}%
+          -{displayValue}
         </span>
       );
     }
     return (
-      <span className="flex items-center gap-1 text-muted-foreground">
+      <span className="flex items-center justify-center gap-1 text-muted-foreground">
         <Minus className="h-4 w-4" />
-        0%
+        0
       </span>
     );
   };
@@ -115,10 +116,10 @@ export function ProductPerformanceTable() {
                   {product.volumeTargetPercent}%
                 </TableCell>
                 <TableCell className="text-center">
-                  {renderChange(product.volumeYoy)}
+                  {renderChange(product.volumeYoy, true)}
                 </TableCell>
                 <TableCell className="text-center border-r border-border">
-                  {renderChange(product.volumeMom)}
+                  {renderChange(product.volumeMom, true)}
                 </TableCell>
                 <TableCell className="text-center border-r border-border">
                   <span className="text-success">{product.actionsPlanned}</span>
