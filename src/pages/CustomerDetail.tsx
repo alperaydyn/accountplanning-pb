@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertCircle, Plus, Bot } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,9 @@ import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreM
 import { AutoPilotPanel } from "@/components/customer/AutoPilotPanel";
 import { cn } from "@/lib/utils";
 import { Action, ActionStatus, CustomerStatus, Priority } from "@/types";
+
+type SortColumn = "product" | "name" | "type" | "priority" | "status" | "gap" | "plannedDate";
+type SortDirection = "asc" | "desc";
 
 const getStatusLabel = (status: CustomerStatus): string => {
   const labels: Record<CustomerStatus, string> = {
@@ -52,6 +55,8 @@ const CustomerDetail = () => {
   const [showAddAction, setShowAddAction] = useState(false);
   const [newActionName, setNewActionName] = useState<string>("");
   const [newActionProduct, setNewActionProduct] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<SortColumn>("gap");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
   const customer = getCustomerById(customerId || "");
   const customerProducts = getCustomerProducts(customerId || "");
@@ -59,25 +64,67 @@ const CustomerDetail = () => {
 
   // Calculate total balance for principality modal
   const totalBalance = customerProducts.reduce((sum, cp) => sum + cp.currentValue, 0);
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  const priorityOrder: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+  const statusOrder: Record<ActionStatus, number> = { pending: 0, planned: 1, completed: 2, postponed: 3, not_interested: 4, not_possible: 5 };
+
   const filteredActions = customerActions.filter(action => {
     if (priorityFilter !== "all" && action.priority !== priorityFilter) return false;
     if (statusFilter !== "all" && action.status !== statusFilter) return false;
     return true;
   });
 
-  const sortedActions = [...filteredActions].sort((a, b) => {
-    const productA = customerProducts.find(cp => cp.productId === a.productId);
-    const productB = customerProducts.find(cp => cp.productId === b.productId);
-    const gapA = productA ? Math.abs(productA.gap) : 0;
-    const gapB = productB ? Math.abs(productB.gap) : 0;
-    
-    // First sort by product gap (descending - larger gap = more critical)
-    if (gapB !== gapA) return gapB - gapA;
-    
-    // Then by action priority
-    return priorityOrder[a.priority] - priorityOrder[b.priority];
-  });
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4 ml-1" />;
+    return sortDirection === "asc" 
+      ? <ArrowUp className="h-4 w-4 ml-1" /> 
+      : <ArrowDown className="h-4 w-4 ml-1" />;
+  };
+
+  const sortedActions = useMemo(() => {
+    return [...filteredActions].sort((a, b) => {
+      const productA = getProductById(a.productId);
+      const productB = getProductById(b.productId);
+      const customerProductA = customerProducts.find(cp => cp.productId === a.productId);
+      const customerProductB = customerProducts.find(cp => cp.productId === b.productId);
+      const gapA = customerProductA ? Math.abs(customerProductA.gap) : 0;
+      const gapB = customerProductB ? Math.abs(customerProductB.gap) : 0;
+
+      let comparison = 0;
+      switch (sortColumn) {
+        case "product":
+          comparison = (productA?.name || "").localeCompare(productB?.name || "");
+          break;
+        case "name":
+          comparison = a.name.localeCompare(b.name);
+          break;
+        case "type":
+          comparison = a.type.localeCompare(b.type);
+          break;
+        case "priority":
+          comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
+          break;
+        case "status":
+          comparison = statusOrder[a.status] - statusOrder[b.status];
+          break;
+        case "gap":
+          comparison = gapA - gapB;
+          break;
+        case "plannedDate":
+          comparison = (a.plannedDate || "").localeCompare(b.plannedDate || "");
+          break;
+      }
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [filteredActions, sortColumn, sortDirection, customerProducts]);
 
   const getPriorityBadgeVariant = (priority: Action["priority"]) => {
     switch (priority) {
@@ -309,13 +356,27 @@ const CustomerDetail = () => {
                 <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Action Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Priority</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Gap</TableHead>
-                    <TableHead>Planned Date</TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("product")}>
+                      <div className="flex items-center">Product{getSortIcon("product")}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("name")}>
+                      <div className="flex items-center">Action Name{getSortIcon("name")}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("type")}>
+                      <div className="flex items-center">Type{getSortIcon("type")}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("priority")}>
+                      <div className="flex items-center">Priority{getSortIcon("priority")}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("status")}>
+                      <div className="flex items-center">Status{getSortIcon("status")}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("gap")}>
+                      <div className="flex items-center">Gap{getSortIcon("gap")}</div>
+                    </TableHead>
+                    <TableHead className="cursor-pointer hover:bg-muted/50" onClick={() => handleSort("plannedDate")}>
+                      <div className="flex items-center">Planned Date{getSortIcon("plannedDate")}</div>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
