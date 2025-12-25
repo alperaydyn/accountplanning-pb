@@ -66,6 +66,7 @@ export function ProductPerformanceTable() {
           <TableHeader>
             <TableRow className="border-border border-b-0">
               <TableHead rowSpan={2} className="text-muted-foreground align-bottom border-r border-border">Product</TableHead>
+              <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Type</TableHead>
               <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Customer Count</TableHead>
               <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Volume</TableHead>
               <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Actions</TableHead>
@@ -84,57 +85,97 @@ export function ProductPerformanceTable() {
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow 
-                key={product.productId} 
-                className="border-border cursor-pointer hover:bg-muted/50"
-                onClick={() => navigate(`/customers?product=${product.productId}`)}
-              >
-                <TableCell className="border-r border-border">
-                  <div>
-                    <span className="font-medium text-card-foreground">{product.productName}</span>
-                    <span className="block text-xs text-muted-foreground capitalize">
-                      {product.category}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-center text-card-foreground">
-                  {product.customerCount}
-                </TableCell>
-                <TableCell className="text-center text-card-foreground">
-                  {product.customerTargetPercent}%
-                </TableCell>
-                <TableCell className="text-center">
-                  {renderChange(product.customerYoy)}
-                </TableCell>
-                <TableCell className="text-center border-r border-border">
-                  {renderChange(product.customerMom)}
-                </TableCell>
-                <TableCell className="text-center text-card-foreground">
-                  {product.totalVolume.toFixed(1)}M
-                </TableCell>
-                <TableCell className="text-center text-card-foreground">
-                  {product.volumeTargetPercent}%
-                </TableCell>
-                <TableCell className="text-center">
-                  {renderChange(product.volumeYoy, true)}
-                </TableCell>
-                <TableCell className="text-center border-r border-border">
-                  {renderChange(product.volumeMom, true)}
-                </TableCell>
-                <TableCell className="text-center border-r border-border">
-                  <span className="text-success">{product.actionsPlanned}</span>
-                  <span className="text-muted-foreground"> / </span>
-                  <span className="text-warning">{product.actionsNotPlanned}</span>
-                </TableCell>
-                <TableCell className="text-center">
-                  <Badge
-                    variant="outline"
-                    className={cn("text-xs", statusColors[product.status])}
-                  >
-                    {statusLabels[product.status]}
-                  </Badge>
-                </TableCell>
-              </TableRow>
+              <>
+                {/* Stock Row */}
+                <TableRow 
+                  key={`${product.productId}-stock`} 
+                  className="border-border cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/customers?product=${product.productId}`)}
+                >
+                  <TableCell className="border-r border-border" rowSpan={2}>
+                    <div>
+                      <span className="font-medium text-card-foreground">{product.productName}</span>
+                      <span className="block text-xs text-muted-foreground capitalize">
+                        {product.category}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                    Stock
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.stock.count}
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.stock.targetPercent}%
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {renderChange(product.stock.yoy)}
+                  </TableCell>
+                  <TableCell className="text-center border-r border-border">
+                    {renderChange(product.stock.mom)}
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.stock.volume.toFixed(1)}M
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.stock.volumeTargetPercent}%
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {renderChange(product.stock.volumeYoy, true)}
+                  </TableCell>
+                  <TableCell className="text-center border-r border-border">
+                    {renderChange(product.stock.volumeMom, true)}
+                  </TableCell>
+                  <TableCell className="text-center border-r border-border" rowSpan={2}>
+                    <span className="text-success">{product.actionsPlanned}</span>
+                    <span className="text-muted-foreground"> / </span>
+                    <span className="text-warning">{product.actionsNotPlanned}</span>
+                  </TableCell>
+                  <TableCell className="text-center" rowSpan={2}>
+                    <Badge
+                      variant="outline"
+                      className={cn("text-xs", statusColors[product.status])}
+                    >
+                      {statusLabels[product.status]}
+                    </Badge>
+                  </TableCell>
+                </TableRow>
+                {/* Flow Row */}
+                <TableRow 
+                  key={`${product.productId}-flow`} 
+                  className="border-border cursor-pointer hover:bg-muted/50"
+                  onClick={() => navigate(`/customers?product=${product.productId}`)}
+                >
+                  <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                    Flow
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.flow.count}
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.flow.targetPercent}%
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {renderChange(product.flow.yoy)}
+                  </TableCell>
+                  <TableCell className="text-center border-r border-border">
+                    {renderChange(product.flow.mom)}
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.flow.volume.toFixed(1)}M
+                  </TableCell>
+                  <TableCell className="text-center text-card-foreground">
+                    {product.flow.volumeTargetPercent}%
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {renderChange(product.flow.volumeYoy, true)}
+                  </TableCell>
+                  <TableCell className="text-center border-r border-border">
+                    {renderChange(product.flow.volumeMom, true)}
+                  </TableCell>
+                </TableRow>
+              </>
             ))}
           </TableBody>
         </Table>

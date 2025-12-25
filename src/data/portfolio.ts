@@ -35,30 +35,50 @@ export const getProductPerformance = (): ProductPerformance[] => {
     const planned = productActions.filter(a => a.status === 'planned' || a.status === 'completed').length;
     const notPlanned = productActions.filter(a => a.status === 'pending').length;
     
-    const customerCount = Math.floor(Math.random() * 30) + 10;
-    const customerYoyChange = Math.floor(Math.random() * 10) - 3; // -3 to +7 customers
-    const customerMomChange = Math.floor(Math.random() * 5) - 2; // -2 to +3 customers
+    // Stock figures (existing/cumulative)
+    const stockCount = Math.floor(Math.random() * 30) + 10;
+    const stockVolume = Math.round((Math.random() * 50 + 10) * 100) / 100;
+    const stockCountYoy = Math.floor(Math.random() * 10) - 3;
+    const stockCountMom = Math.floor(Math.random() * 5) - 2;
+    const stockVolumeYoy = Math.round((Math.random() * 10 - 3) * 10) / 10;
+    const stockVolumeMom = Math.round((Math.random() * 4 - 1.5) * 10) / 10;
     
-    const totalVolume = Math.round((Math.random() * 50 + 10) * 100) / 100; // 10-60M
-    const volumeYoyChange = Math.round((Math.random() * 10 - 3) * 10) / 10; // -3M to +7M
-    const volumeMomChange = Math.round((Math.random() * 4 - 1.5) * 10) / 10; // -1.5M to +2.5M
+    // Flow figures (new/changes over period)
+    const flowCount = Math.floor(Math.random() * 15) + 2;
+    const flowVolume = Math.round((Math.random() * 20 + 2) * 100) / 100;
+    const flowCountYoy = Math.floor(Math.random() * 8) - 2;
+    const flowCountMom = Math.floor(Math.random() * 4) - 1;
+    const flowVolumeYoy = Math.round((Math.random() * 6 - 2) * 10) / 10;
+    const flowVolumeMom = Math.round((Math.random() * 3 - 1) * 10) / 10;
     
     let status: 'on_track' | 'at_risk' | 'critical' = 'on_track';
-    if (customerYoyChange < 0) status = 'critical';
-    else if (customerYoyChange < 2) status = 'at_risk';
+    if (stockCountYoy < 0) status = 'critical';
+    else if (stockCountYoy < 2) status = 'at_risk';
     
     return {
       productId: product.id,
       productName: product.name,
       category: product.category,
-      customerCount,
-      customerTargetPercent: Math.round((Math.random() * 40) + 60), // 60-100%
-      customerYoy: customerYoyChange,
-      customerMom: customerMomChange,
-      totalVolume,
-      volumeYoy: volumeYoyChange,
-      volumeMom: volumeMomChange,
-      volumeTargetPercent: Math.round((Math.random() * 50) + 50), // 50-100%
+      stock: {
+        count: stockCount,
+        targetPercent: Math.round((Math.random() * 40) + 60),
+        yoy: stockCountYoy,
+        mom: stockCountMom,
+        volume: stockVolume,
+        volumeTargetPercent: Math.round((Math.random() * 50) + 50),
+        volumeYoy: stockVolumeYoy,
+        volumeMom: stockVolumeMom,
+      },
+      flow: {
+        count: flowCount,
+        targetPercent: Math.round((Math.random() * 40) + 60),
+        yoy: flowCountYoy,
+        mom: flowCountMom,
+        volume: flowVolume,
+        volumeTargetPercent: Math.round((Math.random() * 50) + 50),
+        volumeYoy: flowVolumeYoy,
+        volumeMom: flowVolumeMom,
+      },
       actionsPlanned: planned,
       actionsNotPlanned: notPlanned,
       status,
