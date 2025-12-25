@@ -62,7 +62,20 @@ This project is built with:
 
 ## How can I deploy this project?
 
+### Quick Deploy with Lovable
+
 Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+
+### Deploy to Google Cloud Run
+
+For production deployments to Google Cloud Run with OAuth 2.0 and Workload Identity Federation, see the comprehensive [Deployment Guide](DEPLOYMENT.md).
+
+The deployment guide covers:
+- Setting up OAuth 2.0 access tokens
+- Configuring Workload Identity Federation
+- Granting `roles/iam.workloadIdentityUser` permissions
+- Secure authentication without service account keys
+- Step-by-step GitHub Actions integration
 
 ## Can I connect a custom domain to my Lovable project?
 
