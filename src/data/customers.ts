@@ -1,7 +1,46 @@
-import { Customer, Sector, Segment } from '@/types';
+import { Customer, CustomerGroup, Sector, Segment } from '@/types';
 
 const sectors: Sector[] = ['Agriculture', 'Manufacturing', 'Services', 'Technology', 'Healthcare', 'Retail', 'Energy'];
 const segments: Segment[] = ['Small', 'Medium', 'Large Enterprise'];
+
+// Customer Groups
+export const customerGroups: CustomerGroup[] = [
+  { id: 'grp-1', name: 'Koç Holding' },
+  { id: 'grp-2', name: 'Sabancı Holding' },
+  { id: 'grp-3', name: 'Zorlu Holding' },
+  { id: 'grp-4', name: 'Eczacıbaşı Holding' },
+  { id: 'grp-5', name: 'Doğuş Holding' },
+  { id: 'grp-6', name: 'Yıldız Holding' },
+  { id: 'grp-7', name: 'Borusan Holding' },
+  { id: 'grp-8', name: 'Anadolu Grubu' },
+];
+
+// Map some customers to groups (indices)
+const customerGroupAssignments: Record<number, string> = {
+  0: 'grp-1',  // Aksan Holding
+  5: 'grp-1',  // Firat Construction
+  10: 'grp-1', // Kaya Steel
+  1: 'grp-2',  // Berke Industries
+  8: 'grp-2',  // Ileri Manufacturing
+  15: 'grp-2', // Pinar Dairy
+  2: 'grp-3',  // Ceylan Group
+  6: 'grp-3',  // Gunes Energy
+  16: 'grp-3', // Ruzgar Wind Power
+  3: 'grp-4',  // Deniz Maritime
+  11: 'grp-4', // Lale Pharmaceuticals
+  17: 'grp-4', // Selin Healthcare
+  4: 'grp-5',  // Eren Tech
+  22: 'grp-5', // Zirve Software
+  34: 'grp-5', // Luna Technologies
+  7: 'grp-6',  // Hasat Agriculture
+  13: 'grp-6', // Narin Foods
+  27: 'grp-6', // Doga Organics
+  9: 'grp-7',  // Jale Textiles
+  24: 'grp-7', // Bora Shipping
+  12: 'grp-8', // Mert Logistics
+  20: 'grp-8', // Vatan Motors
+  21: 'grp-8', // Yildiz Hotels
+};
 
 const customerNames = [
   'Aksan Holding', 'Berke Industries', 'Ceylan Group', 'Deniz Maritime', 'Eren Tech',
@@ -33,10 +72,15 @@ export const customers: Customer[] = customerNames.map((name, index) => ({
   portfolioManagerId: 'pm-1',
   totalActionsPlanned: Math.floor(Math.random() * 8),
   totalActionsNotPlanned: Math.floor(Math.random() * 5),
+  groupId: customerGroupAssignments[index], // May be undefined
 }));
 
 export const getCustomerById = (id: string): Customer | undefined => {
   return customers.find(c => c.id === id);
+};
+
+export const getGroupById = (id: string): CustomerGroup | undefined => {
+  return customerGroups.find(g => g.id === id);
 };
 
 export const getCustomersByFilter = (

@@ -15,6 +15,11 @@ export interface PortfolioManager {
   customerCount: number;
 }
 
+export interface CustomerGroup {
+  id: string;
+  name: string;
+}
+
 export interface Customer {
   id: string;
   name: string;
@@ -26,6 +31,7 @@ export interface Customer {
   portfolioManagerId: string;
   totalActionsPlanned: number;
   totalActionsNotPlanned: number;
+  groupId?: string; // Optional group association
 }
 
 export interface Product {
