@@ -16,7 +16,28 @@ import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
 import { AutoPilotPanel } from "@/components/customer/AutoPilotPanel";
 import { cn } from "@/lib/utils";
-import { Action, ActionStatus, Priority } from "@/types";
+import { Action, ActionStatus, CustomerStatus, Priority } from "@/types";
+
+const getStatusLabel = (status: CustomerStatus): string => {
+  const labels: Record<CustomerStatus, string> = {
+    inactive: "Inactive",
+    active: "Active",
+    target: "Target",
+    strong_target: "Strong Target",
+    primary: "Primary",
+  };
+  return labels[status];
+};
+
+const getStatusBadgeVariantForCustomer = (status: CustomerStatus) => {
+  switch (status) {
+    case "primary": return "default";
+    case "strong_target": return "default";
+    case "target": return "secondary";
+    case "active": return "outline";
+    case "inactive": return "secondary";
+  }
+};
 
 type ViewMode = "products" | "actions" | "autopilot";
 
@@ -87,8 +108,8 @@ const CustomerDetail = () => {
             <PageBreadcrumb items={[{ label: "Customers", href: "/customers" }, { label: customer.name }]} />
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-foreground">{customer.name}</h1>
-              <Badge variant={customer.isPrimaryBank ? "default" : "secondary"}>
-                {customer.isPrimaryBank ? "Primary Bank" : "Non-Primary"}
+              <Badge variant={getStatusBadgeVariantForCustomer(customer.status)}>
+                {getStatusLabel(customer.status)}
               </Badge>
             </div>
             <p className="text-muted-foreground">{customer.sector} · {customer.segment}</p>

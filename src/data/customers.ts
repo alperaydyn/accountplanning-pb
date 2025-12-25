@@ -1,7 +1,8 @@
-import { Customer, CustomerGroup, Sector, Segment } from '@/types';
+import { Customer, CustomerGroup, CustomerStatus, Sector, Segment } from '@/types';
 
 const sectors: Sector[] = ['Agriculture', 'Manufacturing', 'Services', 'Technology', 'Healthcare', 'Retail', 'Energy'];
 const segments: Segment[] = ['Small', 'Medium', 'Large Enterprise'];
+const statuses: CustomerStatus[] = ['inactive', 'active', 'target', 'strong_target', 'primary'];
 
 // Customer Groups
 export const customerGroups: CustomerGroup[] = [
@@ -66,7 +67,7 @@ export const customers: Customer[] = customerNames.map((name, index) => ({
   name,
   sector: sectors[index % sectors.length],
   segment: segments[index % segments.length],
-  isPrimaryBank: Math.random() > 0.4, // ~60% primary bank
+  status: statuses[index % statuses.length],
   principalityScore: Math.floor(Math.random() * 40) + 60, // 60-100
   lastActivityDate: generateDate(Math.floor(Math.random() * 30)),
   portfolioManagerId: 'pm-1',
@@ -87,13 +88,13 @@ export const getCustomersByFilter = (
   searchTerm?: string,
   sector?: Sector | 'all',
   segment?: Segment | 'all',
-  isPrimaryBank?: boolean | 'all'
+  status?: CustomerStatus | 'all'
 ): Customer[] => {
   return customers.filter(c => {
     if (searchTerm && !c.name.toLowerCase().includes(searchTerm.toLowerCase())) return false;
     if (sector && sector !== 'all' && c.sector !== sector) return false;
     if (segment && segment !== 'all' && c.segment !== segment) return false;
-    if (isPrimaryBank !== undefined && isPrimaryBank !== 'all' && c.isPrimaryBank !== isPrimaryBank) return false;
+    if (status && status !== 'all' && c.status !== status) return false;
     return true;
   });
 };

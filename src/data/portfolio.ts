@@ -12,7 +12,7 @@ export const currentUser: PortfolioManager = {
 };
 
 export const getPortfolioSummary = (): PortfolioSummary => {
-  const primaryBankCustomers = customers.filter(c => c.isPrimaryBank).length;
+  const primaryBankCustomers = customers.filter(c => c.status === 'primary').length;
   const nonPrimaryCustomers = customers.length - primaryBankCustomers;
   const primaryBankScore = Math.round((primaryBankCustomers / customers.length) * 100);
   
