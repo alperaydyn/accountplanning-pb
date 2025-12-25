@@ -7,10 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { getCustomerById } from "@/data/customers";
 import { getCustomerProducts } from "@/data/customerProducts";
 import { getProductById } from "@/data/products";
 import { getActionsByCustomerId, actionNames } from "@/data/actions";
+import { getRequirementsForAction, ActionRequiredField } from "@/data/actionRequirements";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
@@ -55,8 +59,24 @@ const CustomerDetail = () => {
   const [showAddAction, setShowAddAction] = useState(false);
   const [newActionName, setNewActionName] = useState<string>("");
   const [newActionProduct, setNewActionProduct] = useState<string>("");
+  const [newActionExplanation, setNewActionExplanation] = useState<string>("");
+  const [newActionRequiredFields, setNewActionRequiredFields] = useState<Record<string, string>>({});
   const [sortColumn, setSortColumn] = useState<SortColumn>("gap");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  const selectedActionRequirements = getRequirementsForAction(newActionName);
+
+  const handleRequiredFieldChange = (fieldName: string, value: string) => {
+    setNewActionRequiredFields(prev => ({ ...prev, [fieldName]: value }));
+  };
+
+  const resetAddActionForm = () => {
+    setShowAddAction(false);
+    setNewActionName("");
+    setNewActionProduct("");
+    setNewActionExplanation("");
+    setNewActionRequiredFields({});
+  };
 
   const customer = getCustomerById(customerId || "");
   const customerProducts = getCustomerProducts(customerId || "");
@@ -286,9 +306,9 @@ const CustomerDetail = () => {
                   </Select>
                 </div>
                 <Button 
-                  variant="outline" 
                   size="sm" 
                   onClick={() => setShowAddAction(!showAddAction)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <Plus className="h-4 w-4 mr-1" />
                   Add New Action
@@ -296,14 +316,14 @@ const CustomerDetail = () => {
               </div>
 
               {showAddAction && (
-                <Card className="border-primary/30 bg-primary/5">
+                <Card className="border-emerald-300 bg-emerald-50/50">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Add New Action</CardTitle>
+                    <CardTitle className="text-sm font-medium text-emerald-800">Add New Action</CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-4 items-end">
-                      <div className="flex-1 space-y-1">
-                        <label className="text-xs text-muted-foreground">Product</label>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Product</Label>
                         <Select value={newActionProduct} onValueChange={setNewActionProduct}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select product" />
@@ -320,9 +340,12 @@ const CustomerDetail = () => {
                           </SelectContent>
                         </Select>
                       </div>
-                      <div className="flex-1 space-y-1">
-                        <label className="text-xs text-muted-foreground">Action</label>
-                        <Select value={newActionName} onValueChange={setNewActionName}>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs text-muted-foreground">Action</Label>
+                        <Select value={newActionName} onValueChange={(value) => {
+                          setNewActionName(value);
+                          setNewActionRequiredFields({});
+                        }}>
                           <SelectTrigger>
                             <SelectValue placeholder="Select action" />
                           </SelectTrigger>
@@ -335,17 +358,87 @@ const CustomerDetail = () => {
                           </SelectContent>
                         </Select>
                       </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label className="text-xs text-muted-foreground">Explanation</Label>
+                      <Textarea 
+                        placeholder="Enter action explanation..."
+                        value={newActionExplanation}
+                        onChange={(e) => setNewActionExplanation(e.target.value)}
+                        className="min-h-[80px]"
+                      />
+                    </div>
+
+                    {selectedActionRequirements.length > 0 && (
+                      <div className="border rounded-lg p-4 bg-background">
+                        <h4 className="text-sm font-medium mb-3 text-foreground">Required Information</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {selectedActionRequirements.map((field) => (
+                            <div key={field.name} className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">{field.name}</Label>
+                              {field.type === 'select' && field.options ? (
+                                <Select 
+                                  value={newActionRequiredFields[field.name] || ''} 
+                                  onValueChange={(value) => handleRequiredFieldChange(field.name, value)}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {field.options.map((option) => (
+                                      <SelectItem key={option} value={option}>
+                                        {option}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              ) : field.type === 'currency' ? (
+                                <div className="relative">
+                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₺</span>
+                                  <Input 
+                                    type="number"
+                                    placeholder="0"
+                                    className="pl-7"
+                                    value={newActionRequiredFields[field.name] || ''}
+                                    onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                  />
+                                </div>
+                              ) : field.type === 'number' ? (
+                                <Input 
+                                  type="number"
+                                  placeholder="0"
+                                  value={newActionRequiredFields[field.name] || ''}
+                                  onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                />
+                              ) : field.type === 'date' ? (
+                                <Input 
+                                  type="date"
+                                  value={newActionRequiredFields[field.name] || ''}
+                                  onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                />
+                              ) : (
+                                <Input 
+                                  type="text"
+                                  placeholder={`Enter ${field.name.toLowerCase()}`}
+                                  value={newActionRequiredFields[field.name] || ''}
+                                  onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex justify-end">
                       <Button 
                         size="sm"
                         disabled={!newActionName || !newActionProduct}
-                        onClick={() => {
-                          // In a real app, this would add to the database
-                          setShowAddAction(false);
-                          setNewActionName("");
-                          setNewActionProduct("");
-                        }}
+                        onClick={resetAddActionForm}
+                        className="bg-emerald-600 hover:bg-emerald-700"
                       >
-                        Add
+                        Add Action
                       </Button>
                     </div>
                   </CardContent>
