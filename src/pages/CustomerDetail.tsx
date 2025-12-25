@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertCircle, Plus } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus, Bot } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,10 +14,11 @@ import { getActionsByCustomerId, actionNames } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
+import { AutoPilotPanel } from "@/components/customer/AutoPilotPanel";
 import { cn } from "@/lib/utils";
 import { Action, ActionStatus, Priority } from "@/types";
 
-type ViewMode = "products" | "actions";
+type ViewMode = "products" | "actions" | "autopilot";
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
@@ -129,6 +130,17 @@ const CustomerDetail = () => {
             >
               Actions
             </h2>
+            <span className="text-muted-foreground">|</span>
+            <h2 
+              className={cn(
+                "text-lg font-semibold cursor-pointer transition-colors flex items-center gap-1.5",
+                viewMode === "autopilot" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setViewMode("autopilot")}
+            >
+              <Bot className="h-4 w-4" />
+              AutoPilot
+            </h2>
           </div>
 
           {viewMode === "products" ? (
@@ -175,7 +187,7 @@ const CustomerDetail = () => {
                 );
               })}
             </div>
-          ) : (
+          ) : viewMode === "actions" ? (
             <div className="space-y-4">
               <div className="flex gap-4 items-center justify-between">
                 <div className="flex gap-4">
@@ -330,8 +342,10 @@ const CustomerDetail = () => {
                 </TableBody>
               </Table>
             </Card>
-          </div>
-          )}
+            </div>
+          ) : viewMode === "autopilot" ? (
+            <AutoPilotPanel customerId={customerId || ""} />
+          ) : null}
         </div>
       </div>
 
