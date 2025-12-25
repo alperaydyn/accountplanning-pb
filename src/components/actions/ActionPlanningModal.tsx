@@ -35,7 +35,7 @@ const responseOptions = [
 
 export function ActionPlanningModal({ open, onOpenChange, customerId, productId }: ActionPlanningModalProps) {
   const [customerExplanation, setCustomerExplanation] = useState("");
-  const [actionStates, setActionStates] = useState<Record<string, { response: string; actionDate: string }>>({});
+  const [actionStates, setActionStates] = useState<Record<string, { response: string; actionDate: string; volume: string }>>({});
   
   const customer = getCustomerById(customerId);
   const product = getProductById(productId);
@@ -58,8 +58,15 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
     }));
   };
 
+  const handleVolumeChange = (actionId: string, volume: string) => {
+    setActionStates(prev => ({
+      ...prev,
+      [actionId]: { ...prev[actionId], volume }
+    }));
+  };
+
   const getActionState = (actionId: string) => {
-    return actionStates[actionId] || { response: "pending", actionDate: "" };
+    return actionStates[actionId] || { response: "pending", actionDate: "", volume: "" };
   };
 
   return (
@@ -113,8 +120,8 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
                       <p className="text-sm text-muted-foreground">{action.description}</p>
                     </div>
 
-                    {/* Response & Action Time Row */}
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Response, Action Time & Volume Row */}
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-xs text-muted-foreground block mb-1">Response</label>
                         <Select value={state.response} onValueChange={(value) => handleResponseChange(action.id, value)}>
@@ -136,6 +143,16 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
                           type="datetime-local"
                           value={state.actionDate}
                           onChange={(e) => handleDateChange(action.id, e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Volume (₺)</label>
+                        <Input
+                          type="number"
+                          placeholder="Enter volume"
+                          value={state.volume}
+                          onChange={(e) => handleVolumeChange(action.id, e.target.value)}
                           className="w-full"
                         />
                       </div>
