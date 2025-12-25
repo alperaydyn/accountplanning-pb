@@ -12,7 +12,6 @@ This document explains how to deploy the Account Planning application to Google 
 - Required APIs enabled:
   - Cloud Run API
   - Cloud Build API
-  - IAM API
   - Identity and Access Management (IAM) API
 
 ## OAuth 2.0 Access Token Generation
@@ -175,8 +174,10 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: 'projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL_NAME/providers/PROVIDER_NAME'
-          service_account: 'SERVICE_ACCOUNT_EMAIL'
+          # Use the full provider resource name from Step 6
+          workload_identity_provider: 'projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WORKLOAD_IDENTITY_POOL}/providers/${WORKLOAD_IDENTITY_PROVIDER}'
+          # Use the service account email from Step 1
+          service_account: '${SERVICE_ACCOUNT_EMAIL}'
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
