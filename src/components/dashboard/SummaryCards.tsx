@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Clock, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,15 @@ export function SummaryCards() {
   const navigate = useNavigate();
   const summary = getPortfolioSummary();
   const [showScoreModal, setShowScoreModal] = useState(false);
+
+  // Calculate customer breakdown by status
+  const primaryCount = customers.filter(c => c.status === 'primary').length;
+  const targetCount = customers.filter(c => c.status === 'target' || c.status === 'strong_target').length;
+  const restCount = customers.length - primaryCount - targetCount;
+
+  // Mock benchmark score
+  const benchmarkScore = 47;
+  const benchmarkMax = 60;
 
   // Generate portfolio-level score breakdown
   const totalVolume = 125000000; // Mock total portfolio volume
@@ -72,25 +81,25 @@ export function SummaryCards() {
     {
       title: "Total Customers",
       value: summary.totalCustomers,
-      subtitle: `${summary.primaryBankCustomers} Primary | ${summary.nonPrimaryCustomers} Non-Primary`,
+      subtitle: `${primaryCount} Primary | ${targetCount} Target | ${restCount} Rest`,
       icon: Users,
       onClick: () => navigate("/customers"),
     },
     {
-      title: "Actions Planned",
+      title: "Benchmark Score",
+      value: `${benchmarkScore}/${benchmarkMax}`,
+      subtitle: "Portfolio benchmark",
+      icon: Target,
+    },
+    {
+      title: "Actions",
       value: summary.totalActionsPlanned,
+      subtitle: `${summary.totalActionsPlanned} Planned | ${summary.totalActionsPending} Pending`,
       change: summary.totalActionsCompleted,
       changeLabel: "Completed",
       icon: ClipboardCheck,
       positive: true,
-      onClick: () => navigate("/agenda?status=planned"),
-    },
-    {
-      title: "Pending Actions",
-      value: summary.totalActionsPending,
-      subtitle: "Awaiting response",
-      icon: Clock,
-      onClick: () => navigate("/agenda?status=pending"),
+      onClick: () => navigate("/agenda"),
     },
   ];
 
