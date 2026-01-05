@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Calendar, Settings, Building2 } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Tooltip,
@@ -85,12 +85,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className={`border-b border-sidebar-border ${isCollapsed ? "p-2" : "p-3"}`}>
         <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-          <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center shrink-0">
-            <Building2 className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+          <img 
+            src="/favicon.png" 
+            alt="Portfolio Dashboard" 
+            className="h-9 w-9 rounded-lg shrink-0"
+          />
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground text-sm">Account Planning</span>
+              <span className="font-semibold text-sidebar-foreground text-sm">Portfolio Dashboard</span>
               <span className="text-xs text-sidebar-foreground/70">Banking Suite</span>
             </div>
           )}
