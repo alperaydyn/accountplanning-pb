@@ -14,6 +14,82 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_template_fields: {
+        Row: {
+          action_template_id: string
+          created_at: string
+          display_order: number
+          field_name: string
+          field_options: string[] | null
+          field_type: string
+          id: string
+          is_required: boolean
+        }
+        Insert: {
+          action_template_id: string
+          created_at?: string
+          display_order?: number
+          field_name: string
+          field_options?: string[] | null
+          field_type: string
+          id?: string
+          is_required?: boolean
+        }
+        Update: {
+          action_template_id?: string
+          created_at?: string
+          display_order?: number
+          field_name?: string
+          field_options?: string[] | null
+          field_type?: string
+          id?: string
+          is_required?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_template_fields_action_template_id_fkey"
+            columns: ["action_template_id"]
+            isOneToOne: false
+            referencedRelation: "action_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      action_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          name: string
+          product_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name: string
+          product_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          name?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_templates_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       action_updates: {
         Row: {
           action_id: string

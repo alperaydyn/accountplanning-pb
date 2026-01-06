@@ -16,8 +16,7 @@ import { useCustomerById } from "@/hooks/useCustomers";
 import { useCustomerProducts, CustomerProduct } from "@/hooks/useCustomerProducts";
 import { useProducts, Product } from "@/hooks/useProducts";
 import { useActionsByCustomer, useCreateAction, Action, ACTION_STATUSES, ACTION_PRIORITIES } from "@/hooks/useActions";
-import { getRequirementsForAction, ActionRequiredField } from "@/data/actionRequirements";
-import { actionNames } from "@/data/actions";
+import { useActionTemplates, ActionTemplate, ActionTemplateField } from "@/hooks/useActionTemplates";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
@@ -72,8 +71,13 @@ const CustomerDetail = () => {
   const { data: customerActions = [], isLoading: actionsLoading } = useActionsByCustomer(customerId);
   const { data: allProducts = [] } = useProducts();
   const createAction = useCreateAction();
-
-  const selectedActionRequirements = getRequirementsForAction(newActionName);
+  
+  // Fetch action templates for the selected product
+  const { data: actionTemplates = [] } = useActionTemplates(newActionProduct || undefined);
+  
+  // Get the selected action template and its fields
+  const selectedActionTemplate = actionTemplates.find(t => t.id === newActionName);
+  const selectedActionRequirements = selectedActionTemplate?.fields || [];
 
   const handleRequiredFieldChange = (fieldName: string, value: string) => {
     setNewActionRequiredFields(prev => ({ ...prev, [fieldName]: value }));
@@ -88,15 +92,24 @@ const CustomerDetail = () => {
   };
 
   const handleAddAction = async () => {
-    if (!newActionName || !newActionProduct || !customerId) return;
+    if (!newActionName || !newActionProduct || !customerId || !selectedActionTemplate) return;
     
     const today = new Date().toISOString().split('T')[0];
     const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
     
+    // Build description from required fields
+    const fieldsDescription = Object.entries(newActionRequiredFields)
+      .filter(([_, value]) => value)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+    
     await createAction.mutateAsync({
       customer_id: customerId,
       product_id: newActionProduct,
-      name: newActionName,
+      name: selectedActionTemplate.name,
+      description: selectedActionTemplate.description || undefined,
+      creation_reason: newActionExplanation || undefined,
+      customer_hints: fieldsDescription || undefined,
       creator_name: 'User',
       source_data_date: today,
       action_target_date: endOfMonth,
@@ -505,35 +518,46 @@ const CustomerDetail = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">Product</Label>
-                        <Select value={newActionProduct} onValueChange={setNewActionProduct}>
+                        <Select 
+                          value={newActionProduct} 
+                          onValueChange={(value) => {
+                            setNewActionProduct(value);
+                            // Reset action selection when product changes
+                            setNewActionName("");
+                            setNewActionRequiredFields({});
+                          }}
+                        >
                           <SelectTrigger>
                             <SelectValue placeholder="Select product" />
                           </SelectTrigger>
                           <SelectContent>
-                            {customerProducts.map((cp) => {
-                              const product = getProductById(cp.product_id);
-                              return product ? (
-                                <SelectItem key={cp.product_id} value={cp.product_id}>
+                            {allProducts
+                              .sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999))
+                              .map((product) => (
+                                <SelectItem key={product.id} value={product.id}>
                                   {product.name}
                                 </SelectItem>
-                              ) : null;
-                            })}
+                              ))}
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs text-muted-foreground">Action</Label>
-                        <Select value={newActionName} onValueChange={(value) => {
-                          setNewActionName(value);
-                          setNewActionRequiredFields({});
-                        }}>
+                        <Select 
+                          value={newActionName} 
+                          onValueChange={(value) => {
+                            setNewActionName(value);
+                            setNewActionRequiredFields({});
+                          }}
+                          disabled={!newActionProduct}
+                        >
                           <SelectTrigger>
-                            <SelectValue placeholder="Select action" />
+                            <SelectValue placeholder={newActionProduct ? "Select action" : "Select a product first"} />
                           </SelectTrigger>
                           <SelectContent>
-                            {actionNames.map((name) => (
-                              <SelectItem key={name} value={name}>
-                                {name}
+                            {actionTemplates.map((template) => (
+                              <SelectItem key={template.id} value={template.id}>
+                                {template.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -556,54 +580,57 @@ const CustomerDetail = () => {
                         <h4 className="text-sm font-medium mb-3 text-foreground">Required Information</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {selectedActionRequirements.map((field) => (
-                            <div key={field.name} className="space-y-1.5">
-                              <Label className="text-xs text-muted-foreground">{field.name}</Label>
-                              {field.type === 'select' && field.options ? (
+                            <div key={field.id} className="space-y-1.5">
+                              <Label className="text-xs text-muted-foreground">
+                                {field.field_name}
+                                {field.is_required && <span className="text-destructive ml-0.5">*</span>}
+                              </Label>
+                              {field.field_type === 'select' && field.field_options ? (
                                 <Select 
-                                  value={newActionRequiredFields[field.name] || ''} 
-                                  onValueChange={(value) => handleRequiredFieldChange(field.name, value)}
+                                  value={newActionRequiredFields[field.field_name] || ''} 
+                                  onValueChange={(value) => handleRequiredFieldChange(field.field_name, value)}
                                 >
                                   <SelectTrigger>
-                                    <SelectValue placeholder={`Select ${field.name.toLowerCase()}`} />
+                                    <SelectValue placeholder={`Select ${field.field_name.toLowerCase()}`} />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    {field.options.map((option) => (
+                                    {field.field_options.map((option) => (
                                       <SelectItem key={option} value={option}>
                                         {option}
                                       </SelectItem>
                                     ))}
                                   </SelectContent>
                                 </Select>
-                              ) : field.type === 'currency' ? (
+                              ) : field.field_type === 'currency' ? (
                                 <div className="relative">
                                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₺</span>
                                   <Input 
                                     type="number"
                                     placeholder="0"
                                     className="pl-7"
-                                    value={newActionRequiredFields[field.name] || ''}
-                                    onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                    value={newActionRequiredFields[field.field_name] || ''}
+                                    onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
                                   />
                                 </div>
-                              ) : field.type === 'number' ? (
+                              ) : field.field_type === 'number' ? (
                                 <Input 
                                   type="number"
                                   placeholder="0"
-                                  value={newActionRequiredFields[field.name] || ''}
-                                  onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                  value={newActionRequiredFields[field.field_name] || ''}
+                                  onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
                                 />
-                              ) : field.type === 'date' ? (
+                              ) : field.field_type === 'date' ? (
                                 <Input 
                                   type="date"
-                                  value={newActionRequiredFields[field.name] || ''}
-                                  onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                  value={newActionRequiredFields[field.field_name] || ''}
+                                  onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
                                 />
                               ) : (
                                 <Input 
                                   type="text"
-                                  placeholder={`Enter ${field.name.toLowerCase()}`}
-                                  value={newActionRequiredFields[field.name] || ''}
-                                  onChange={(e) => handleRequiredFieldChange(field.name, e.target.value)}
+                                  placeholder={`Enter ${field.field_name.toLowerCase()}`}
+                                  value={newActionRequiredFields[field.field_name] || ''}
+                                  onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
                                 />
                               )}
                             </div>
@@ -615,7 +642,7 @@ const CustomerDetail = () => {
                     <div className="flex justify-end">
                       <Button 
                         size="sm"
-                        disabled={!newActionName || !newActionProduct || createAction.isPending}
+                        disabled={!newActionName || !newActionProduct || !selectedActionTemplate || createAction.isPending}
                         onClick={handleAddAction}
                         className="bg-emerald-600 hover:bg-emerald-700"
                       >
