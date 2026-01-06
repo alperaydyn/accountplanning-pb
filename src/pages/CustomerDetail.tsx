@@ -360,60 +360,83 @@ const CustomerDetail = () => {
 
           {viewMode === "products" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...customerProducts]
-                .sort((a, b) => {
-                  const productA = getProductById(a.product_id);
-                  const productB = getProductById(b.product_id);
-                  return (productA?.display_order ?? 999) - (productB?.display_order ?? 999);
-                })
-                .map((cp) => {
-                const product = getProductById(cp.product_id);
-                if (!product) return null;
-                const threshold = cp.threshold || 0;
-                const gap = cp.gap || 0;
-                const currentValue = Number(cp.current_value);
-                const isAboveThreshold = currentValue >= threshold;
-                const actionsCount = customerActions.filter(a => a.product_id === cp.product_id).length;
+              {(() => {
+                // Get all unique product IDs from customer products and actions
+                const customerProductIds = new Set(customerProducts.map(cp => cp.product_id));
+                const actionProductIds = new Set(customerActions.map(a => a.product_id));
+                const allProductIds = new Set([...customerProductIds, ...actionProductIds]);
                 
-                return (
-                  <Card 
-                    key={cp.id} 
-                    className={cn("cursor-pointer transition-all hover:shadow-md", actionsCount > 0 && "border-info/50")}
-                    onClick={() => {
-                      const firstAction = customerActions.find(a => a.product_id === cp.product_id);
-                      if (firstAction) setSelectedActionId(firstAction.id);
-                    }}
-                  >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start justify-between">
-                        <CardTitle className="text-sm font-medium">{product.name}</CardTitle>
-                        {actionsCount > 0 && (
-                          <Badge variant="outline" className="bg-info/10 text-info border-info/20">
-                            {actionsCount} actions
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground capitalize">{product.category}</span>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Current</span>
-                          <span className="font-medium">₺{currentValue.toLocaleString()}</span>
+                // Get all products we need to display and sort by display_order
+                const productsToDisplay = [...allProductIds]
+                  .map(productId => {
+                    const product = getProductById(productId);
+                    const customerProduct = customerProducts.find(cp => cp.product_id === productId);
+                    const actionsForProduct = customerActions.filter(a => a.product_id === productId);
+                    return { productId, product, customerProduct, actionsForProduct };
+                  })
+                  .filter(item => item.product)
+                  .sort((a, b) => (a.product?.display_order ?? 999) - (b.product?.display_order ?? 999));
+
+                return productsToDisplay.map(({ productId, product, customerProduct, actionsForProduct }) => {
+                  if (!product) return null;
+                  const threshold = customerProduct?.threshold || 0;
+                  const gap = customerProduct?.gap || 0;
+                  const currentValue = customerProduct ? Number(customerProduct.current_value) : 0;
+                  const isAboveThreshold = currentValue >= threshold;
+                  const actionsCount = actionsForProduct.length;
+                  const isOwned = !!customerProduct;
+                  
+                  return (
+                    <Card 
+                      key={productId} 
+                      className={cn(
+                        "transition-all",
+                        actionsCount > 0 && "cursor-pointer hover:shadow-md border-info/50",
+                        !isOwned && "bg-muted/30"
+                      )}
+                      onClick={() => {
+                        if (actionsCount > 0) {
+                          setSelectedActionId(actionsForProduct[0].id);
+                        }
+                      }}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between">
+                          <CardTitle className="text-sm font-medium">{product.name}</CardTitle>
+                          {actionsCount > 0 && (
+                            <Badge variant="outline" className="bg-info/10 text-info border-info/20">
+                              {actionsCount} action{actionsCount > 1 ? 's' : ''}
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Threshold</span>
-                          <span>₺{threshold.toLocaleString()}</span>
+                        <span className="text-xs text-muted-foreground capitalize">
+                          {product.category}{!isOwned && " • Not owned"}
+                        </span>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Current</span>
+                            <span className="font-medium">₺{currentValue.toLocaleString()}</span>
+                          </div>
+                          {isOwned && (
+                            <>
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Threshold</span>
+                                <span>₺{threshold.toLocaleString()}</span>
+                              </div>
+                              <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
+                                {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                                <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(gap).toLocaleString()}`}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
-                        <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
-                          {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                          <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(gap).toLocaleString()}`}</span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+                      </CardContent>
+                    </Card>
+                  );
+                });
+              })()}
             </div>
           ) : viewMode === "actions" ? (
             <div className="space-y-4">
