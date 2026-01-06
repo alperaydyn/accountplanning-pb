@@ -253,6 +253,53 @@ export type Database = {
         }
         Relationships: []
       }
+      product_thresholds: {
+        Row: {
+          calculation_date: string
+          created_at: string
+          id: string
+          is_active: boolean
+          product_id: string
+          sector: Database["public"]["Enums"]["customer_sector"]
+          segment: Database["public"]["Enums"]["customer_segment"]
+          threshold_value: number
+          updated_at: string
+          version_num: number
+        }
+        Insert: {
+          calculation_date?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product_id: string
+          sector: Database["public"]["Enums"]["customer_sector"]
+          segment: Database["public"]["Enums"]["customer_segment"]
+          threshold_value?: number
+          updated_at?: string
+          version_num?: number
+        }
+        Update: {
+          calculation_date?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          product_id?: string
+          sector?: Database["public"]["Enums"]["customer_sector"]
+          segment?: Database["public"]["Enums"]["customer_segment"]
+          threshold_value?: number
+          updated_at?: string
+          version_num?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_thresholds_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: Database["public"]["Enums"]["product_category"]
