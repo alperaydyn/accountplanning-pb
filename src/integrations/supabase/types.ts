@@ -250,6 +250,111 @@ export type Database = {
         }
         Relationships: []
       }
+      portfolio_targets: {
+        Row: {
+          created_at: string
+          flow_count: number
+          flow_count_delta_mtd: number
+          flow_count_delta_ytd: number
+          flow_count_tar: number
+          flow_count_target: number
+          flow_volume: number
+          flow_volume_delta_mtd: number
+          flow_volume_delta_ytd: number
+          flow_volume_tar: number
+          flow_volume_target: number
+          id: string
+          measure_date: string
+          portfolio_manager_id: string
+          product_id: string
+          record_date: string
+          stock_count: number
+          stock_count_delta_mtd: number
+          stock_count_delta_ytd: number
+          stock_count_tar: number
+          stock_count_target: number
+          stock_volume: number
+          stock_volume_delta_mtd: number
+          stock_volume_delta_ytd: number
+          stock_volume_tar: number
+          stock_volume_target: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          flow_count?: number
+          flow_count_delta_mtd?: number
+          flow_count_delta_ytd?: number
+          flow_count_tar?: number
+          flow_count_target?: number
+          flow_volume?: number
+          flow_volume_delta_mtd?: number
+          flow_volume_delta_ytd?: number
+          flow_volume_tar?: number
+          flow_volume_target?: number
+          id?: string
+          measure_date?: string
+          portfolio_manager_id: string
+          product_id: string
+          record_date: string
+          stock_count?: number
+          stock_count_delta_mtd?: number
+          stock_count_delta_ytd?: number
+          stock_count_tar?: number
+          stock_count_target?: number
+          stock_volume?: number
+          stock_volume_delta_mtd?: number
+          stock_volume_delta_ytd?: number
+          stock_volume_tar?: number
+          stock_volume_target?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          flow_count?: number
+          flow_count_delta_mtd?: number
+          flow_count_delta_ytd?: number
+          flow_count_tar?: number
+          flow_count_target?: number
+          flow_volume?: number
+          flow_volume_delta_mtd?: number
+          flow_volume_delta_ytd?: number
+          flow_volume_tar?: number
+          flow_volume_target?: number
+          id?: string
+          measure_date?: string
+          portfolio_manager_id?: string
+          product_id?: string
+          record_date?: string
+          stock_count?: number
+          stock_count_delta_mtd?: number
+          stock_count_delta_ytd?: number
+          stock_count_tar?: number
+          stock_count_target?: number
+          stock_volume?: number
+          stock_volume_delta_mtd?: number
+          stock_volume_delta_ytd?: number
+          stock_volume_tar?: number
+          stock_volume_target?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_targets_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_targets_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_thresholds: {
         Row: {
           calculation_date: string
