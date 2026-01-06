@@ -160,9 +160,12 @@ IMPORTANT:
     }
 
     const data = await response.json();
+    console.log("OpenAI response:", JSON.stringify(data, null, 2));
+    
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
     
     if (!toolCall?.function?.arguments) {
+      console.error("Missing tool call in response:", JSON.stringify(data, null, 2));
       throw new Error("No valid response from AI");
     }
 
