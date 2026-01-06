@@ -249,6 +249,14 @@ export const ACTION_STATUSES: ActionStatus[] = [
   'Beklemede', 'Planlandı', 'Tamamlandı', 'Ertelendi', 'İlgilenmiyor', 'Uygun Değil'
 ];
 
-export const ACTION_TYPES: ActionType[] = ['model_based', 'ad_hoc'];
+export const ACTION_TYPES: ActionType[] = ['model_based', 'rm_action', 'ad_hoc', 'recursive'];
+
+// Display labels for action types
+export const ACTION_TYPE_LABELS: Record<ActionType, string> = {
+  'model_based': 'Model',      // AI generated
+  'rm_action': 'RM Action',    // RM generated
+  'ad_hoc': 'Ad-Hoc',          // Uploaded
+  'recursive': 'Recursive',    // Scheduled
+};
 
 export const ACTION_PRIORITIES: ActionPriority[] = ['high', 'medium', 'low'];

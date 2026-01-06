@@ -602,7 +602,7 @@ export type Database = {
         | "Ertelendi"
         | "İlgilenmiyor"
         | "Uygun Değil"
-      action_type: "model_based" | "ad_hoc"
+      action_type: "model_based" | "ad_hoc" | "rm_action" | "recursive"
       customer_sector:
         | "Turizm"
         | "Ulaşım"
@@ -761,7 +761,7 @@ export const Constants = {
         "İlgilenmiyor",
         "Uygun Değil",
       ],
-      action_type: ["model_based", "ad_hoc"],
+      action_type: ["model_based", "ad_hoc", "rm_action", "recursive"],
       customer_sector: [
         "Turizm",
         "Ulaşım",
