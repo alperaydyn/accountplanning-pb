@@ -6,11 +6,11 @@ export interface CustomerProduct {
   customer_id: string;
   product_id: string;
   current_value: number;
-  threshold: number;
   external_data: number | null;
   created_at: string;
   updated_at: string;
-  // Computed
+  // Computed from product_thresholds
+  threshold?: number;
   gap?: number;
   // Joined data
   products?: {
@@ -21,13 +21,29 @@ export interface CustomerProduct {
   };
 }
 
+interface CustomerWithSectorSegment {
+  sector: string;
+  segment: string;
+}
+
 export const useCustomerProducts = (customerId: string | undefined) => {
   return useQuery({
     queryKey: ['customer-products', customerId],
     queryFn: async () => {
       if (!customerId) return [];
       
-      const { data, error } = await supabase
+      // Fetch customer to get sector and segment
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('sector, segment')
+        .eq('id', customerId)
+        .maybeSingle();
+
+      if (customerError) throw customerError;
+      if (!customer) return [];
+
+      // Fetch customer products with product info
+      const { data: customerProducts, error: cpError } = await supabase
         .from('customer_products')
         .select(`
           *,
@@ -40,13 +56,34 @@ export const useCustomerProducts = (customerId: string | undefined) => {
         `)
         .eq('customer_id', customerId);
 
-      if (error) throw error;
-      
-      // Add computed gap field
-      return (data as CustomerProduct[]).map(cp => ({
-        ...cp,
-        gap: cp.threshold - cp.current_value,
-      }));
+      if (cpError) throw cpError;
+      if (!customerProducts || customerProducts.length === 0) return [];
+
+      // Fetch active thresholds for this customer's sector/segment
+      const { data: thresholds, error: thresholdsError } = await supabase
+        .from('product_thresholds')
+        .select('product_id, threshold_value')
+        .eq('sector', customer.sector)
+        .eq('segment', customer.segment)
+        .eq('is_active', true);
+
+      if (thresholdsError) throw thresholdsError;
+
+      // Create a map of product_id to threshold_value
+      const thresholdMap = new Map<string, number>();
+      thresholds?.forEach(t => {
+        thresholdMap.set(t.product_id, Number(t.threshold_value));
+      });
+
+      // Add computed threshold and gap fields
+      return customerProducts.map(cp => {
+        const threshold = thresholdMap.get(cp.product_id) || 0;
+        return {
+          ...cp,
+          threshold,
+          gap: threshold - Number(cp.current_value),
+        };
+      });
     },
     enabled: !!customerId,
   });
@@ -56,7 +93,6 @@ export interface CreateCustomerProductInput {
   customer_id: string;
   product_id: string;
   current_value?: number;
-  threshold?: number;
   external_data?: number | null;
 }
 

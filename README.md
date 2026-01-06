@@ -336,15 +336,16 @@ The Account Planning System is a corporate banking relationship management appli
 | `customerId`   | string | FK → Customer.id, not null | The customer who holds/uses this product                                  |
 | `productId`    | string | FK → Product.id, not null  | The product being used                                                    |
 | `currentValue` | number | not null                   | Current balance/volume/value of product holding for this customer         |
-| `threshold`    | number | not null                   | Target or expected level set for this product (business goal)             |
-| `gap`          | number | not null                   | Calculated as `threshold - currentValue`, representing opportunity size   |
+| `threshold`    | number | computed, optional         | Target/expected level from product_thresholds based on customer's sector/segment |
+| `gap`          | number | computed, optional         | Calculated as `threshold - currentValue`, representing opportunity size   |
 | `externalData` | number | nullable                   | If product is external, the value of holdings at competitor banks         |
 | `actionsCount` | number | not null                   | Number of actions planned for this customer-product combination (derived) |
 
 **Notes**:
 
 - Unique constraint likely on `(customerId, productId)` in a real system
-- `gap` is calculated, not stored separately in a real system
+- `threshold` is derived from `product_thresholds` table based on customer's sector and segment
+- `gap` is calculated as `threshold - currentValue` at runtime
 - `externalData` only populated when `Product.isExternal = true`
 
 ---

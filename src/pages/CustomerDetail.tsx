@@ -115,8 +115,8 @@ const CustomerDetail = () => {
       const productB = getProductById(b.productId);
       const customerProductA = customerProducts.find(cp => cp.productId === a.productId);
       const customerProductB = customerProducts.find(cp => cp.productId === b.productId);
-      const gapA = customerProductA ? Math.abs(customerProductA.gap) : 0;
-      const gapB = customerProductB ? Math.abs(customerProductB.gap) : 0;
+      const gapA = customerProductA?.gap ? Math.abs(customerProductA.gap) : 0;
+      const gapB = customerProductB?.gap ? Math.abs(customerProductB.gap) : 0;
 
       let comparison = 0;
       switch (sortColumn) {
@@ -236,7 +236,9 @@ const CustomerDetail = () => {
               {customerProducts.map((cp) => {
                 const product = getProductById(cp.productId);
                 if (!product) return null;
-                const isAboveThreshold = cp.currentValue >= cp.threshold;
+                const threshold = cp.threshold || 0;
+                const gap = cp.gap || 0;
+                const isAboveThreshold = cp.currentValue >= threshold;
                 
                 return (
                   <Card 
@@ -263,11 +265,11 @@ const CustomerDetail = () => {
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Threshold</span>
-                          <span>₺{cp.threshold.toLocaleString()}</span>
+                          <span>₺{threshold.toLocaleString()}</span>
                         </div>
                         <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
                           {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                          <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(cp.gap).toLocaleString()}`}</span>
+                          <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(gap).toLocaleString()}`}</span>
                         </div>
                       </div>
                     </CardContent>

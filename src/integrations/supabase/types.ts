@@ -126,7 +126,6 @@ export type Database = {
           external_data: number | null
           id: string
           product_id: string
-          threshold: number
           updated_at: string
         }
         Insert: {
@@ -136,7 +135,6 @@ export type Database = {
           external_data?: number | null
           id?: string
           product_id: string
-          threshold?: number
           updated_at?: string
         }
         Update: {
@@ -146,7 +144,6 @@ export type Database = {
           external_data?: number | null
           id?: string
           product_id?: string
-          threshold?: number
           updated_at?: string
         }
         Relationships: [

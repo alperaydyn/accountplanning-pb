@@ -66,12 +66,11 @@ This document outlines the step-by-step plan to migrate the Account Planning Sys
 | customer_id   | uuid        | FK to customers, NOT NULL     | Customer reference    |
 | product_id    | uuid        | FK to products, NOT NULL      | Product reference     |
 | current_value | numeric     | default 0                     | Current value         |
-| threshold     | numeric     | default 0                     | Target threshold      |
 | external_data | numeric     | NULLABLE                      | External data value   |
 | created_at    | timestamptz | default now()                 | Creation timestamp    |
 | updated_at    | timestamptz | default now()                 | Last update timestamp |
 
-**Note:** `gap` and `actionsCount` are computed fields, not stored.
+**Note:** `threshold` and `gap` are computed fields derived from `product_thresholds` table based on customer's sector/segment, not stored in this table.
 
 #### `product_thresholds`
 
