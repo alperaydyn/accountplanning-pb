@@ -14,16 +14,329 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      actions: {
+        Row: {
+          action_response: string | null
+          completed_date: string | null
+          created_at: string
+          customer_id: string
+          description: string | null
+          estimated_action_time: number | null
+          explanation: string | null
+          id: string
+          name: string
+          planned_date: string | null
+          priority: Database["public"]["Enums"]["action_priority"]
+          product_id: string
+          status: Database["public"]["Enums"]["action_status"]
+          target_value: number | null
+          time_to_ready: number
+          type: Database["public"]["Enums"]["action_type"]
+          updated_at: string
+        }
+        Insert: {
+          action_response?: string | null
+          completed_date?: string | null
+          created_at?: string
+          customer_id: string
+          description?: string | null
+          estimated_action_time?: number | null
+          explanation?: string | null
+          id?: string
+          name: string
+          planned_date?: string | null
+          priority: Database["public"]["Enums"]["action_priority"]
+          product_id: string
+          status?: Database["public"]["Enums"]["action_status"]
+          target_value?: number | null
+          time_to_ready?: number
+          type: Database["public"]["Enums"]["action_type"]
+          updated_at?: string
+        }
+        Update: {
+          action_response?: string | null
+          completed_date?: string | null
+          created_at?: string
+          customer_id?: string
+          description?: string | null
+          estimated_action_time?: number | null
+          explanation?: string | null
+          id?: string
+          name?: string
+          planned_date?: string | null
+          priority?: Database["public"]["Enums"]["action_priority"]
+          product_id?: string
+          status?: Database["public"]["Enums"]["action_status"]
+          target_value?: number | null
+          time_to_ready?: number
+          type?: Database["public"]["Enums"]["action_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_groups: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          portfolio_manager_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          portfolio_manager_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          portfolio_manager_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_groups_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_products: {
+        Row: {
+          created_at: string
+          current_value: number
+          customer_id: string
+          external_data: number | null
+          id: string
+          product_id: string
+          threshold: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number
+          customer_id: string
+          external_data?: number | null
+          id?: string
+          product_id: string
+          threshold?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number
+          customer_id?: string
+          external_data?: number | null
+          id?: string
+          product_id?: string
+          threshold?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_products_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          created_at: string
+          group_id: string | null
+          id: string
+          last_activity_date: string | null
+          name: string
+          portfolio_manager_id: string
+          principality_score: number | null
+          sector: Database["public"]["Enums"]["customer_sector"]
+          segment: Database["public"]["Enums"]["customer_segment"]
+          status: Database["public"]["Enums"]["customer_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          last_activity_date?: string | null
+          name: string
+          portfolio_manager_id: string
+          principality_score?: number | null
+          sector: Database["public"]["Enums"]["customer_sector"]
+          segment: Database["public"]["Enums"]["customer_segment"]
+          status: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          group_id?: string | null
+          id?: string
+          last_activity_date?: string | null
+          name?: string
+          portfolio_manager_id?: string
+          principality_score?: number | null
+          sector?: Database["public"]["Enums"]["customer_sector"]
+          segment?: Database["public"]["Enums"]["customer_segment"]
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customers_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "customer_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      portfolio_managers: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          portfolio_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          portfolio_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          portfolio_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: Database["public"]["Enums"]["product_category"]
+          created_at: string
+          description: string | null
+          id: string
+          is_external: boolean
+          name: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["product_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_external?: boolean
+          name: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["product_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_external?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_portfolio_manager_id: { Args: { _user_id: string }; Returns: string }
+      user_owns_customer: { Args: { _customer_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      action_priority: "high" | "medium" | "low"
+      action_status:
+        | "Beklemede"
+        | "Planlandı"
+        | "Tamamlandı"
+        | "Ertelendi"
+        | "İlgilenmiyor"
+        | "Uygun Değil"
+      action_type: "model_based" | "ad_hoc"
+      customer_sector:
+        | "Turizm"
+        | "Ulaşım"
+        | "Perakende"
+        | "Gayrimenkul"
+        | "Tarım Hayvancılık"
+        | "Sağlık"
+        | "Enerji"
+      customer_segment: "MİKRO" | "Kİ" | "OBİ" | "TİCARİ"
+      customer_status:
+        | "Yeni Müşteri"
+        | "Aktif"
+        | "Target"
+        | "Strong Target"
+        | "Ana Banka"
+      product_category:
+        | "TL Nakdi Kredi"
+        | "TL Gayrinakdi Kredi"
+        | "YP Nakdi Kredi"
+        | "YP Gayrinakdi Kredi"
+        | "TL Vadeli"
+        | "TL Vadesiz"
+        | "YP Vadeli"
+        | "YP Vadesiz"
+        | "TL Yatırım Fonu"
+        | "YP Yatırım Fonu"
+        | "Ticari Kart"
+        | "Üye İşyeri"
+        | "Maaş"
+        | "Sigorta-Hayat"
+        | "Sigorta-Elementer"
+        | "Sigorta-BES"
+        | "Faktoring"
+        | "Leasing"
+        | "Ödeme Çeki"
+        | "Tahsil Çeki"
+        | "DTS"
+        | "Garantili Ödeme"
+        | "Garanti Filo Kiralama"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +463,59 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      action_priority: ["high", "medium", "low"],
+      action_status: [
+        "Beklemede",
+        "Planlandı",
+        "Tamamlandı",
+        "Ertelendi",
+        "İlgilenmiyor",
+        "Uygun Değil",
+      ],
+      action_type: ["model_based", "ad_hoc"],
+      customer_sector: [
+        "Turizm",
+        "Ulaşım",
+        "Perakende",
+        "Gayrimenkul",
+        "Tarım Hayvancılık",
+        "Sağlık",
+        "Enerji",
+      ],
+      customer_segment: ["MİKRO", "Kİ", "OBİ", "TİCARİ"],
+      customer_status: [
+        "Yeni Müşteri",
+        "Aktif",
+        "Target",
+        "Strong Target",
+        "Ana Banka",
+      ],
+      product_category: [
+        "TL Nakdi Kredi",
+        "TL Gayrinakdi Kredi",
+        "YP Nakdi Kredi",
+        "YP Gayrinakdi Kredi",
+        "TL Vadeli",
+        "TL Vadesiz",
+        "YP Vadeli",
+        "YP Vadesiz",
+        "TL Yatırım Fonu",
+        "YP Yatırım Fonu",
+        "Ticari Kart",
+        "Üye İşyeri",
+        "Maaş",
+        "Sigorta-Hayat",
+        "Sigorta-Elementer",
+        "Sigorta-BES",
+        "Faktoring",
+        "Leasing",
+        "Ödeme Çeki",
+        "Tahsil Çeki",
+        "DTS",
+        "Garantili Ödeme",
+        "Garanti Filo Kiralama",
+      ],
+    },
   },
 } as const
