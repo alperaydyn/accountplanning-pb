@@ -105,7 +105,8 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
           sector: generatedCustomer.sector as CustomerSector,
           segment: generatedCustomer.segment as CustomerSegment,
           status: generatedCustomer.status as CustomerStatus,
-          principality_score: generatedCustomer.principality_score,
+          // DB column is integer
+          principality_score: Math.round(generatedCustomer.principality_score),
           portfolio_manager_id: portfolioManager.id,
           last_activity_date: new Date().toISOString().split("T")[0],
         })

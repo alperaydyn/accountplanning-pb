@@ -96,7 +96,8 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-5-2025-08-07",
+        // Use a faster model for lower latency.
+        model: "gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -114,13 +115,15 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
                   sector: { type: "string", enum: SECTORS },
                   segment: { type: "string", enum: SEGMENTS },
                   status: { type: "string", enum: STATUSES },
-                  principality_score: { type: "number", minimum: 0, maximum: 100 },
+                  // DB expects an integer score.
+                  principality_score: { type: "integer", minimum: 0, maximum: 100 },
                   products: {
                     type: "array",
                     items: {
                       type: "object",
                       properties: {
-                        product_id: { type: "string" },
+                        // Restrict IDs so we never generate unknown products.
+                        product_id: { type: "string", enum: PRODUCTS.map((p) => p.id) },
                         current_value: { type: "number" },
                       },
                       required: ["product_id", "current_value"],
@@ -135,8 +138,8 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
           },
         ],
         tool_choice: { type: "function", function: { name: "create_customer" } },
-        // GPT-5 can spend many tokens on internal reasoning; keep this high so we still get a tool call.
-        max_completion_tokens: 8000,
+        // Keep this comfortably high to avoid rare "no tool call" failures.
+        max_completion_tokens: 2000,
       }),
     });
 
@@ -164,6 +167,12 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
 
     const customerData = JSON.parse(toolCall.function.arguments);
 
+    // Normalize types defensively (DB expects integer score).
+    customerData.principality_score = Math.max(0, Math.min(100, Math.round(customerData.principality_score)));
+    customerData.products = (customerData.products ?? []).map((p: { product_id: string; current_value: number }) => ({
+      product_id: p.product_id,
+      current_value: Number(p.current_value),
+    }));
     // Ensure mandatory product is included
     const hasMandatory = customerData.products.some(
       (p: { product_id: string }) => p.product_id === MANDATORY_PRODUCT_ID
