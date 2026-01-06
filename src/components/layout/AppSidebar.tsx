@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Calendar, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Tooltip,
   TooltipContent,
@@ -19,7 +20,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { currentUser } from "@/data/portfolio";
+import { Button } from "@/components/ui/button";
 
 const mainNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
@@ -36,6 +37,10 @@ export function AppSidebar() {
   const currentPath = location.pathname;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const { user, signOut } = useAuth();
+
+  const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+  const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const isActive = (path: string) => {
     if (path === "/") return currentPath === "/";
@@ -140,17 +145,43 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className={`border-t border-sidebar-border ${isCollapsed ? "p-2" : "p-3"}`}>
-        <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
-          <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
-            <span className="text-xs font-medium text-sidebar-accent-foreground">
-              {currentUser.name.split(' ').map(n => n[0]).join('')}
-            </span>
-          </div>
-          {!isCollapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-medium text-sidebar-foreground">{currentUser.name}</span>
-              <span className="text-xs text-sidebar-foreground/70">{currentUser.portfolioName}</span>
+        <div className={`flex items-center ${isCollapsed ? "flex-col gap-2" : "justify-between"}`}>
+          <div className={`flex items-center ${isCollapsed ? "justify-center" : "gap-3"}`}>
+            <div className="h-8 w-8 rounded-full bg-sidebar-accent flex items-center justify-center shrink-0">
+              <span className="text-xs font-medium text-sidebar-accent-foreground">
+                {userInitials}
+              </span>
             </div>
+            {!isCollapsed && (
+              <div className="flex flex-col">
+                <span className="text-sm font-medium text-sidebar-foreground">{userName}</span>
+                <span className="text-xs text-sidebar-foreground/70">{user?.email}</span>
+              </div>
+            )}
+          </div>
+          {isCollapsed ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={signOut}
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Çıkış Yap</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={signOut}
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           )}
         </div>
       </SidebarFooter>
