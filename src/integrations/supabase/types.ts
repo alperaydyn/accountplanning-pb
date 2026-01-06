@@ -173,9 +173,15 @@ export type Database = {
           customer_id: string
           description: string | null
           id: string
+          is_recursive: boolean
           name: string
+          next_recurrence_date: string | null
+          parent_action_id: string | null
           priority: Database["public"]["Enums"]["action_priority"]
           product_id: string
+          recurrence_end_date: string | null
+          recurrence_interval: number | null
+          recurrence_pattern: string | null
           source_data_date: string
           target_value: number | null
           type: Database["public"]["Enums"]["action_type"]
@@ -195,9 +201,15 @@ export type Database = {
           customer_id: string
           description?: string | null
           id?: string
+          is_recursive?: boolean
           name: string
+          next_recurrence_date?: string | null
+          parent_action_id?: string | null
           priority: Database["public"]["Enums"]["action_priority"]
           product_id: string
+          recurrence_end_date?: string | null
+          recurrence_interval?: number | null
+          recurrence_pattern?: string | null
           source_data_date: string
           target_value?: number | null
           type: Database["public"]["Enums"]["action_type"]
@@ -217,9 +229,15 @@ export type Database = {
           customer_id?: string
           description?: string | null
           id?: string
+          is_recursive?: boolean
           name?: string
+          next_recurrence_date?: string | null
+          parent_action_id?: string | null
           priority?: Database["public"]["Enums"]["action_priority"]
           product_id?: string
+          recurrence_end_date?: string | null
+          recurrence_interval?: number | null
+          recurrence_pattern?: string | null
           source_data_date?: string
           target_value?: number | null
           type?: Database["public"]["Enums"]["action_type"]
@@ -231,6 +249,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actions_parent_action_id_fkey"
+            columns: ["parent_action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
             referencedColumns: ["id"]
           },
           {

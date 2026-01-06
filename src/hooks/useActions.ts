@@ -177,6 +177,11 @@ export interface CreateActionInput {
   target_value?: number;
   current_status?: ActionStatus;
   current_planned_date?: string;
+  // Recursion fields
+  is_recursive?: boolean;
+  recurrence_pattern?: string;
+  recurrence_interval?: number;
+  recurrence_end_date?: string;
 }
 
 export const useCreateAction = () => {

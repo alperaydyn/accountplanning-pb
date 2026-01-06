@@ -15,9 +15,10 @@ import { Label } from "@/components/ui/label";
 import { useCustomerById } from "@/hooks/useCustomers";
 import { useCustomerProducts, CustomerProduct } from "@/hooks/useCustomerProducts";
 import { useProducts, Product } from "@/hooks/useProducts";
-import { useActionsByCustomer, useCreateAction, Action, ACTION_STATUSES, ACTION_PRIORITIES } from "@/hooks/useActions";
+import { useActionsByCustomer, useCreateAction, ACTION_STATUSES, ACTION_TYPE_LABELS } from "@/hooks/useActions";
 import { useActionTemplates, ActionTemplate, ActionTemplateField } from "@/hooks/useActionTemplates";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
+import { AddActionModal } from "@/components/actions/AddActionModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
 import { AutoPilotPanel } from "@/components/customer/AutoPilotPanel";
@@ -57,10 +58,7 @@ const CustomerDetail = () => {
   const [statusFilter, setStatusFilter] = useState<DBActionStatus | "all">("all");
   const [showPrincipalityModal, setShowPrincipalityModal] = useState(false);
   const [showAddAction, setShowAddAction] = useState(false);
-  const [newActionName, setNewActionName] = useState<string>("");
-  const [newActionProduct, setNewActionProduct] = useState<string>("");
-  const [newActionExplanation, setNewActionExplanation] = useState<string>("");
-  const [newActionRequiredFields, setNewActionRequiredFields] = useState<Record<string, string>>({});
+  const [preselectedProductId, setPreselectedProductId] = useState<string>("");
   const [sortColumn, setSortColumn] = useState<SortColumn>("gap");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isGeneratingActions, setIsGeneratingActions] = useState(false);
@@ -72,52 +70,9 @@ const CustomerDetail = () => {
   const { data: allProducts = [] } = useProducts();
   const createAction = useCreateAction();
   
-  // Fetch action templates for the selected product
-  const { data: actionTemplates = [] } = useActionTemplates(newActionProduct || undefined);
-  
-  // Get the selected action template and its fields
-  const selectedActionTemplate = actionTemplates.find(t => t.id === newActionName);
-  const selectedActionRequirements = selectedActionTemplate?.fields || [];
-
-  const handleRequiredFieldChange = (fieldName: string, value: string) => {
-    setNewActionRequiredFields(prev => ({ ...prev, [fieldName]: value }));
-  };
-
-  const resetAddActionForm = () => {
-    setShowAddAction(false);
-    setNewActionName("");
-    setNewActionProduct("");
-    setNewActionExplanation("");
-    setNewActionRequiredFields({});
-  };
-
-  const handleAddAction = async () => {
-    if (!newActionName || !newActionProduct || !customerId || !selectedActionTemplate) return;
-    
-    const today = new Date().toISOString().split('T')[0];
-    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
-    
-    // Build description from required fields
-    const fieldsDescription = Object.entries(newActionRequiredFields)
-      .filter(([_, value]) => value)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n');
-    
-    await createAction.mutateAsync({
-      customer_id: customerId,
-      product_id: newActionProduct,
-      name: selectedActionTemplate.name,
-      description: selectedActionTemplate.description || undefined,
-      creation_reason: newActionExplanation || undefined,
-      customer_hints: fieldsDescription || undefined,
-      creator_name: 'User',
-      source_data_date: today,
-      action_target_date: endOfMonth,
-      type: 'ad_hoc',
-      priority: 'medium',
-    });
-    
-    resetAddActionForm();
+  const handleOpenAddAction = (productId?: string) => {
+    setPreselectedProductId(productId || "");
+    setShowAddAction(true);
   };
 
   const handleGenerateActions = async () => {
@@ -411,10 +366,8 @@ const CustomerDetail = () => {
                         if (actionsCount > 0) {
                           setSelectedActionId(actionsForProduct[0].id);
                         } else {
-                          // Open Add Action panel with this product pre-selected
-                          setNewActionProduct(productId);
-                          setShowAddAction(true);
-                          setViewMode("actions");
+                          // Open Add Action modal with this product pre-selected
+                          handleOpenAddAction(productId);
                         }
                       }}
                     >
@@ -500,7 +453,7 @@ const CustomerDetail = () => {
                   </Button>
                   <Button 
                     size="sm" 
-                    onClick={() => setShowAddAction(!showAddAction)}
+                    onClick={() => handleOpenAddAction()}
                     className="bg-emerald-600 hover:bg-emerald-700 text-white"
                   >
                     <Plus className="h-4 w-4 mr-1" />
@@ -508,151 +461,6 @@ const CustomerDetail = () => {
                   </Button>
                 </div>
               </div>
-
-              {showAddAction && (
-                <Card className="border-emerald-200 bg-slate-50/80">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm font-medium">Add New Action</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Product</Label>
-                        <Select 
-                          value={newActionProduct} 
-                          onValueChange={(value) => {
-                            setNewActionProduct(value);
-                            // Reset action selection when product changes
-                            setNewActionName("");
-                            setNewActionRequiredFields({});
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {allProducts
-                              .sort((a, b) => (a.display_order ?? 999) - (b.display_order ?? 999))
-                              .map((product) => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name}
-                                </SelectItem>
-                              ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Action</Label>
-                        <Select 
-                          value={newActionName} 
-                          onValueChange={(value) => {
-                            setNewActionName(value);
-                            setNewActionRequiredFields({});
-                          }}
-                          disabled={!newActionProduct}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder={newActionProduct ? "Select action" : "Select a product first"} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {actionTemplates.map((template) => (
-                              <SelectItem key={template.id} value={template.id}>
-                                {template.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Explanation</Label>
-                      <Textarea 
-                        placeholder="Enter action explanation..."
-                        value={newActionExplanation}
-                        onChange={(e) => setNewActionExplanation(e.target.value)}
-                        className="min-h-[80px]"
-                      />
-                    </div>
-
-                    {selectedActionRequirements.length > 0 && (
-                      <div className="border rounded-lg p-4 bg-background">
-                        <h4 className="text-sm font-medium mb-3 text-foreground">Required Information</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {selectedActionRequirements.map((field) => (
-                            <div key={field.id} className="space-y-1.5">
-                              <Label className="text-xs text-muted-foreground">
-                                {field.field_name}
-                                {field.is_required && <span className="text-destructive ml-0.5">*</span>}
-                              </Label>
-                              {field.field_type === 'select' && field.field_options ? (
-                                <Select 
-                                  value={newActionRequiredFields[field.field_name] || ''} 
-                                  onValueChange={(value) => handleRequiredFieldChange(field.field_name, value)}
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder={`Select ${field.field_name.toLowerCase()}`} />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {field.field_options.map((option) => (
-                                      <SelectItem key={option} value={option}>
-                                        {option}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              ) : field.field_type === 'currency' ? (
-                                <div className="relative">
-                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">₺</span>
-                                  <Input 
-                                    type="number"
-                                    placeholder="0"
-                                    className="pl-7"
-                                    value={newActionRequiredFields[field.field_name] || ''}
-                                    onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
-                                  />
-                                </div>
-                              ) : field.field_type === 'number' ? (
-                                <Input 
-                                  type="number"
-                                  placeholder="0"
-                                  value={newActionRequiredFields[field.field_name] || ''}
-                                  onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
-                                />
-                              ) : field.field_type === 'date' ? (
-                                <Input 
-                                  type="date"
-                                  value={newActionRequiredFields[field.field_name] || ''}
-                                  onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
-                                />
-                              ) : (
-                                <Input 
-                                  type="text"
-                                  placeholder={`Enter ${field.field_name.toLowerCase()}`}
-                                  value={newActionRequiredFields[field.field_name] || ''}
-                                  onChange={(e) => handleRequiredFieldChange(field.field_name, e.target.value)}
-                                />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex justify-end">
-                      <Button 
-                        size="sm"
-                        disabled={!newActionName || !newActionProduct || !selectedActionTemplate || createAction.isPending}
-                        onClick={handleAddAction}
-                        className="bg-emerald-600 hover:bg-emerald-700"
-                      >
-                        {createAction.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                        Add Action
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
 
               <Card>
                 <Table>
@@ -696,7 +504,7 @@ const CustomerDetail = () => {
                         <TableCell>{action.name}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="capitalize">
-                            {action.type === 'model_based' ? 'Model' : 'Ad-hoc'}
+                            {ACTION_TYPE_LABELS[action.type] || action.type}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -738,6 +546,13 @@ const CustomerDetail = () => {
         onOpenChange={(open) => !open && setSelectedActionId(null)}
         customerId={customerId || ""}
         actionId={selectedActionId || ""}
+      />
+
+      <AddActionModal
+        open={showAddAction}
+        onOpenChange={setShowAddAction}
+        customerId={customerId || ""}
+        preselectedProductId={preselectedProductId}
       />
 
       <PrincipalityScoreModal
