@@ -358,29 +358,12 @@ export type Database = {
         | "Strong Target"
         | "Ana Banka"
       product_category:
-        | "TL Nakdi Kredi"
-        | "TL Gayrinakdi Kredi"
-        | "YP Nakdi Kredi"
-        | "YP Gayrinakdi Kredi"
-        | "TL Vadeli"
-        | "TL Vadesiz"
-        | "YP Vadeli"
-        | "YP Vadesiz"
-        | "TL Yatırım Fonu"
-        | "YP Yatırım Fonu"
-        | "Ticari Kart"
-        | "Üye İşyeri"
-        | "Maaş"
-        | "Sigorta-Hayat"
-        | "Sigorta-Elementer"
-        | "Sigorta-BES"
-        | "Faktoring"
-        | "Leasing"
-        | "Ödeme Çeki"
-        | "Tahsil Çeki"
-        | "DTS"
-        | "Garantili Ödeme"
-        | "Garanti Filo Kiralama"
+        | "Kredi"
+        | "Kaynak"
+        | "Ödeme"
+        | "Tahsilat"
+        | "Sigorta"
+        | "İştirak"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -536,29 +519,12 @@ export const Constants = {
         "Ana Banka",
       ],
       product_category: [
-        "TL Nakdi Kredi",
-        "TL Gayrinakdi Kredi",
-        "YP Nakdi Kredi",
-        "YP Gayrinakdi Kredi",
-        "TL Vadeli",
-        "TL Vadesiz",
-        "YP Vadeli",
-        "YP Vadesiz",
-        "TL Yatırım Fonu",
-        "YP Yatırım Fonu",
-        "Ticari Kart",
-        "Üye İşyeri",
-        "Maaş",
-        "Sigorta-Hayat",
-        "Sigorta-Elementer",
-        "Sigorta-BES",
-        "Faktoring",
-        "Leasing",
-        "Ödeme Çeki",
-        "Tahsil Çeki",
-        "DTS",
-        "Garantili Ödeme",
-        "Garanti Filo Kiralama",
+        "Kredi",
+        "Kaynak",
+        "Ödeme",
+        "Tahsilat",
+        "Sigorta",
+        "İştirak",
       ],
     },
   },
