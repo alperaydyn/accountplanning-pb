@@ -89,7 +89,7 @@ const Customers = () => {
   // Filter by product (need to check customer_products) - for now just filter actions
   const getCustomerIdsWithActionStatus = (status: string): Set<string> => {
     if (status === "all") return new Set(customers.map(c => c.id));
-    return new Set(allActions.filter(a => a.status === status).map(a => a.customer_id));
+    return new Set(allActions.filter(a => a.current_status === status).map(a => a.customer_id));
   };
 
   const customerIdsWithActionStatus = getCustomerIdsWithActionStatus(actionStatusFilter);
@@ -97,8 +97,8 @@ const Customers = () => {
   // Calculate action counts per customer
   const getCustomerActionCounts = (customerId: string) => {
     const customerActions = allActions.filter(a => a.customer_id === customerId);
-    const planned = customerActions.filter(a => a.status === 'Planlandı').length;
-    const pending = customerActions.filter(a => a.status === 'Beklemede').length;
+    const planned = customerActions.filter(a => a.current_status === 'Planlandı').length;
+    const pending = customerActions.filter(a => a.current_status === 'Beklemede').length;
     return { planned, pending };
   };
 

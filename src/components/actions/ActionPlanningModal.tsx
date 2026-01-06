@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getCustomerById } from "@/data/customers";
-import { getCustomerProductByProductId } from "@/data/customerProducts";
-import { getProductById } from "@/data/products";
-import { getActionsByProductId } from "@/data/actions";
+import { useCustomerById } from "@/hooks/useCustomers";
+import { useCustomerProducts } from "@/hooks/useCustomerProducts";
+import { useProducts } from "@/hooks/useProducts";
+import { useActionsByProduct, Action } from "@/hooks/useActions";
+import { useActionUpdatesByProduct, ActionUpdate } from "@/hooks/useActionUpdates";
 import { cn } from "@/lib/utils";
 
 interface ActionPlanningModalProps {
@@ -25,22 +25,26 @@ const priorityColors = {
 };
 
 const responseOptions = [
-  { value: "pending", label: "Pending" },
-  { value: "planned", label: "Planned" },
-  { value: "completed", label: "Completed" },
-  { value: "postponed", label: "Postponed" },
-  { value: "not_interested", label: "Not Interested" },
-  { value: "not_possible", label: "Not Possible" },
+  { value: "Beklemede", label: "Pending" },
+  { value: "Planlandı", label: "Planned" },
+  { value: "Tamamlandı", label: "Completed" },
+  { value: "Ertelendi", label: "Postponed" },
+  { value: "İlgilenmiyor", label: "Not Interested" },
+  { value: "Uygun Değil", label: "Not Possible" },
 ];
 
 export function ActionPlanningModal({ open, onOpenChange, customerId, productId }: ActionPlanningModalProps) {
   const [customerExplanation, setCustomerExplanation] = useState("");
   const [actionStates, setActionStates] = useState<Record<string, { response: string; actionDate: string; volume: string }>>({});
   
-  const customer = getCustomerById(customerId);
-  const product = getProductById(productId);
-  const customerProduct = getCustomerProductByProductId(customerId, productId);
-  const actions = getActionsByProductId(customerId, productId);
+  const { data: customer } = useCustomerById(customerId);
+  const { data: allProducts = [] } = useProducts();
+  const { data: customerProducts = [] } = useCustomerProducts(customerId);
+  const { data: actions = [] } = useActionsByProduct(customerId, productId);
+  const { data: updates = [] } = useActionUpdatesByProduct(customerId, productId);
+  
+  const product = allProducts.find(p => p.id === productId);
+  const customerProduct = customerProducts.find(cp => cp.product_id === productId);
 
   if (!customer || !product || !customerProduct) return null;
 
@@ -66,8 +70,12 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
   };
 
   const getActionState = (actionId: string) => {
-    return actionStates[actionId] || { response: "pending", actionDate: "", volume: "" };
+    return actionStates[actionId] || { response: "Beklemede", actionDate: "", volume: "" };
   };
+
+  const currentValue = Number(customerProduct.current_value);
+  const threshold = customerProduct.threshold || 0;
+  const gap = customerProduct.gap || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -82,16 +90,16 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
           <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
             <div>
               <span className="text-xs text-muted-foreground">Current Value</span>
-              <p className="text-lg font-semibold">₺{customerProduct.currentValue.toLocaleString()}</p>
+              <p className="text-lg font-semibold">₺{currentValue.toLocaleString()}</p>
             </div>
             <div>
               <span className="text-xs text-muted-foreground">Threshold</span>
-              <p className="text-lg font-semibold">₺{customerProduct.threshold.toLocaleString()}</p>
+              <p className="text-lg font-semibold">₺{threshold.toLocaleString()}</p>
             </div>
             <div>
               <span className="text-xs text-muted-foreground">Gap</span>
-              <p className={cn("text-lg font-semibold", customerProduct.gap > 0 ? "text-destructive" : "text-success")}>
-                {customerProduct.gap > 0 ? `-₺${customerProduct.gap.toLocaleString()}` : "On Target"}
+              <p className={cn("text-lg font-semibold", gap > 0 ? "text-destructive" : "text-success")}>
+                {gap > 0 ? `-₺${gap.toLocaleString()}` : "On Target"}
               </p>
             </div>
           </div>
@@ -102,7 +110,7 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
             <div className="space-y-4">
               {actions.map((action) => {
                 const state = getActionState(action.id);
-                const isPlanned = state.response !== "pending" && state.response !== "";
+                const isPlanned = state.response !== "Beklemede" && state.response !== "";
                 
                 return (
                   <div key={action.id} className="border rounded-lg p-4 space-y-4">
@@ -158,11 +166,11 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
                       </div>
                     </div>
 
-                    {/* Action Explanation */}
+                    {/* Creation Reason */}
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Action Explanation</label>
+                      <label className="text-xs text-muted-foreground block mb-1">Creation Reason</label>
                       <p className="text-sm p-2 bg-muted/50 rounded-md min-h-[2rem]">
-                        {isPlanned ? (action.explanation || "No explanation provided") : ""}
+                        {isPlanned ? (action.creation_reason || "No reason provided") : ""}
                       </p>
                     </div>
                   </div>

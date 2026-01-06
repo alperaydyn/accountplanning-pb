@@ -1,4 +1,4 @@
-import { Action, ActionType, Priority, ActionStatus } from '@/types';
+import { Action, ActionType, Priority, ActionStatus, UpdateType } from '@/types';
 import { customers } from './customers';
 import { products } from './products';
 
@@ -41,7 +41,7 @@ const actionResponses = [
   'Customer needs board approval first'
 ];
 
-const explanations = [
+const creationReasons = [
   'Customer has shown interest based on recent engagement patterns',
   'Analysis of transaction history indicates strong fit',
   'Risk assessment completed with positive outcome',
@@ -52,6 +52,22 @@ const explanations = [
   'Gap analysis identified opportunity for value creation',
   'Customer feedback from previous interactions supports this',
   'Competitive intelligence suggests timing is optimal'
+];
+
+const customerHints = [
+  'Mention competitor rates to create urgency',
+  'Focus on relationship benefits and loyalty rewards',
+  'Highlight recent success stories from similar customers',
+  'Emphasize cost savings and efficiency gains',
+  'Present as a package deal with existing products'
+];
+
+const creatorNames = [
+  'AI Model v2.1',
+  'Segment Analysis Engine',
+  'Risk Assessment System',
+  'Portfolio Optimizer',
+  'Customer Insight AI'
 ];
 
 const statuses: ActionStatus[] = ['pending', 'planned', 'completed', 'postponed', 'not_interested', 'not_possible'];
@@ -90,8 +106,7 @@ customers.forEach((customer, custIndex) => {
       : Math.floor(Math.random() * 2);      // 0-1 actions
     
     for (let i = 0; i < baseActionCount; i++) {
-      const status = statuses[Math.floor(Math.random() * statuses.length)];
-      const hasResponse = Math.random() > 0.4; // 60% have a response
+      const currentStatus = statuses[Math.floor(Math.random() * statuses.length)];
       
       actions.push({
         id: `action-${actionId++}`,
@@ -99,17 +114,21 @@ customers.forEach((customer, custIndex) => {
         productId: productId,
         name: actionNames[(prodIndex + i) % actionNames.length],
         description: actionDescriptions[(prodIndex + i) % actionDescriptions.length],
+        creatorName: creatorNames[Math.floor(Math.random() * creatorNames.length)],
+        creationReason: creationReasons[(prodIndex + i) % creationReasons.length],
+        customerHints: customerHints[Math.floor(Math.random() * customerHints.length)],
+        sourceDataDate: generateDate(-Math.floor(Math.random() * 30)),
+        actionTargetDate: generateDate(Math.floor(Math.random() * 30) + 1),
         type: types[Math.floor(Math.random() * types.length)],
         priority: priorities[Math.floor(Math.random() * priorities.length)],
-        status,
         targetValue: Math.floor(Math.random() * 500000) + 100000,
-        plannedDate: status === 'planned' ? generateDate(Math.floor(Math.random() * 30) + 1) : undefined,
-        completedDate: status === 'completed' ? generateDate(-Math.floor(Math.random() * 14)) : undefined,
-        explanation: explanations[(prodIndex + i) % explanations.length],
-        timeToReady: Math.floor(Math.random() * 14) + 1,
+        currentStatus,
+        currentOwnerId: currentStatus !== 'pending' ? 'pm-1' : undefined,
+        currentOwnerType: currentStatus !== 'pending' ? 'user' : 'system',
+        currentPlannedDate: currentStatus === 'planned' ? generateDate(Math.floor(Math.random() * 30) + 1) : undefined,
+        currentValue: currentStatus === 'completed' ? Math.floor(Math.random() * 500000) + 100000 : undefined,
         createdAt: generateDate(-Math.floor(Math.random() * 60)),
-        actionResponse: hasResponse ? actionResponses[Math.floor(Math.random() * actionResponses.length)] : undefined,
-        estimatedActionTime: Math.floor(Math.random() * 30) + 5, // 5-35 days
+        updatedAt: generateDate(-Math.floor(Math.random() * 7)),
       });
     }
   });
@@ -129,13 +148,13 @@ export const getActionsByProductId = (customerId: string, productId: string): Ac
 };
 
 export const getPendingActionsCount = (): number => {
-  return actions.filter(a => a.status === 'pending').length;
+  return actions.filter(a => a.currentStatus === 'pending').length;
 };
 
 export const getPlannedActionsCount = (): number => {
-  return actions.filter(a => a.status === 'planned').length;
+  return actions.filter(a => a.currentStatus === 'planned').length;
 };
 
 export const getCompletedActionsCount = (): number => {
-  return actions.filter(a => a.status === 'completed').length;
+  return actions.filter(a => a.currentStatus === 'completed').length;
 };

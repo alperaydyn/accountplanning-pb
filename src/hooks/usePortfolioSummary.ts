@@ -61,17 +61,17 @@ export const usePortfolioSummary = () => {
         };
       }
 
-      // Get actions
+      // Get actions - use current_status instead of status
       const { data: actions, error: actionsError } = await supabase
         .from('actions')
-        .select('status')
+        .select('current_status')
         .in('customer_id', customerIds);
 
       if (actionsError) throw actionsError;
 
-      const totalActionsPlanned = actions?.filter(a => a.status === 'Planlandı').length || 0;
-      const totalActionsCompleted = actions?.filter(a => a.status === 'Tamamlandı').length || 0;
-      const totalActionsPending = actions?.filter(a => a.status === 'Beklemede').length || 0;
+      const totalActionsPlanned = actions?.filter(a => a.current_status === 'Planlandı').length || 0;
+      const totalActionsCompleted = actions?.filter(a => a.current_status === 'Tamamlandı').length || 0;
+      const totalActionsPending = actions?.filter(a => a.current_status === 'Beklemede').length || 0;
 
       return {
         totalCustomers,

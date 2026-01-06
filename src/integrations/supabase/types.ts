@@ -14,61 +14,138 @@ export type Database = {
   }
   public: {
     Tables: {
+      action_updates: {
+        Row: {
+          action_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          new_date: string | null
+          new_owner_id: string | null
+          new_owner_type: string | null
+          new_status: Database["public"]["Enums"]["action_status"] | null
+          new_value: number | null
+          notes: string | null
+          previous_date: string | null
+          previous_owner_id: string | null
+          previous_owner_type: string | null
+          previous_status: Database["public"]["Enums"]["action_status"] | null
+          previous_value: number | null
+          response_text: string | null
+          update_type: string
+        }
+        Insert: {
+          action_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_date?: string | null
+          new_owner_id?: string | null
+          new_owner_type?: string | null
+          new_status?: Database["public"]["Enums"]["action_status"] | null
+          new_value?: number | null
+          notes?: string | null
+          previous_date?: string | null
+          previous_owner_id?: string | null
+          previous_owner_type?: string | null
+          previous_status?: Database["public"]["Enums"]["action_status"] | null
+          previous_value?: number | null
+          response_text?: string | null
+          update_type: string
+        }
+        Update: {
+          action_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_date?: string | null
+          new_owner_id?: string | null
+          new_owner_type?: string | null
+          new_status?: Database["public"]["Enums"]["action_status"] | null
+          new_value?: number | null
+          notes?: string | null
+          previous_date?: string | null
+          previous_owner_id?: string | null
+          previous_owner_type?: string | null
+          previous_status?: Database["public"]["Enums"]["action_status"] | null
+          previous_value?: number | null
+          response_text?: string | null
+          update_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "action_updates_action_id_fkey"
+            columns: ["action_id"]
+            isOneToOne: false
+            referencedRelation: "actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       actions: {
         Row: {
-          action_response: string | null
-          completed_date: string | null
+          action_target_date: string
           created_at: string
+          creation_reason: string | null
+          creator_name: string
+          current_owner_id: string | null
+          current_owner_type: string | null
+          current_planned_date: string | null
+          current_status: Database["public"]["Enums"]["action_status"]
+          current_value: number | null
+          customer_hints: string | null
           customer_id: string
           description: string | null
-          estimated_action_time: number | null
-          explanation: string | null
           id: string
           name: string
-          planned_date: string | null
           priority: Database["public"]["Enums"]["action_priority"]
           product_id: string
-          status: Database["public"]["Enums"]["action_status"]
+          source_data_date: string
           target_value: number | null
-          time_to_ready: number
           type: Database["public"]["Enums"]["action_type"]
           updated_at: string
         }
         Insert: {
-          action_response?: string | null
-          completed_date?: string | null
+          action_target_date: string
           created_at?: string
+          creation_reason?: string | null
+          creator_name: string
+          current_owner_id?: string | null
+          current_owner_type?: string | null
+          current_planned_date?: string | null
+          current_status?: Database["public"]["Enums"]["action_status"]
+          current_value?: number | null
+          customer_hints?: string | null
           customer_id: string
           description?: string | null
-          estimated_action_time?: number | null
-          explanation?: string | null
           id?: string
           name: string
-          planned_date?: string | null
           priority: Database["public"]["Enums"]["action_priority"]
           product_id: string
-          status?: Database["public"]["Enums"]["action_status"]
+          source_data_date: string
           target_value?: number | null
-          time_to_ready?: number
           type: Database["public"]["Enums"]["action_type"]
           updated_at?: string
         }
         Update: {
-          action_response?: string | null
-          completed_date?: string | null
+          action_target_date?: string
           created_at?: string
+          creation_reason?: string | null
+          creator_name?: string
+          current_owner_id?: string | null
+          current_owner_type?: string | null
+          current_planned_date?: string | null
+          current_status?: Database["public"]["Enums"]["action_status"]
+          current_value?: number | null
+          customer_hints?: string | null
           customer_id?: string
           description?: string | null
-          estimated_action_time?: number | null
-          explanation?: string | null
           id?: string
           name?: string
-          planned_date?: string | null
           priority?: Database["public"]["Enums"]["action_priority"]
           product_id?: string
-          status?: Database["public"]["Enums"]["action_status"]
+          source_data_date?: string
           target_value?: number | null
-          time_to_ready?: number
           type?: Database["public"]["Enums"]["action_type"]
           updated_at?: string
         }
