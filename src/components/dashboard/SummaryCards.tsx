@@ -4,8 +4,8 @@ import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Pack
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { getPortfolioSummary } from "@/data/portfolio";
-import { customers } from "@/data/customers";
+import { usePortfolioSummary } from "@/hooks/usePortfolioSummary";
+import { useCustomers } from "@/hooks/useCustomers";
 
 interface ScoreAxis {
   name: string;
@@ -23,12 +23,13 @@ const getProgressColor = (score: number) => {
 
 export function SummaryCards() {
   const navigate = useNavigate();
-  const summary = getPortfolioSummary();
+  const { data: summary, isLoading } = usePortfolioSummary();
+  const { data: customers = [] } = useCustomers();
   const [showScoreModal, setShowScoreModal] = useState(false);
 
-  // Calculate customer breakdown by status
-  const primaryCount = customers.filter(c => c.status === 'primary').length;
-  const targetCount = customers.filter(c => c.status === 'target' || c.status === 'strong_target').length;
+  // Calculate customer breakdown by status from database
+  const primaryCount = customers.filter(c => c.status === 'Ana Banka').length;
+  const targetCount = customers.filter(c => c.status === 'Target' || c.status === 'Strong Target').length;
   const restCount = customers.length - primaryCount - targetCount;
 
   // Mock benchmark score
@@ -37,32 +38,33 @@ export function SummaryCards() {
 
   // Generate portfolio-level score breakdown
   const totalVolume = 125000000; // Mock total portfolio volume
+  const primaryBankScore = summary?.primaryBankScore ?? 0;
   const axes: ScoreAxis[] = [
     {
       name: "Products",
       icon: <Package className="h-4 w-4" />,
-      score: Math.min(100, summary.primaryBankScore + 5),
+      score: Math.min(100, primaryBankScore + 5),
       description: "Share of loans, guarantees, insurance",
       volume: Math.floor(totalVolume * 0.35),
     },
     {
       name: "Transactional Services",
       icon: <CreditCard className="h-4 w-4" />,
-      score: Math.min(100, summary.primaryBankScore - 3),
+      score: Math.min(100, primaryBankScore - 3),
       description: "Share of monthly payment volume",
       volume: Math.floor(totalVolume * 0.45),
     },
     {
       name: "Liabilities",
       icon: <PiggyBank className="h-4 w-4" />,
-      score: Math.min(100, summary.primaryBankScore + 8),
+      score: Math.min(100, primaryBankScore + 8),
       description: "Share of deposits and other liabilities",
       volume: Math.floor(totalVolume * 0.25),
     },
     {
       name: "Assets / Share of Wallet",
       icon: <Wallet className="h-4 w-4" />,
-      score: Math.min(100, summary.primaryBankScore - 7),
+      score: Math.min(100, primaryBankScore - 7),
       description: "Share of drawn short and long term debt",
       volume: Math.floor(totalVolume * 0.30),
     },
@@ -71,16 +73,13 @@ export function SummaryCards() {
   const cards = [
     {
       title: "Primary Bank Score",
-      value: `${summary.primaryBankScore}%`,
-      change: summary.primaryBankScoreYoY,
-      changeLabel: "YoY",
+      value: isLoading ? "..." : `${summary?.primaryBankScore ?? 0}%`,
       icon: Building,
-      positive: summary.primaryBankScoreYoY > 0,
       onClick: () => setShowScoreModal(true),
     },
     {
       title: "Total Customers",
-      value: summary.totalCustomers,
+      value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
       subtitle: `${primaryCount} Primary | ${targetCount} Target | ${restCount} Rest`,
       icon: Users,
       onClick: () => navigate("/customers"),
@@ -93,9 +92,9 @@ export function SummaryCards() {
     },
     {
       title: "Actions",
-      value: summary.totalActionsPlanned,
-      subtitle: `${summary.totalActionsPlanned} Planned | ${summary.totalActionsPending} Pending`,
-      change: summary.totalActionsCompleted,
+      value: isLoading ? "..." : (summary?.totalActionsPlanned ?? 0),
+      subtitle: `${summary?.totalActionsPlanned ?? 0} Planned | ${summary?.totalActionsPending ?? 0} Pending`,
+      change: summary?.totalActionsCompleted ?? 0,
       changeLabel: "Completed",
       icon: ClipboardCheck,
       positive: true,
@@ -154,14 +153,14 @@ export function SummaryCards() {
               <Users className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Customers</p>
-                <p className="font-medium">{summary.totalCustomers}</p>
+                <p className="font-medium">{summary?.totalCustomers ?? 0}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Factory className="h-4 w-4 text-muted-foreground" />
               <div>
                 <p className="text-xs text-muted-foreground">Primary Bank</p>
-                <p className="font-medium">{summary.primaryBankCustomers} customers</p>
+                <p className="font-medium">{summary?.primaryBankCustomers ?? 0} customers</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -176,7 +175,7 @@ export function SummaryCards() {
           {/* Main Score */}
           <div className="py-4">
             <div className="flex items-baseline gap-3 mb-2">
-              <span className="text-4xl font-bold text-primary">{summary.primaryBankScore}%</span>
+              <span className="text-4xl font-bold text-primary">{primaryBankScore}%</span>
               <span className="text-sm text-muted-foreground">
                 Average principality score across your entire portfolio.
               </span>
@@ -210,7 +209,7 @@ export function SummaryCards() {
           {/* Explanation */}
           <div className="py-4 border-t">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              These four axes aggregate data from all {summary.totalCustomers} customers in your portfolio. The overall Primary Bank Score of {summary.primaryBankScore}% indicates the average depth of banking relationships. Focus on improving underperforming axes to increase wallet share and strengthen customer relationships.
+              These four axes aggregate data from all {summary?.totalCustomers ?? 0} customers in your portfolio. The overall Primary Bank Score of {primaryBankScore}% indicates the average depth of banking relationships. Focus on improving underperforming axes to increase wallet share and strengthen customer relationships.
             </p>
           </div>
 
