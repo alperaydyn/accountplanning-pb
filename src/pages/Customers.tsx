@@ -1,36 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Users } from "lucide-react";
+import { Search, Users, Loader2 } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { customers, customerGroups, getGroupById } from "@/data/customers";
-import { products } from "@/data/products";
-import { customerProducts } from "@/data/customerProducts";
-import { actions } from "@/data/actions";
-import { ActionStatus, CustomerStatus } from "@/types";
+import { useCustomers, SECTORS, SEGMENTS, STATUSES, Customer } from "@/hooks/useCustomers";
+import { useCustomerGroups } from "@/hooks/useCustomerGroups";
+import { useProducts } from "@/hooks/useProducts";
+import { useActions, ACTION_STATUSES } from "@/hooks/useActions";
+import { Database } from "@/integrations/supabase/types";
 
-const getStatusLabel = (status: CustomerStatus): string => {
-  const labels: Record<CustomerStatus, string> = {
-    inactive: "Inactive",
-    active: "Active",
-    target: "Target",
-    strong_target: "Strong Target",
-    primary: "Primary",
-  };
-  return labels[status];
-};
+type CustomerStatus = Database['public']['Enums']['customer_status'];
 
 const getStatusBadgeClass = (status: CustomerStatus): string => {
   switch (status) {
-    case "primary": return "bg-emerald-600 text-white hover:bg-emerald-600";
-    case "strong_target": return "bg-amber-500 text-white hover:bg-amber-500";
-    case "target": return "bg-sky-500 text-white hover:bg-sky-500";
-    case "active": return "bg-slate-400 text-white hover:bg-slate-400";
-    case "inactive": return "bg-slate-200 text-slate-600 hover:bg-slate-200";
+    case "Ana Banka": return "bg-emerald-600 text-white hover:bg-emerald-600";
+    case "Strong Target": return "bg-amber-500 text-white hover:bg-amber-500";
+    case "Target": return "bg-sky-500 text-white hover:bg-sky-500";
+    case "Aktif": return "bg-slate-400 text-white hover:bg-slate-400";
+    case "Yeni Müşteri": return "bg-slate-200 text-slate-600 hover:bg-slate-200";
+    default: return "bg-slate-200 text-slate-600 hover:bg-slate-200";
   }
 };
 
@@ -55,27 +47,34 @@ const Customers = () => {
     }
   }, [searchParams]);
 
-  // Get customer IDs that have the selected product
-  const getCustomerIdsWithProduct = (productId: string): Set<string> => {
-    if (productId === "all") return new Set(customers.map(c => c.id));
-    return new Set(customerProducts.filter(cp => cp.productId === productId).map(cp => cp.customerId));
-  };
+  // Fetch data from database
+  const { data: customers = [], isLoading: customersLoading } = useCustomers({
+    search,
+    status: statusFilter as CustomerStatus | 'all',
+    groupId: groupFilter,
+  });
+  const { data: customerGroups = [] } = useCustomerGroups();
+  const { data: products = [] } = useProducts();
+  const { data: allActions = [] } = useActions();
 
-  // Get customer IDs that have actions with the selected status
+  // Filter by product (need to check customer_products) - for now just filter actions
   const getCustomerIdsWithActionStatus = (status: string): Set<string> => {
     if (status === "all") return new Set(customers.map(c => c.id));
-    return new Set(actions.filter(a => a.status === status).map(a => a.customerId));
+    return new Set(allActions.filter(a => a.status === status).map(a => a.customer_id));
   };
 
-  const customerIdsWithProduct = getCustomerIdsWithProduct(productFilter);
   const customerIdsWithActionStatus = getCustomerIdsWithActionStatus(actionStatusFilter);
 
+  // Calculate action counts per customer
+  const getCustomerActionCounts = (customerId: string) => {
+    const customerActions = allActions.filter(a => a.customer_id === customerId);
+    const planned = customerActions.filter(a => a.status === 'Planlandı').length;
+    const pending = customerActions.filter(a => a.status === 'Beklemede').length;
+    return { planned, pending };
+  };
+
   const filteredCustomers = customers.filter(c => {
-    if (search && !c.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (statusFilter !== "all" && c.status !== statusFilter) return false;
-    if (productFilter !== "all" && !customerIdsWithProduct.has(c.id)) return false;
     if (actionStatusFilter !== "all" && !customerIdsWithActionStatus.has(c.id)) return false;
-    if (groupFilter !== "all" && c.groupId !== groupFilter) return false;
     return true;
   });
 
@@ -95,6 +94,16 @@ const Customers = () => {
     }
     setSearchParams(searchParams);
   };
+
+  if (customersLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -117,11 +126,9 @@ const Customers = () => {
                   <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="target">Target</SelectItem>
-                    <SelectItem value="strong_target">Strong Target</SelectItem>
-                    <SelectItem value="primary">Primary</SelectItem>
+                    {STATUSES.map(status => (
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <Select value={productFilter} onValueChange={(value) => {
@@ -154,65 +161,74 @@ const Customers = () => {
                   <SelectTrigger className="w-40"><SelectValue placeholder="Action Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="planned">Planned</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
+                    {ACTION_STATUSES.slice(0, 3).map(status => (
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Group</TableHead>
-                  <TableHead>Sector</TableHead>
-                  <TableHead>Segment</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-center">Actions</TableHead>
-                  <TableHead>Last Activity</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCustomers.map((customer) => {
-                  const group = customer.groupId ? getGroupById(customer.groupId) : null;
-                  return (
-                    <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/customers/${customer.id}`)}>
-                      <TableCell className="font-medium">{customer.name}</TableCell>
-                      <TableCell>
-                        {group ? (
-                          <Badge 
-                            variant="outline" 
-                            className="cursor-pointer hover:bg-primary/10 gap-1"
-                            onClick={(e) => handleGroupClick(group.id, e)}
-                          >
-                            <Users className="h-3 w-3" />
-                            {group.name}
+            {filteredCustomers.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="text-lg font-medium">No customers found</p>
+                <p className="text-sm">Add your first customer to get started.</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Group</TableHead>
+                    <TableHead>Sector</TableHead>
+                    <TableHead>Segment</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                    <TableHead>Last Activity</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredCustomers.map((customer) => {
+                    const group = customer.customer_groups;
+                    const actionCounts = getCustomerActionCounts(customer.id);
+                    return (
+                      <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/customers/${customer.id}`)}>
+                        <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableCell>
+                          {group ? (
+                            <Badge 
+                              variant="outline" 
+                              className="cursor-pointer hover:bg-primary/10 gap-1"
+                              onClick={(e) => handleGroupClick(group.id, e)}
+                            >
+                              <Users className="h-3 w-3" />
+                              {group.name}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>{customer.sector}</TableCell>
+                        <TableCell>{customer.segment}</TableCell>
+                        <TableCell className="text-center">
+                          <Badge className={getStatusBadgeClass(customer.status)}>
+                            {customer.status}
                           </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>{customer.sector}</TableCell>
-                      <TableCell>{customer.segment}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge className={getStatusBadgeClass(customer.status)}>
-                          {getStatusLabel(customer.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="text-success">{customer.totalActionsPlanned}</span>
-                        <span className="text-muted-foreground"> / </span>
-                        <span className="text-warning">{customer.totalActionsNotPlanned}</span>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{customer.lastActivityDate}</TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-success">{actionCounts.planned}</span>
+                          <span className="text-muted-foreground"> / </span>
+                          <span className="text-warning">{actionCounts.pending}</span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{customer.last_activity_date || '-'}</TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       </div>
