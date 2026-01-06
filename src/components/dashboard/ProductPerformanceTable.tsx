@@ -1,7 +1,16 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -10,8 +19,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getProductPerformance } from "@/data/portfolio";
+import { usePortfolioTargets, useRecordDates, useCreatePortfolioTargets } from "@/hooks/usePortfolioTargets";
+import { useActions } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const statusColors = {
   on_track: "bg-success/10 text-success border-success/20",
@@ -27,7 +38,15 @@ const statusLabels = {
 
 export function ProductPerformanceTable() {
   const navigate = useNavigate();
-  const products = getProductPerformance();
+  const { data: recordDates = [], isLoading: datesLoading } = useRecordDates();
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  
+  // Set default to first available date
+  const effectiveDate = selectedDate || recordDates[0];
+  
+  const { data: targets = [], isLoading: targetsLoading } = usePortfolioTargets(effectiveDate);
+  const { data: actions = [] } = useActions();
+  const createTargets = useCreatePortfolioTargets();
 
   const renderChange = (value: number, isVolume: boolean = false) => {
     const displayValue = isVolume ? `${Math.abs(value).toFixed(1)}M` : Math.abs(value).toString();
@@ -54,131 +73,201 @@ export function ProductPerformanceTable() {
     );
   };
 
+  const getProductStatus = (target: typeof targets[0]): 'on_track' | 'at_risk' | 'critical' => {
+    if (target.stock_count_delta_ytd < 0) return 'critical';
+    if (target.stock_count_delta_ytd < 2) return 'at_risk';
+    return 'on_track';
+  };
+
+  const getActionsCount = (productId: string) => {
+    const productActions = actions.filter(a => a.product_id === productId);
+    const planned = productActions.filter(a => a.status === 'Planlandı' || a.status === 'Tamamlandı').length;
+    const pending = productActions.filter(a => a.status === 'Beklemede').length;
+    return { planned, pending };
+  };
+
+  const handleCreateRecords = async () => {
+    const currentDate = new Date();
+    const recordDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    
+    try {
+      await createTargets.mutateAsync(recordDate);
+      toast.success(`Records created for ${recordDate}`);
+      setSelectedDate(recordDate);
+    } catch (error) {
+      toast.error("Failed to create records");
+    }
+  };
+
+  const noData = !targetsLoading && targets.length === 0;
+
   return (
     <Card className="bg-card border-border">
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-semibold text-card-foreground">
           Product Performance
         </CardTitle>
+        <div className="flex items-center gap-2">
+          {noData && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleCreateRecords}
+              disabled={createTargets.isPending}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Create Records
+            </Button>
+          )}
+          <Select
+            value={effectiveDate}
+            onValueChange={setSelectedDate}
+            disabled={datesLoading || recordDates.length === 0}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Select date" />
+            </SelectTrigger>
+            <SelectContent>
+              {recordDates.map((date) => (
+                <SelectItem key={date} value={date}>
+                  {date}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border border-b-0">
-              <TableHead rowSpan={2} className="text-muted-foreground align-bottom border-r border-border">Product</TableHead>
-              <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Type</TableHead>
-              <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Customer Count</TableHead>
-              <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Volume</TableHead>
-              <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Actions</TableHead>
-              <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom">Status</TableHead>
-            </TableRow>
-            <TableRow className="border-border">
-              <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
-              <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <>
-                {/* Stock Row */}
-                <TableRow 
-                  key={`${product.productId}-stock`} 
-                  className="border-border cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/customers?product=${product.productId}`)}
-                >
-                  <TableCell className="border-r border-border" rowSpan={2}>
-                    <div>
-                      <span className="font-medium text-card-foreground">{product.productName}</span>
-                      <span className="block text-xs text-muted-foreground capitalize">
-                        {product.category}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                    Stock
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.stock.count}
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.stock.targetPercent}%
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {renderChange(product.stock.yoy)}
-                  </TableCell>
-                  <TableCell className="text-center border-r border-border">
-                    {renderChange(product.stock.mom)}
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.stock.volume.toFixed(1)}M
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.stock.volumeTargetPercent}%
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {renderChange(product.stock.volumeYoy, true)}
-                  </TableCell>
-                  <TableCell className="text-center border-r border-border">
-                    {renderChange(product.stock.volumeMom, true)}
-                  </TableCell>
-                  <TableCell className="text-center border-r border-border" rowSpan={2}>
-                    <span className="text-success">{product.actionsPlanned}</span>
-                    <span className="text-muted-foreground"> / </span>
-                    <span className="text-warning">{product.actionsNotPlanned}</span>
-                  </TableCell>
-                  <TableCell className="text-center" rowSpan={2}>
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs", statusColors[product.status])}
+        {targetsLoading ? (
+          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+        ) : noData ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No data available. Click "Create Records" to initialize targets.
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border border-b-0">
+                <TableHead rowSpan={2} className="text-muted-foreground align-bottom border-r border-border">Product</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Type</TableHead>
+                <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Customer Count</TableHead>
+                <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Volume</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Actions</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom">Status</TableHead>
+              </TableRow>
+              <TableRow className="border-border">
+                <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {targets.map((target) => {
+                const status = getProductStatus(target);
+                const actionsCount = getActionsCount(target.product_id);
+                
+                return (
+                  <>
+                    {/* Stock Row */}
+                    <TableRow 
+                      key={`${target.id}-stock`} 
+                      className="border-border cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/customers?product=${target.product_id}`)}
                     >
-                      {statusLabels[product.status]}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-                {/* Flow Row */}
-                <TableRow 
-                  key={`${product.productId}-flow`} 
-                  className="border-border cursor-pointer hover:bg-muted/50"
-                  onClick={() => navigate(`/customers?product=${product.productId}`)}
-                >
-                  <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                    Flow
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.flow.count}
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.flow.targetPercent}%
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {renderChange(product.flow.yoy)}
-                  </TableCell>
-                  <TableCell className="text-center border-r border-border">
-                    {renderChange(product.flow.mom)}
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.flow.volume.toFixed(1)}M
-                  </TableCell>
-                  <TableCell className="text-center text-card-foreground">
-                    {product.flow.volumeTargetPercent}%
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {renderChange(product.flow.volumeYoy, true)}
-                  </TableCell>
-                  <TableCell className="text-center border-r border-border">
-                    {renderChange(product.flow.volumeMom, true)}
-                  </TableCell>
-                </TableRow>
-              </>
-            ))}
-          </TableBody>
-        </Table>
+                      <TableCell className="border-r border-border" rowSpan={2}>
+                        <div>
+                          <span className="font-medium text-card-foreground">{target.products?.name}</span>
+                          <span className="block text-xs text-muted-foreground capitalize">
+                            {target.products?.category}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                        Stock
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {target.stock_count}
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {Number(target.stock_count_tar).toFixed(0)}%
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {renderChange(target.stock_count_delta_ytd)}
+                      </TableCell>
+                      <TableCell className="text-center border-r border-border">
+                        {renderChange(target.stock_count_delta_mtd)}
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {Number(target.stock_volume).toFixed(1)}M
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {Number(target.stock_volume_tar).toFixed(0)}%
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {renderChange(Number(target.stock_volume_delta_ytd), true)}
+                      </TableCell>
+                      <TableCell className="text-center border-r border-border">
+                        {renderChange(Number(target.stock_volume_delta_mtd), true)}
+                      </TableCell>
+                      <TableCell className="text-center border-r border-border" rowSpan={2}>
+                        <span className="text-success">{actionsCount.planned}</span>
+                        <span className="text-muted-foreground"> / </span>
+                        <span className="text-warning">{actionsCount.pending}</span>
+                      </TableCell>
+                      <TableCell className="text-center" rowSpan={2}>
+                        <Badge
+                          variant="outline"
+                          className={cn("text-xs", statusColors[status])}
+                        >
+                          {statusLabels[status]}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                    {/* Flow Row */}
+                    <TableRow 
+                      key={`${target.id}-flow`} 
+                      className="border-border cursor-pointer hover:bg-muted/50"
+                      onClick={() => navigate(`/customers?product=${target.product_id}`)}
+                    >
+                      <TableCell className="text-center text-xs text-muted-foreground font-medium">
+                        Flow
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {target.flow_count}
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {Number(target.flow_count_tar).toFixed(0)}%
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {renderChange(target.flow_count_delta_ytd)}
+                      </TableCell>
+                      <TableCell className="text-center border-r border-border">
+                        {renderChange(target.flow_count_delta_mtd)}
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {Number(target.flow_volume).toFixed(1)}M
+                      </TableCell>
+                      <TableCell className="text-center text-card-foreground">
+                        {Number(target.flow_volume_tar).toFixed(0)}%
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {renderChange(Number(target.flow_volume_delta_ytd), true)}
+                      </TableCell>
+                      <TableCell className="text-center border-r border-border">
+                        {renderChange(Number(target.flow_volume_delta_mtd), true)}
+                      </TableCell>
+                    </TableRow>
+                  </>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
