@@ -4,11 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { Lightbulb } from "lucide-react";
 import { useCustomerById } from "@/hooks/useCustomers";
 import { useCustomerProducts } from "@/hooks/useCustomerProducts";
 import { useProducts } from "@/hooks/useProducts";
-import { useActionsByProduct, Action } from "@/hooks/useActions";
-import { useActionUpdatesByProduct, ActionUpdate } from "@/hooks/useActionUpdates";
+import { useActionsByProduct } from "@/hooks/useActions";
+import { useActionUpdatesByProduct } from "@/hooks/useActionUpdates";
 import { cn } from "@/lib/utils";
 
 interface ActionPlanningModalProps {
@@ -35,7 +38,8 @@ const responseOptions = [
 
 export function ActionPlanningModal({ open, onOpenChange, customerId, productId }: ActionPlanningModalProps) {
   const [customerExplanation, setCustomerExplanation] = useState("");
-  const [actionStates, setActionStates] = useState<Record<string, { response: string; actionDate: string; volume: string }>>({});
+  const [actionStates, setActionStates] = useState<Record<string, { response: string; actionDate: string; volume: string; responseText: string }>>({});
+  const [expandedHints, setExpandedHints] = useState<Record<string, boolean>>({});
   
   const { data: customer } = useCustomerById(customerId);
   const { data: allProducts = [] } = useProducts();
@@ -69,8 +73,22 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
     }));
   };
 
+  const handleResponseTextChange = (actionId: string, responseText: string) => {
+    setActionStates(prev => ({
+      ...prev,
+      [actionId]: { ...prev[actionId], responseText }
+    }));
+  };
+
+  const toggleHint = (actionId: string) => {
+    setExpandedHints(prev => ({
+      ...prev,
+      [actionId]: !prev[actionId]
+    }));
+  };
+
   const getActionState = (actionId: string) => {
-    return actionStates[actionId] || { response: "Beklemede", actionDate: "", volume: "" };
+    return actionStates[actionId] || { response: "Beklemede", actionDate: "", volume: "", responseText: "" };
   };
 
   const currentValue = Number(customerProduct.current_value);
@@ -110,7 +128,6 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
             <div className="space-y-4">
               {actions.map((action) => {
                 const state = getActionState(action.id);
-                const isPlanned = state.response !== "Beklemede" && state.response !== "";
                 
                 return (
                   <div key={action.id} className="border rounded-lg p-4 space-y-4">
@@ -124,8 +141,36 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
                         <Badge variant="outline" className="text-xs">
                           {action.type === 'model_based' ? 'Model' : 'Ad-hoc'}
                         </Badge>
+                        {(action.creation_reason || action.customer_hints) && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 ml-auto"
+                            onClick={() => toggleHint(action.id)}
+                          >
+                            <Lightbulb className={cn("h-4 w-4", expandedHints[action.id] ? "text-warning" : "text-muted-foreground")} />
+                          </Button>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">{action.description}</p>
+                      
+                      {/* Hints Panel */}
+                      <Collapsible open={expandedHints[action.id]}>
+                        <CollapsibleContent className="mt-2 space-y-2 p-3 bg-warning/10 border border-warning/20 rounded-md">
+                          {action.creation_reason && (
+                            <div>
+                              <span className="text-xs font-medium text-warning">Creation Reason:</span>
+                              <p className="text-sm text-foreground">{action.creation_reason}</p>
+                            </div>
+                          )}
+                          {action.customer_hints && (
+                            <div>
+                              <span className="text-xs font-medium text-warning">Customer Hints:</span>
+                              <p className="text-sm text-foreground">{action.customer_hints}</p>
+                            </div>
+                          )}
+                        </CollapsibleContent>
+                      </Collapsible>
                     </div>
 
                     {/* Response, Action Time & Volume Row */}
@@ -166,12 +211,15 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
                       </div>
                     </div>
 
-                    {/* Creation Reason */}
+                    {/* Response Explanation */}
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Creation Reason</label>
-                      <p className="text-sm p-2 bg-muted/50 rounded-md min-h-[2rem]">
-                        {isPlanned ? (action.creation_reason || "No reason provided") : ""}
-                      </p>
+                      <label className="text-xs text-muted-foreground block mb-1">Response Explanation</label>
+                      <Textarea
+                        placeholder="Explain your response..."
+                        value={state.responseText}
+                        onChange={(e) => handleResponseTextChange(action.id, e.target.value)}
+                        className="min-h-[60px]"
+                      />
                     </div>
                   </div>
                 );
