@@ -56,7 +56,8 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
   const product = action ? allProducts.find(p => p.id === action.product_id) : null;
   const customerProduct = action ? customerProducts.find(cp => cp.product_id === action.product_id) : null;
 
-  if (!customer || !action || !product || !customerProduct) return null;
+  // Only require customer, action, and product - customerProduct is optional for non-owned products
+  if (!customer || !action || !product) return null;
 
   const handleResponseChange = (response: string) => {
     setActionState(prev => ({ ...prev, response }));
@@ -74,36 +75,48 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
     setActionState(prev => ({ ...prev, responseText }));
   };
 
-  const currentValue = Number(customerProduct.current_value);
-  const threshold = customerProduct.threshold || 0;
-  const gap = customerProduct.gap || 0;
+  const currentValue = customerProduct ? Number(customerProduct.current_value) : 0;
+  const threshold = customerProduct?.threshold || 0;
+  const gap = customerProduct?.gap || 0;
+  const isOwned = !!customerProduct;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">{product.name} - Action Planning</DialogTitle>
-          <p className="text-sm text-muted-foreground">{customer.name}</p>
+          <p className="text-sm text-muted-foreground">
+            {customer.name}
+            {!isOwned && <span className="ml-2 text-warning">(Product not owned)</span>}
+          </p>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* Product Summary */}
-          <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-            <div>
-              <span className="text-xs text-muted-foreground">Current Value</span>
-              <p className="text-lg font-semibold">₺{currentValue.toLocaleString()}</p>
+          {isOwned ? (
+            <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+              <div>
+                <span className="text-xs text-muted-foreground">Current Value</span>
+                <p className="text-lg font-semibold">₺{currentValue.toLocaleString()}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Threshold</span>
+                <p className="text-lg font-semibold">₺{threshold.toLocaleString()}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Gap</span>
+                <p className={cn("text-lg font-semibold", gap > 0 ? "text-destructive" : "text-success")}>
+                  {gap > 0 ? `-₺${gap.toLocaleString()}` : "On Target"}
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-xs text-muted-foreground">Threshold</span>
-              <p className="text-lg font-semibold">₺{threshold.toLocaleString()}</p>
-            </div>
-            <div>
-              <span className="text-xs text-muted-foreground">Gap</span>
-              <p className={cn("text-lg font-semibold", gap > 0 ? "text-destructive" : "text-success")}>
-                {gap > 0 ? `-₺${gap.toLocaleString()}` : "On Target"}
+          ) : (
+            <div className="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+              <p className="text-sm text-warning">
+                This is a cross-sell action for a product the customer doesn't currently own.
               </p>
             </div>
-          </div>
+          )}
 
           {/* Single Action */}
           <div className="border rounded-lg p-4 space-y-4">
