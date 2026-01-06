@@ -4,6 +4,7 @@ import { products } from './products';
 import { actions, getCustomerProductIds } from './actions';
 
 // Generate customer-product relationships
+// Note: threshold values are now fetched from product_thresholds table based on sector/segment
 export const customerProducts: CustomerProduct[] = [];
 
 let cpId = 1;
@@ -15,9 +16,8 @@ customers.forEach(customer => {
     const product = products.find(p => p.id === productId);
     if (!product) return;
     
-    const rawThreshold = Math.floor(Math.random() * 1000000) + 100000;
-    const threshold = Math.floor(rawThreshold / 10000) * 10000;
-    const currentValue = Math.floor(Math.random() * threshold * 1.3); // Can exceed threshold
+    // Generate random current value (threshold comes from product_thresholds table)
+    const currentValue = Math.floor(Math.random() * 1000000) + 100000;
     const customerActions = actions.filter(
       a => a.customerId === customer.id && a.productId === productId
     );
@@ -27,9 +27,8 @@ customers.forEach(customer => {
       customerId: customer.id,
       productId: productId,
       currentValue,
-      threshold,
+      // threshold is now fetched from product_thresholds based on customer sector/segment
       externalData: product.isExternal ? Math.floor(Math.random() * 500000) : undefined,
-      gap: threshold - currentValue,
       actionsCount: customerActions.length,
     });
   });

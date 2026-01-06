@@ -48,9 +48,9 @@ export interface CustomerProduct {
   customerId: string;
   productId: string;
   currentValue: number;
-  threshold: number;
+  threshold?: number; // From product_thresholds table
   externalData?: number; // For external products
-  gap: number; // threshold - currentValue
+  gap?: number; // threshold - currentValue (computed)
   actionsCount: number;
 }
 
