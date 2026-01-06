@@ -7,6 +7,7 @@ export type ActionStatus = 'pending' | 'planned' | 'completed' | 'postponed' | '
 export type ActionType = 'model_based' | 'ad_hoc';
 export type Priority = 'high' | 'medium' | 'low';
 export type ProductCategory = 'loans' | 'deposits' | 'fx' | 'cards' | 'insurance' | 'investment' | 'payment' | 'external';
+export type UpdateType = 'assigned' | 'status_change' | 'value_update' | 'date_change' | 'response' | 'closed';
 
 export interface PortfolioManager {
   id: string;
@@ -41,6 +42,7 @@ export interface Product {
   category: ProductCategory;
   isExternal: boolean;
   description: string;
+  displayOrder?: number;
 }
 
 export interface CustomerProduct {
@@ -54,23 +56,50 @@ export interface CustomerProduct {
   actionsCount: number;
 }
 
+// Updated Action interface matching the new schema
 export interface Action {
   id: string;
   customerId: string;
   productId: string;
   name: string;
   description: string;
+  creatorName: string;
+  creationReason?: string;
+  customerHints?: string;
+  sourceDataDate: string;
+  actionTargetDate: string;
   type: ActionType;
   priority: Priority;
-  status: ActionStatus;
   targetValue?: number;
-  plannedDate?: string;
-  completedDate?: string;
-  explanation?: string;
-  timeToReady: number; // days
+  // Current state (denormalized)
+  currentStatus: ActionStatus;
+  currentOwnerId?: string;
+  currentOwnerType?: string; // 'system' or 'user'
+  currentPlannedDate?: string;
+  currentValue?: number;
   createdAt: string;
-  actionResponse?: string; // Response/feedback from customer
-  estimatedActionTime?: number; // Estimated time to complete action in days
+  updatedAt: string;
+}
+
+// Action Update for tracking all changes/responses
+export interface ActionUpdate {
+  id: string;
+  actionId: string;
+  updateType: UpdateType;
+  previousStatus?: ActionStatus;
+  newStatus?: ActionStatus;
+  previousValue?: number;
+  newValue?: number;
+  previousDate?: string;
+  newDate?: string;
+  previousOwnerId?: string;
+  newOwnerId?: string;
+  previousOwnerType?: string;
+  newOwnerType?: string;
+  responseText?: string;
+  notes?: string;
+  createdAt: string;
+  createdBy?: string;
 }
 
 export interface ProductPerformanceRow {

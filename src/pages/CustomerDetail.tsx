@@ -87,13 +87,18 @@ const CustomerDetail = () => {
   const handleAddAction = async () => {
     if (!newActionName || !newActionProduct || !customerId) return;
     
+    const today = new Date().toISOString().split('T')[0];
+    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+    
     await createAction.mutateAsync({
       customer_id: customerId,
       product_id: newActionProduct,
       name: newActionName,
+      creator_name: 'User',
+      source_data_date: today,
+      action_target_date: endOfMonth,
       type: 'ad_hoc',
       priority: 'medium',
-      explanation: newActionExplanation || undefined,
     });
     
     resetAddActionForm();
@@ -119,7 +124,7 @@ const CustomerDetail = () => {
 
   const filteredActions = customerActions.filter(action => {
     if (priorityFilter !== "all" && action.priority !== priorityFilter) return false;
-    if (statusFilter !== "all" && action.status !== statusFilter) return false;
+    if (statusFilter !== "all" && action.current_status !== statusFilter) return false;
     return true;
   });
 
@@ -163,13 +168,13 @@ const CustomerDetail = () => {
           comparison = priorityOrder[a.priority] - priorityOrder[b.priority];
           break;
         case "status":
-          comparison = statusOrder[a.status] - statusOrder[b.status];
+          comparison = statusOrder[a.current_status] - statusOrder[b.current_status];
           break;
         case "gap":
           comparison = gapA - gapB;
           break;
         case "plannedDate":
-          comparison = (a.planned_date || "").localeCompare(b.planned_date || "");
+          comparison = (a.current_planned_date || "").localeCompare(b.current_planned_date || "");
           break;
       }
       return sortDirection === "asc" ? comparison : -comparison;
@@ -557,14 +562,14 @@ const CustomerDetail = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(action.status)}>
-                            {action.status}
+                          <Badge variant={getStatusBadgeVariant(action.current_status)}>
+                            {action.current_status}
                           </Badge>
                         </TableCell>
                         <TableCell className={customerProduct && (customerProduct.gap || 0) > 0 ? "text-destructive" : "text-success"}>
                           {customerProduct ? `₺${Math.abs(customerProduct.gap || 0).toLocaleString()}` : "-"}
                         </TableCell>
-                        <TableCell>{action.planned_date || "-"}</TableCell>
+                        <TableCell>{action.current_planned_date || "-"}</TableCell>
                       </TableRow>
                     );
                   })}

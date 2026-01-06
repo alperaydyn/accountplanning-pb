@@ -23,17 +23,17 @@ export const getPortfolioSummary = (): PortfolioSummary => {
     primaryBankScore,
     primaryBankScoreYoY: 5.2, // Mock improvement
     primaryBankScoreMoM: 1.8,
-    totalActionsPlanned: actions.filter(a => a.status === 'planned').length,
-    totalActionsCompleted: actions.filter(a => a.status === 'completed').length,
-    totalActionsPending: actions.filter(a => a.status === 'pending').length,
+    totalActionsPlanned: actions.filter(a => a.currentStatus === 'planned').length,
+    totalActionsCompleted: actions.filter(a => a.currentStatus === 'completed').length,
+    totalActionsPending: actions.filter(a => a.currentStatus === 'pending').length,
   };
 };
 
 export const getProductPerformance = (): ProductPerformance[] => {
   return products.slice(0, 15).map(product => {
     const productActions = actions.filter(a => a.productId === product.id);
-    const planned = productActions.filter(a => a.status === 'planned' || a.status === 'completed').length;
-    const notPlanned = productActions.filter(a => a.status === 'pending').length;
+    const planned = productActions.filter(a => a.currentStatus === 'planned' || a.currentStatus === 'completed').length;
+    const notPlanned = productActions.filter(a => a.currentStatus === 'pending').length;
     
     // Stock figures (existing/cumulative)
     const stockCount = Math.floor(Math.random() * 30) + 10;

@@ -7,22 +7,27 @@ type ActionStatus = Database['public']['Enums']['action_status'];
 type ActionType = Database['public']['Enums']['action_type'];
 type ActionPriority = Database['public']['Enums']['action_priority'];
 
+// Updated Action interface matching the new schema
 export interface Action {
   id: string;
   customer_id: string;
   product_id: string;
   name: string;
   description: string | null;
+  creator_name: string;
+  creation_reason: string | null;
+  customer_hints: string | null;
+  source_data_date: string;
+  action_target_date: string;
   type: ActionType;
   priority: ActionPriority;
-  status: ActionStatus;
   target_value: number | null;
-  planned_date: string | null;
-  completed_date: string | null;
-  explanation: string | null;
-  time_to_ready: number;
-  action_response: string | null;
-  estimated_action_time: number | null;
+  // Current state (denormalized)
+  current_status: ActionStatus;
+  current_owner_id: string | null;
+  current_owner_type: string | null;
+  current_planned_date: string | null;
+  current_value: number | null;
   created_at: string;
   updated_at: string;
   // Joined data
@@ -80,11 +85,11 @@ export const useActions = (filters?: ActionFilters) => {
           )
         `)
         .in('customer_id', customerIds)
-        .order('planned_date', { ascending: true, nullsFirst: false });
+        .order('action_target_date', { ascending: true, nullsFirst: false });
 
       // Apply filters
       if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
+        query = query.eq('current_status', filters.status);
       }
       if (filters?.priority && filters.priority !== 'all') {
         query = query.eq('priority', filters.priority);
@@ -96,10 +101,10 @@ export const useActions = (filters?: ActionFilters) => {
         query = query.eq('product_id', filters.productId);
       }
       if (filters?.dateFrom) {
-        query = query.gte('planned_date', filters.dateFrom);
+        query = query.gte('action_target_date', filters.dateFrom);
       }
       if (filters?.dateTo) {
-        query = query.lte('planned_date', filters.dateTo);
+        query = query.lte('action_target_date', filters.dateTo);
       }
 
       const { data, error } = await query;
@@ -128,7 +133,7 @@ export const useActionsByCustomer = (customerId: string | undefined) => {
           )
         `)
         .eq('customer_id', customerId)
-        .order('planned_date', { ascending: true, nullsFirst: false });
+        .order('action_target_date', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       return data as Action[];
@@ -148,7 +153,7 @@ export const useActionsByProduct = (customerId: string | undefined, productId: s
         .select('*')
         .eq('customer_id', customerId)
         .eq('product_id', productId)
-        .order('planned_date', { ascending: true, nullsFirst: false });
+        .order('action_target_date', { ascending: true, nullsFirst: false });
 
       if (error) throw error;
       return data as Action[];
@@ -162,14 +167,16 @@ export interface CreateActionInput {
   product_id: string;
   name: string;
   description?: string;
+  creator_name: string;
+  creation_reason?: string;
+  customer_hints?: string;
+  source_data_date: string;
+  action_target_date: string;
   type: ActionType;
   priority: ActionPriority;
-  status?: ActionStatus;
   target_value?: number;
-  planned_date?: string;
-  explanation?: string;
-  time_to_ready?: number;
-  estimated_action_time?: number;
+  current_status?: ActionStatus;
+  current_planned_date?: string;
 }
 
 export const useCreateAction = () => {
@@ -181,7 +188,7 @@ export const useCreateAction = () => {
         .from('actions')
         .insert({
           ...input,
-          status: input.status || 'Beklemede',
+          current_status: input.current_status || 'Beklemede',
         })
         .select()
         .single();

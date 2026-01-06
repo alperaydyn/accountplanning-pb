@@ -7,20 +7,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { actions } from "@/data/actions";
-import { customers } from "@/data/customers";
-import { products } from "@/data/products";
-import { Action, ActionStatus } from "@/types";
+import { useActions, Action } from "@/hooks/useActions";
+import { useCustomers } from "@/hooks/useCustomers";
+import { useProducts } from "@/hooks/useProducts";
+import { Database } from "@/integrations/supabase/types";
 
 type ViewMode = "daily" | "weekly" | "monthly";
+type ActionStatus = Database['public']['Enums']['action_status'];
 
 const statusConfig: Record<ActionStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
-  pending: { label: "Pending", variant: "secondary", icon: Clock },
-  planned: { label: "Planned", variant: "default", icon: CalendarIcon },
-  completed: { label: "Completed", variant: "outline", icon: CheckCircle2 },
-  postponed: { label: "Postponed", variant: "secondary", icon: AlertCircle },
-  not_interested: { label: "Not Interested", variant: "destructive", icon: XCircle },
-  not_possible: { label: "Not Possible", variant: "destructive", icon: XCircle },
+  'Beklemede': { label: "Pending", variant: "secondary", icon: Clock },
+  'Planlandı': { label: "Planned", variant: "default", icon: CalendarIcon },
+  'Tamamlandı': { label: "Completed", variant: "outline", icon: CheckCircle2 },
+  'Ertelendi': { label: "Postponed", variant: "secondary", icon: AlertCircle },
+  'İlgilenmiyor': { label: "Not Interested", variant: "destructive", icon: XCircle },
+  'Uygun Değil': { label: "Not Possible", variant: "destructive", icon: XCircle },
 };
 
 const priorityColors = {
@@ -31,10 +32,14 @@ const priorityColors = {
 
 export default function ActionsAgenda() {
   const [searchParams] = useSearchParams();
-  const filterStatus = searchParams.get("status"); // 'planned' or 'pending'
+  const filterStatus = searchParams.get("status");
   
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [currentDate, setCurrentDate] = useState(new Date());
+  
+  const { data: actions = [] } = useActions();
+  const { data: customers = [] } = useCustomers();
+  const { data: products = [] } = useProducts();
 
   const navigateDate = (direction: "prev" | "next") => {
     if (viewMode === "daily") {
@@ -60,7 +65,6 @@ export default function ActionsAgenda() {
 
   const days = useMemo(() => {
     const allDays = eachDayOfInterval(dateRange);
-    // Hide weekends for weekly view
     if (viewMode === "weekly") {
       return allDays.filter(day => !isWeekend(day));
     }
@@ -70,25 +74,24 @@ export default function ActionsAgenda() {
   const filteredActions = useMemo(() => {
     let result = actions;
     
-    if (filterStatus === "planned") {
-      result = result.filter(a => a.status === "planned");
-    } else if (filterStatus === "pending") {
-      result = result.filter(a => a.status === "pending");
+    if (filterStatus === "Planlandı") {
+      result = result.filter(a => a.current_status === "Planlandı");
+    } else if (filterStatus === "Beklemede") {
+      result = result.filter(a => a.current_status === "Beklemede");
     } else {
-      result = result.filter(a => a.status === "planned" || a.status === "pending");
+      result = result.filter(a => a.current_status === "Planlandı" || a.current_status === "Beklemede");
     }
     
     return result;
-  }, [filterStatus]);
+  }, [actions, filterStatus]);
 
   const getActionsForDay = (day: Date): Action[] => {
     return filteredActions.filter(action => {
-      if (action.plannedDate) {
-        return isSameDay(new Date(action.plannedDate), day);
+      if (action.current_planned_date) {
+        return isSameDay(new Date(action.current_planned_date), day);
       }
-      // For pending actions without planned date, show on creation date
-      if (action.status === "pending" && action.createdAt) {
-        return isSameDay(new Date(action.createdAt), day);
+      if (action.current_status === "Beklemede" && action.action_target_date) {
+        return isSameDay(new Date(action.action_target_date), day);
       }
       return false;
     });
@@ -117,13 +120,12 @@ export default function ActionsAgenda() {
   return (
     <AppLayout>
       <div className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <PageBreadcrumb items={[{ label: "Actions Agenda" }]} />
             <h1 className="text-2xl font-bold text-foreground">Actions Agenda</h1>
             <p className="text-muted-foreground">
-              {filterStatus === "planned" ? "Planned actions" : filterStatus === "pending" ? "Pending actions" : "All planned & pending actions"} 
+              {filterStatus === "Planlandı" ? "Planned actions" : filterStatus === "Beklemede" ? "Pending actions" : "All planned & pending actions"} 
               {" "}• {totalActionsInView} actions in view
             </p>
           </div>
@@ -139,7 +141,6 @@ export default function ActionsAgenda() {
           </div>
         </div>
 
-        {/* Navigation */}
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
@@ -158,7 +159,7 @@ export default function ActionsAgenda() {
               <div className="flex gap-2">
                 {filterStatus && (
                   <Badge variant="secondary">
-                    Filtered: {filterStatus === "planned" ? "Planned" : "Pending"}
+                    Filtered: {filterStatus === "Planlandı" ? "Planned" : "Pending"}
                   </Badge>
                 )}
               </div>
@@ -166,7 +167,6 @@ export default function ActionsAgenda() {
           </CardHeader>
         </Card>
 
-        {/* Calendar Grid */}
         {viewMode === "monthly" ? (
           <div className="grid grid-cols-7 gap-2">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
@@ -190,7 +190,7 @@ export default function ActionsAgenda() {
                         <div 
                           key={action.id} 
                           className={`text-xs p-1 rounded border truncate ${priorityColors[action.priority]}`}
-                          title={`${action.name} - ${getCustomerName(action.customerId)}`}
+                          title={`${action.name} - ${getCustomerName(action.customer_id)}`}
                         >
                           {action.name}
                         </div>
@@ -207,7 +207,6 @@ export default function ActionsAgenda() {
             })}
           </div>
         ) : viewMode === "weekly" ? (
-          /* Weekly View - Vertical days, compact layout, no weekends */
           <Card>
             <CardContent className="p-0 divide-y divide-border">
               {days.map(day => {
@@ -217,7 +216,6 @@ export default function ActionsAgenda() {
                     key={day.toISOString()} 
                     className={`flex ${isToday(day) ? "bg-primary/5" : ""}`}
                   >
-                    {/* Day label */}
                     <div className={`w-24 shrink-0 p-3 border-r border-border ${isToday(day) ? "bg-primary/10" : "bg-muted/30"}`}>
                       <p className={`text-xs font-medium ${isToday(day) ? "text-primary" : "text-muted-foreground"}`}>
                         {format(day, "EEE")}
@@ -226,7 +224,6 @@ export default function ActionsAgenda() {
                         {format(day, "d")}
                       </p>
                     </div>
-                    {/* Actions */}
                     <div className="flex-1 p-2 min-h-[60px]">
                       {dayActions.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic py-2">No actions</p>
@@ -236,19 +233,19 @@ export default function ActionsAgenda() {
                             <div 
                               key={action.id} 
                               className={`inline-flex items-center gap-1.5 px-2 py-1 rounded border text-xs ${priorityColors[action.priority]}`}
-                              title={`${action.name} - ${getProductName(action.productId)}`}
+                              title={`${action.name} - ${getProductName(action.product_id)}`}
                             >
                               <Link 
-                                to={`/customers/${action.customerId}`}
+                                to={`/customers/${action.customer_id}`}
                                 className="font-medium truncate max-w-[120px] hover:underline hover:text-primary"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                {getCustomerName(action.customerId)}
+                                {getCustomerName(action.customer_id)}
                               </Link>
                               <span className="text-muted-foreground">•</span>
                               <span className="truncate max-w-[150px]">{action.name}</span>
-                              <Badge variant={statusConfig[action.status].variant} className="text-[10px] px-1 py-0 h-4">
-                                {statusConfig[action.status].label}
+                              <Badge variant={statusConfig[action.current_status].variant} className="text-[10px] px-1 py-0 h-4">
+                                {statusConfig[action.current_status].label}
                               </Badge>
                             </div>
                           ))}
@@ -261,7 +258,6 @@ export default function ActionsAgenda() {
             </CardContent>
           </Card>
         ) : (
-          /* Daily View */
           <div className="grid grid-cols-1 gap-4">
             {days.map(day => {
               const dayActions = getActionsForDay(day);
@@ -280,7 +276,7 @@ export default function ActionsAgenda() {
                       <p className="text-sm text-muted-foreground italic">No actions</p>
                     ) : (
                       dayActions.map(action => {
-                        const StatusIcon = statusConfig[action.status].icon;
+                        const StatusIcon = statusConfig[action.current_status].icon;
                         return (
                           <div 
                             key={action.id} 
@@ -290,18 +286,18 @@ export default function ActionsAgenda() {
                               <div className="flex-1 min-w-0">
                                 <p className="font-medium text-sm truncate">{action.name}</p>
                                 <Link 
-                                  to={`/customers/${action.customerId}`}
+                                  to={`/customers/${action.customer_id}`}
                                   className="text-xs text-muted-foreground truncate hover:underline hover:text-primary block"
                                 >
-                                  {getCustomerName(action.customerId)}
+                                  {getCustomerName(action.customer_id)}
                                 </Link>
                                 <p className="text-xs text-muted-foreground truncate">
-                                  {getProductName(action.productId)}
+                                  {getProductName(action.product_id)}
                                 </p>
                               </div>
-                              <Badge variant={statusConfig[action.status].variant} className="text-xs shrink-0">
+                              <Badge variant={statusConfig[action.current_status].variant} className="text-xs shrink-0">
                                 <StatusIcon className="h-3 w-3 mr-1" />
-                                {statusConfig[action.status].label}
+                                {statusConfig[action.current_status].label}
                               </Badge>
                             </div>
                             <p className="text-xs text-muted-foreground mt-2 line-clamp-2">

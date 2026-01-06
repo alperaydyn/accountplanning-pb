@@ -81,8 +81,8 @@ export function ProductPerformanceTable() {
 
   const getActionsCount = (productId: string) => {
     const productActions = actions.filter(a => a.product_id === productId);
-    const planned = productActions.filter(a => a.status === 'Planlandı' || a.status === 'Tamamlandı').length;
-    const pending = productActions.filter(a => a.status === 'Beklemede').length;
+    const planned = productActions.filter(a => a.current_status === 'Planlandı' || a.current_status === 'Tamamlandı').length;
+    const pending = productActions.filter(a => a.current_status === 'Beklemede').length;
     return { planned, pending };
   };
 
