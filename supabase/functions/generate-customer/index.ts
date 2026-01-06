@@ -54,6 +54,13 @@ Available sectors: ${SECTORS.join(", ")}
 Available segments: ${SEGMENTS.join(", ")} (TİCARİ = largest, MİKRO = smallest)
 Available statuses: ${STATUSES.join(", ")}
 
+IMPORTANT - Status probability distribution (follow this strictly):
+- Yeni Müşteri: 25% chance
+- Aktif: 35% chance
+- Strong Target: 25% chance
+- Target: 10% chance (rare)
+- Ana Banka: 5% chance (very rare)
+
 Product count rules by status:
 - Yeni Müşteri: 1 product (TL Vadesiz Mevduat mandatory)
 - Aktif: 2-3 products
