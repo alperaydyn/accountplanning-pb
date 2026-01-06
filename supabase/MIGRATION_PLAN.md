@@ -315,9 +315,13 @@ Indexes: Performance indexes on foreign keys and common filters
 - useActions (with filters)
 - usePortfolioSummary
 
-### ⏳ Phase 5: Update Components - IN PROGRESS
+### ✅ Phase 5: Update Components - IN PROGRESS
 - [x] Customers page connected to database
-- [ ] CustomerDetail page
+- [x] CustomerDetail page connected to database (2026-01-06)
+  - Uses useCustomerById, useCustomerProducts, useActionsByCustomer, useProducts hooks
+  - Products view with dynamic thresholds from product_thresholds table
+  - Actions view with filtering, sorting, and add new action functionality
+  - AI Customer Summary and Principality Score modal updated for DB types
 - [ ] Dashboard page
 - [ ] ActionsAgenda page
 

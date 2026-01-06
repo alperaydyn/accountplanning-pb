@@ -3,22 +3,33 @@ import { Sparkles, FileText, TrendingUp, Building2, ChevronDown } from "lucide-r
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Customer, CustomerProduct } from "@/types";
-import { getProductById } from "@/data/products";
+
+interface CustomerSummaryData {
+  id: string;
+  name: string;
+  status: string;
+  principalityScore: number;
+}
+
+interface CustomerProductData {
+  productId: string;
+  currentValue: number;
+  threshold: number;
+}
 
 interface AICustomerSummaryProps {
-  customer: Customer;
-  customerProducts: CustomerProduct[];
+  customer: CustomerSummaryData;
+  customerProducts: CustomerProductData[];
   actionsCount: number;
 }
 
 // Generate mock AI summary data based on customer
-const generateCustomerSummary = (customer: Customer, customerProducts: CustomerProduct[], actionsCount: number) => {
+const generateCustomerSummary = (customer: CustomerSummaryData, customerProducts: CustomerProductData[], actionsCount: number) => {
   const totalVolume = customerProducts.reduce((sum, cp) => sum + cp.currentValue, 0);
   const productsAboveThreshold = customerProducts.filter(cp => cp.currentValue >= cp.threshold).length;
   const productsBelowThreshold = customerProducts.length - productsAboveThreshold;
   
-  const isPrimary = customer.status === 'primary';
+  const isPrimary = customer.status === 'primary' || customer.status === 'Ana Banka';
   const statusSummary = isPrimary
     ? `${customer.name} is a primary bank customer with a principality score of ${customer.principalityScore}%. The customer has ${customerProducts.length} active products with a total volume of ₺${totalVolume.toLocaleString()}. ${productsAboveThreshold} products are performing above threshold while ${productsBelowThreshold} require attention.`
     : `${customer.name} is currently using competitor banks as their primary provider. With a principality score of ${customer.principalityScore}%, there is significant opportunity to increase wallet share. Focus on ${productsBelowThreshold} underperforming product areas to strengthen the relationship.`;
@@ -34,7 +45,7 @@ const generateCustomerSummary = (customer: Customer, customerProducts: CustomerP
       .sort((a, b) => b.currentValue - a.currentValue)
       .slice(0, 3)
       .map(cp => ({
-        name: getProductById(cp.productId)?.name || "Unknown",
+        name: `Product ${cp.productId.slice(0, 8)}`,
         volume: cp.currentValue,
         trend: cp.currentValue >= cp.threshold ? "up" : "down"
       })),

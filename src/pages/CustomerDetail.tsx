@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,39 +10,38 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { getCustomerById } from "@/data/customers";
-import { getCustomerProducts } from "@/data/customerProducts";
-import { getProductById } from "@/data/products";
-import { getActionsByCustomerId, actionNames } from "@/data/actions";
+import { useCustomerById } from "@/hooks/useCustomers";
+import { useCustomerProducts, CustomerProduct } from "@/hooks/useCustomerProducts";
+import { useProducts, Product } from "@/hooks/useProducts";
+import { useActionsByCustomer, useCreateAction, Action, ACTION_STATUSES, ACTION_PRIORITIES } from "@/hooks/useActions";
 import { getRequirementsForAction, ActionRequiredField } from "@/data/actionRequirements";
+import { actionNames } from "@/data/actions";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
 import { AutoPilotPanel } from "@/components/customer/AutoPilotPanel";
 import { cn } from "@/lib/utils";
-import { Action, ActionStatus, CustomerStatus, Priority } from "@/types";
+import { Database } from "@/integrations/supabase/types";
+
+type DBCustomerStatus = Database['public']['Enums']['customer_status'];
+type DBActionStatus = Database['public']['Enums']['action_status'];
+type DBActionPriority = Database['public']['Enums']['action_priority'];
 
 type SortColumn = "product" | "name" | "type" | "priority" | "status" | "gap" | "plannedDate";
 type SortDirection = "asc" | "desc";
 
-const getStatusLabel = (status: CustomerStatus): string => {
-  const labels: Record<CustomerStatus, string> = {
-    inactive: "Inactive",
-    active: "Active",
-    target: "Target",
-    strong_target: "Strong Target",
-    primary: "Primary",
-  };
-  return labels[status];
+const getStatusLabel = (status: DBCustomerStatus): string => {
+  return status;
 };
 
-const getStatusBadgeClass = (status: CustomerStatus): string => {
+const getStatusBadgeClass = (status: DBCustomerStatus): string => {
   switch (status) {
-    case "primary": return "bg-emerald-600 text-white hover:bg-emerald-600";
-    case "strong_target": return "bg-amber-500 text-white hover:bg-amber-500";
-    case "target": return "bg-sky-500 text-white hover:bg-sky-500";
-    case "active": return "bg-slate-400 text-white hover:bg-slate-400";
-    case "inactive": return "bg-slate-200 text-slate-600 hover:bg-slate-200";
+    case "Ana Banka": return "bg-emerald-600 text-white hover:bg-emerald-600";
+    case "Strong Target": return "bg-amber-500 text-white hover:bg-amber-500";
+    case "Target": return "bg-sky-500 text-white hover:bg-sky-500";
+    case "Aktif": return "bg-slate-400 text-white hover:bg-slate-400";
+    case "Yeni Müşteri": return "bg-slate-200 text-slate-600 hover:bg-slate-200";
+    default: return "bg-slate-200 text-slate-600 hover:bg-slate-200";
   }
 };
 
@@ -53,8 +52,8 @@ const CustomerDetail = () => {
   const navigate = useNavigate();
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("products");
-  const [priorityFilter, setPriorityFilter] = useState<Priority | "all">("all");
-  const [statusFilter, setStatusFilter] = useState<ActionStatus | "all">("all");
+  const [priorityFilter, setPriorityFilter] = useState<DBActionPriority | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<DBActionStatus | "all">("all");
   const [showPrincipalityModal, setShowPrincipalityModal] = useState(false);
   const [showAddAction, setShowAddAction] = useState(false);
   const [newActionName, setNewActionName] = useState<string>("");
@@ -63,6 +62,13 @@ const CustomerDetail = () => {
   const [newActionRequiredFields, setNewActionRequiredFields] = useState<Record<string, string>>({});
   const [sortColumn, setSortColumn] = useState<SortColumn>("gap");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  // Database hooks
+  const { data: customer, isLoading: customerLoading } = useCustomerById(customerId);
+  const { data: customerProducts = [], isLoading: productsLoading } = useCustomerProducts(customerId);
+  const { data: customerActions = [], isLoading: actionsLoading } = useActionsByCustomer(customerId);
+  const { data: allProducts = [] } = useProducts();
+  const createAction = useCreateAction();
 
   const selectedActionRequirements = getRequirementsForAction(newActionName);
 
@@ -78,14 +84,38 @@ const CustomerDetail = () => {
     setNewActionRequiredFields({});
   };
 
-  const customer = getCustomerById(customerId || "");
-  const customerProducts = getCustomerProducts(customerId || "");
-  const customerActions = getActionsByCustomerId(customerId || "");
+  const handleAddAction = async () => {
+    if (!newActionName || !newActionProduct || !customerId) return;
+    
+    await createAction.mutateAsync({
+      customer_id: customerId,
+      product_id: newActionProduct,
+      name: newActionName,
+      type: 'ad_hoc',
+      priority: 'medium',
+      explanation: newActionExplanation || undefined,
+    });
+    
+    resetAddActionForm();
+  };
+
+  // Helper to get product by ID from allProducts
+  const getProductById = (productId: string): Product | undefined => {
+    return allProducts.find(p => p.id === productId);
+  };
 
   // Calculate total balance for principality modal
-  const totalBalance = customerProducts.reduce((sum, cp) => sum + cp.currentValue, 0);
-  const priorityOrder: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
-  const statusOrder: Record<ActionStatus, number> = { pending: 0, planned: 1, completed: 2, postponed: 3, not_interested: 4, not_possible: 5 };
+  const totalBalance = customerProducts.reduce((sum, cp) => sum + Number(cp.current_value), 0);
+  
+  const priorityOrder: Record<DBActionPriority, number> = { high: 0, medium: 1, low: 2 };
+  const statusOrder: Record<DBActionStatus, number> = { 
+    'Beklemede': 0, 
+    'Planlandı': 1, 
+    'Tamamlandı': 2, 
+    'Ertelendi': 3, 
+    'İlgilenmiyor': 4, 
+    'Uygun Değil': 5 
+  };
 
   const filteredActions = customerActions.filter(action => {
     if (priorityFilter !== "all" && action.priority !== priorityFilter) return false;
@@ -111,10 +141,10 @@ const CustomerDetail = () => {
 
   const sortedActions = useMemo(() => {
     return [...filteredActions].sort((a, b) => {
-      const productA = getProductById(a.productId);
-      const productB = getProductById(b.productId);
-      const customerProductA = customerProducts.find(cp => cp.productId === a.productId);
-      const customerProductB = customerProducts.find(cp => cp.productId === b.productId);
+      const productA = getProductById(a.product_id);
+      const productB = getProductById(b.product_id);
+      const customerProductA = customerProducts.find(cp => cp.product_id === a.product_id);
+      const customerProductB = customerProducts.find(cp => cp.product_id === b.product_id);
       const gapA = customerProductA?.gap ? Math.abs(customerProductA.gap) : 0;
       const gapB = customerProductB?.gap ? Math.abs(customerProductB.gap) : 0;
 
@@ -139,14 +169,14 @@ const CustomerDetail = () => {
           comparison = gapA - gapB;
           break;
         case "plannedDate":
-          comparison = (a.plannedDate || "").localeCompare(b.plannedDate || "");
+          comparison = (a.planned_date || "").localeCompare(b.planned_date || "");
           break;
       }
       return sortDirection === "asc" ? comparison : -comparison;
     });
-  }, [filteredActions, sortColumn, sortDirection, customerProducts]);
+  }, [filteredActions, sortColumn, sortDirection, customerProducts, allProducts]);
 
-  const getPriorityBadgeVariant = (priority: Action["priority"]) => {
+  const getPriorityBadgeVariant = (priority: DBActionPriority) => {
     switch (priority) {
       case "high": return "destructive";
       case "medium": return "default";
@@ -154,18 +184,47 @@ const CustomerDetail = () => {
     }
   };
 
-  const getStatusBadgeVariant = (status: Action["status"]) => {
+  const getStatusBadgeVariant = (status: DBActionStatus) => {
     switch (status) {
-      case "completed": return "default";
-      case "planned": return "outline";
-      case "pending": return "secondary";
+      case "Tamamlandı": return "default";
+      case "Planlandı": return "outline";
+      case "Beklemede": return "secondary";
       default: return "secondary";
     }
   };
 
+  const isLoading = customerLoading || productsLoading || actionsLoading;
+
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (!customer) {
     return <AppLayout><div className="text-center py-12">Customer not found</div></AppLayout>;
   }
+
+  // Convert customer data for components expecting simpler format
+  const customerForComponents = {
+    id: customer.id,
+    name: customer.name,
+    sector: customer.sector,
+    segment: customer.segment,
+    status: customer.status,
+    principalityScore: customer.principality_score || 0,
+  };
+
+  // Convert customerProducts for AICustomerSummary
+  const customerProductsForSummary = customerProducts.map(cp => ({
+    productId: cp.product_id,
+    currentValue: Number(cp.current_value),
+    threshold: cp.threshold || 0,
+  }));
 
   return (
     <AppLayout>
@@ -186,14 +245,14 @@ const CustomerDetail = () => {
             onClick={() => setShowPrincipalityModal(true)}
           >
             <div className="text-sm text-muted-foreground">Principality Score</div>
-            <div className="text-2xl font-bold text-primary underline decoration-dotted underline-offset-4">{customer.principalityScore}%</div>
+            <div className="text-2xl font-bold text-primary underline decoration-dotted underline-offset-4">{customer.principality_score || 0}%</div>
           </div>
         </div>
 
         {/* AI Customer Summary */}
         <AICustomerSummary 
-          customer={customer} 
-          customerProducts={customerProducts} 
+          customer={customerForComponents} 
+          customerProducts={customerProductsForSummary} 
           actionsCount={customerActions.length} 
         />
 
@@ -234,24 +293,26 @@ const CustomerDetail = () => {
           {viewMode === "products" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {customerProducts.map((cp) => {
-                const product = getProductById(cp.productId);
+                const product = getProductById(cp.product_id);
                 if (!product) return null;
                 const threshold = cp.threshold || 0;
                 const gap = cp.gap || 0;
-                const isAboveThreshold = cp.currentValue >= threshold;
+                const currentValue = Number(cp.current_value);
+                const isAboveThreshold = currentValue >= threshold;
+                const actionsCount = customerActions.filter(a => a.product_id === cp.product_id).length;
                 
                 return (
                   <Card 
                     key={cp.id} 
-                    className={cn("cursor-pointer transition-all hover:shadow-md", cp.actionsCount > 0 && "border-info/50")}
-                    onClick={() => setSelectedProductId(cp.productId)}
+                    className={cn("cursor-pointer transition-all hover:shadow-md", actionsCount > 0 && "border-info/50")}
+                    onClick={() => setSelectedProductId(cp.product_id)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-sm font-medium">{product.name}</CardTitle>
-                        {cp.actionsCount > 0 && (
+                        {actionsCount > 0 && (
                           <Badge variant="outline" className="bg-info/10 text-info border-info/20">
-                            {cp.actionsCount} actions
+                            {actionsCount} actions
                           </Badge>
                         )}
                       </div>
@@ -261,7 +322,7 @@ const CustomerDetail = () => {
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Current</span>
-                          <span className="font-medium">₺{cp.currentValue.toLocaleString()}</span>
+                          <span className="font-medium">₺{currentValue.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between text-sm">
                           <span className="text-muted-foreground">Threshold</span>
@@ -281,7 +342,7 @@ const CustomerDetail = () => {
             <div className="space-y-4">
               <div className="flex gap-4 items-center justify-between">
                 <div className="flex gap-4">
-                  <Select value={priorityFilter} onValueChange={(val) => setPriorityFilter(val as Priority | "all")}>
+                  <Select value={priorityFilter} onValueChange={(val) => setPriorityFilter(val as DBActionPriority | "all")}>
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Priority" />
                     </SelectTrigger>
@@ -292,18 +353,15 @@ const CustomerDetail = () => {
                       <SelectItem value="low">Low</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as ActionStatus | "all")}>
+                  <Select value={statusFilter} onValueChange={(val) => setStatusFilter(val as DBActionStatus | "all")}>
                     <SelectTrigger className="w-[150px]">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="planned">Planned</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="postponed">Postponed</SelectItem>
-                      <SelectItem value="not_interested">Not Interested</SelectItem>
-                      <SelectItem value="not_possible">Not Possible</SelectItem>
+                      {ACTION_STATUSES.map(status => (
+                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -332,9 +390,9 @@ const CustomerDetail = () => {
                           </SelectTrigger>
                           <SelectContent>
                             {customerProducts.map((cp) => {
-                              const product = getProductById(cp.productId);
+                              const product = getProductById(cp.product_id);
                               return product ? (
-                                <SelectItem key={cp.productId} value={cp.productId}>
+                                <SelectItem key={cp.product_id} value={cp.product_id}>
                                   {product.name}
                                 </SelectItem>
                               ) : null;
@@ -436,10 +494,11 @@ const CustomerDetail = () => {
                     <div className="flex justify-end">
                       <Button 
                         size="sm"
-                        disabled={!newActionName || !newActionProduct}
-                        onClick={resetAddActionForm}
+                        disabled={!newActionName || !newActionProduct || createAction.isPending}
+                        onClick={handleAddAction}
                         className="bg-emerald-600 hover:bg-emerald-700"
                       >
+                        {createAction.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                         Add Action
                       </Button>
                     </div>
@@ -476,14 +535,14 @@ const CustomerDetail = () => {
                 </TableHeader>
                 <TableBody>
                   {sortedActions.map((action) => {
-                    const product = getProductById(action.productId);
-                    const customerProduct = customerProducts.find(cp => cp.productId === action.productId);
+                    const product = getProductById(action.product_id);
+                    const customerProduct = customerProducts.find(cp => cp.product_id === action.product_id);
                     
                     return (
                       <TableRow 
                         key={action.id} 
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedProductId(action.productId)}
+                        onClick={() => setSelectedProductId(action.product_id)}
                       >
                         <TableCell className="font-medium">{product?.name || "Unknown"}</TableCell>
                         <TableCell>{action.name}</TableCell>
@@ -498,14 +557,14 @@ const CustomerDetail = () => {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getStatusBadgeVariant(action.status)} className="capitalize">
-                            {action.status.replace("_", " ")}
+                          <Badge variant={getStatusBadgeVariant(action.status)}>
+                            {action.status}
                           </Badge>
                         </TableCell>
-                        <TableCell className={customerProduct && customerProduct.gap < 0 ? "text-destructive" : "text-success"}>
-                          {customerProduct ? `₺${Math.abs(customerProduct.gap).toLocaleString()}` : "-"}
+                        <TableCell className={customerProduct && (customerProduct.gap || 0) > 0 ? "text-destructive" : "text-success"}>
+                          {customerProduct ? `₺${Math.abs(customerProduct.gap || 0).toLocaleString()}` : "-"}
                         </TableCell>
-                        <TableCell>{action.plannedDate || "-"}</TableCell>
+                        <TableCell>{action.planned_date || "-"}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -536,7 +595,7 @@ const CustomerDetail = () => {
       <PrincipalityScoreModal
         open={showPrincipalityModal}
         onOpenChange={setShowPrincipalityModal}
-        customer={customer}
+        customer={customerForComponents}
         totalBalance={totalBalance}
       />
     </AppLayout>
