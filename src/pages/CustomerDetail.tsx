@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Sparkles } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +64,7 @@ const CustomerDetail = () => {
   const [newActionRequiredFields, setNewActionRequiredFields] = useState<Record<string, string>>({});
   const [sortColumn, setSortColumn] = useState<SortColumn>("gap");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+  const [isGeneratingActions, setIsGeneratingActions] = useState(false);
 
   // Database hooks
   const { data: customer, isLoading: customerLoading } = useCustomerById(customerId);
@@ -102,6 +105,66 @@ const CustomerDetail = () => {
     });
     
     resetAddActionForm();
+  };
+
+  const handleGenerateActions = async () => {
+    if (!customer || !customerId) return;
+    
+    setIsGeneratingActions(true);
+    try {
+      const ownedProductIds = customerProducts.map(cp => cp.product_id);
+      
+      const { data, error } = await supabase.functions.invoke('generate-actions', {
+        body: {
+          customer: {
+            name: customer.name,
+            segment: customer.segment,
+            sector: customer.sector,
+            status: customer.status,
+            principality_score: customer.principality_score,
+          },
+          products: allProducts.map(p => ({
+            id: p.id,
+            name: p.name,
+            category: p.category,
+          })),
+          ownedProductIds,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.actions && data.actions.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split('T')[0];
+
+        for (const action of data.actions) {
+          await createAction.mutateAsync({
+            customer_id: customerId,
+            product_id: action.product_id,
+            name: action.name,
+            description: action.description,
+            creation_reason: action.creation_reason,
+            customer_hints: action.customer_hints,
+            target_value: action.target_value,
+            creator_name: 'AI Action Generator',
+            source_data_date: today,
+            action_target_date: endOfMonth,
+            type: 'model_based',
+            priority: action.priority,
+          });
+        }
+        
+        toast.success(`${data.actions.length} actions generated successfully`);
+      } else {
+        toast.info('No actions were generated for this customer');
+      }
+    } catch (error) {
+      console.error('Error generating actions:', error);
+      toast.error('Failed to generate actions');
+    } finally {
+      setIsGeneratingActions(false);
+    }
   };
 
   // Helper to get product by ID from allProducts
@@ -376,14 +439,30 @@ const CustomerDetail = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button 
-                  size="sm" 
-                  onClick={() => setShowAddAction(!showAddAction)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add New Action
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleGenerateActions}
+                    disabled={isGeneratingActions}
+                    className="border-primary/50 text-primary hover:bg-primary/10"
+                  >
+                    {isGeneratingActions ? (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-1" />
+                    )}
+                    Generate Actions
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={() => setShowAddAction(!showAddAction)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Add New Action
+                  </Button>
+                </div>
               </div>
 
               {showAddAction && (
