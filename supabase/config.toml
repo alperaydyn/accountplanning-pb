@@ -2,3 +2,6 @@ project_id = "rfpojorabznodwaxwwvl"
 
 [functions.generate-customer]
 verify_jwt = false
+
+[functions.generate-actions]
+verify_jwt = false
