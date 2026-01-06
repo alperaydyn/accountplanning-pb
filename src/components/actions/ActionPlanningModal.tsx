@@ -10,15 +10,15 @@ import { Lightbulb } from "lucide-react";
 import { useCustomerById } from "@/hooks/useCustomers";
 import { useCustomerProducts } from "@/hooks/useCustomerProducts";
 import { useProducts } from "@/hooks/useProducts";
-import { useActionsByProduct } from "@/hooks/useActions";
-import { useActionUpdatesByProduct } from "@/hooks/useActionUpdates";
+import { useActionsByCustomer } from "@/hooks/useActions";
+import { useActionUpdates } from "@/hooks/useActionUpdates";
 import { cn } from "@/lib/utils";
 
 interface ActionPlanningModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: string;
-  productId: string;
+  actionId: string;
 }
 
 const priorityColors = {
@@ -36,59 +36,42 @@ const responseOptions = [
   { value: "Uygun Değil", label: "Not Possible" },
 ];
 
-export function ActionPlanningModal({ open, onOpenChange, customerId, productId }: ActionPlanningModalProps) {
+export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }: ActionPlanningModalProps) {
   const [customerExplanation, setCustomerExplanation] = useState("");
-  const [actionStates, setActionStates] = useState<Record<string, { response: string; actionDate: string; volume: string; responseText: string }>>({});
-  const [expandedHints, setExpandedHints] = useState<Record<string, boolean>>({});
+  const [actionState, setActionState] = useState<{ response: string; actionDate: string; volume: string; responseText: string }>({
+    response: "Beklemede",
+    actionDate: "",
+    volume: "",
+    responseText: "",
+  });
+  const [hintsExpanded, setHintsExpanded] = useState(false);
   
   const { data: customer } = useCustomerById(customerId);
   const { data: allProducts = [] } = useProducts();
   const { data: customerProducts = [] } = useCustomerProducts(customerId);
-  const { data: actions = [] } = useActionsByProduct(customerId, productId);
-  const { data: updates = [] } = useActionUpdatesByProduct(customerId, productId);
+  const { data: customerActions = [] } = useActionsByCustomer(customerId);
+  const { data: updates = [] } = useActionUpdates(actionId);
   
-  const product = allProducts.find(p => p.id === productId);
-  const customerProduct = customerProducts.find(cp => cp.product_id === productId);
+  const action = customerActions.find(a => a.id === actionId);
+  const product = action ? allProducts.find(p => p.id === action.product_id) : null;
+  const customerProduct = action ? customerProducts.find(cp => cp.product_id === action.product_id) : null;
 
-  if (!customer || !product || !customerProduct) return null;
+  if (!customer || !action || !product || !customerProduct) return null;
 
-  const handleResponseChange = (actionId: string, response: string) => {
-    setActionStates(prev => ({
-      ...prev,
-      [actionId]: { ...prev[actionId], response }
-    }));
+  const handleResponseChange = (response: string) => {
+    setActionState(prev => ({ ...prev, response }));
   };
 
-  const handleDateChange = (actionId: string, actionDate: string) => {
-    setActionStates(prev => ({
-      ...prev,
-      [actionId]: { ...prev[actionId], actionDate }
-    }));
+  const handleDateChange = (actionDate: string) => {
+    setActionState(prev => ({ ...prev, actionDate }));
   };
 
-  const handleVolumeChange = (actionId: string, volume: string) => {
-    setActionStates(prev => ({
-      ...prev,
-      [actionId]: { ...prev[actionId], volume }
-    }));
+  const handleVolumeChange = (volume: string) => {
+    setActionState(prev => ({ ...prev, volume }));
   };
 
-  const handleResponseTextChange = (actionId: string, responseText: string) => {
-    setActionStates(prev => ({
-      ...prev,
-      [actionId]: { ...prev[actionId], responseText }
-    }));
-  };
-
-  const toggleHint = (actionId: string) => {
-    setExpandedHints(prev => ({
-      ...prev,
-      [actionId]: !prev[actionId]
-    }));
-  };
-
-  const getActionState = (actionId: string) => {
-    return actionStates[actionId] || { response: "Beklemede", actionDate: "", volume: "", responseText: "" };
+  const handleResponseTextChange = (responseText: string) => {
+    setActionState(prev => ({ ...prev, responseText }));
   };
 
   const currentValue = Number(customerProduct.current_value);
@@ -122,111 +105,97 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, productId 
             </div>
           </div>
 
-          {/* Actions List */}
-          <div>
-            <h3 className="font-semibold mb-3">Actions ({actions.length})</h3>
-            <div className="space-y-4">
-              {actions.map((action) => {
-                const state = getActionState(action.id);
-                
-                return (
-                  <div key={action.id} className="border rounded-lg p-4 space-y-4">
-                    {/* Action Name & Description */}
+          {/* Single Action */}
+          <div className="border rounded-lg p-4 space-y-4">
+            {/* Action Name & Description */}
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-medium text-base">{action.name}</span>
+                <Badge variant="outline" className={priorityColors[action.priority]}>
+                  {action.priority}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {action.type === 'model_based' ? 'Model' : 'Ad-hoc'}
+                </Badge>
+                {(action.creation_reason || action.customer_hints) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 ml-auto"
+                    onClick={() => setHintsExpanded(!hintsExpanded)}
+                  >
+                    <Lightbulb className={cn("h-4 w-4", hintsExpanded ? "text-warning" : "text-muted-foreground")} />
+                  </Button>
+                )}
+              </div>
+              <p className="text-sm text-muted-foreground">{action.description}</p>
+              
+              {/* Hints Panel */}
+              <Collapsible open={hintsExpanded}>
+                <CollapsibleContent className="mt-2 space-y-2 p-3 bg-warning/10 border border-warning/20 rounded-md">
+                  {action.creation_reason && (
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-base">{action.name}</span>
-                        <Badge variant="outline" className={priorityColors[action.priority]}>
-                          {action.priority}
-                        </Badge>
-                        <Badge variant="outline" className="text-xs">
-                          {action.type === 'model_based' ? 'Model' : 'Ad-hoc'}
-                        </Badge>
-                        {(action.creation_reason || action.customer_hints) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 ml-auto"
-                            onClick={() => toggleHint(action.id)}
-                          >
-                            <Lightbulb className={cn("h-4 w-4", expandedHints[action.id] ? "text-warning" : "text-muted-foreground")} />
-                          </Button>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">{action.description}</p>
-                      
-                      {/* Hints Panel */}
-                      <Collapsible open={expandedHints[action.id]}>
-                        <CollapsibleContent className="mt-2 space-y-2 p-3 bg-warning/10 border border-warning/20 rounded-md">
-                          {action.creation_reason && (
-                            <div>
-                              <span className="text-xs font-medium text-warning">Creation Reason:</span>
-                              <p className="text-sm text-foreground">{action.creation_reason}</p>
-                            </div>
-                          )}
-                          {action.customer_hints && (
-                            <div>
-                              <span className="text-xs font-medium text-warning">Customer Hints:</span>
-                              <p className="text-sm text-foreground">{action.customer_hints}</p>
-                            </div>
-                          )}
-                        </CollapsibleContent>
-                      </Collapsible>
+                      <span className="text-xs font-medium text-warning">Creation Reason:</span>
+                      <p className="text-sm text-foreground">{action.creation_reason}</p>
                     </div>
-
-                    {/* Response, Action Time & Volume Row */}
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">Response</label>
-                        <Select value={state.response} onValueChange={(value) => handleResponseChange(action.id, value)}>
-                          <SelectTrigger className="w-full bg-background">
-                            <SelectValue placeholder="Select response" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-background z-50">
-                            {responseOptions.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">Estimated Action Time</label>
-                        <Input
-                          type="datetime-local"
-                          value={state.actionDate}
-                          onChange={(e) => handleDateChange(action.id, e.target.value)}
-                          className="w-full"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-muted-foreground block mb-1">Volume (₺)</label>
-                        <Input
-                          type="number"
-                          placeholder="Enter volume"
-                          value={state.volume}
-                          onChange={(e) => handleVolumeChange(action.id, e.target.value)}
-                          className="w-full"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Response Explanation */}
+                  )}
+                  {action.customer_hints && (
                     <div>
-                      <label className="text-xs text-muted-foreground block mb-1">Response Explanation</label>
-                      <Textarea
-                        placeholder="Explain your response..."
-                        value={state.responseText}
-                        onChange={(e) => handleResponseTextChange(action.id, e.target.value)}
-                        className="min-h-[60px]"
-                      />
+                      <span className="text-xs font-medium text-warning">Customer Hints:</span>
+                      <p className="text-sm text-foreground">{action.customer_hints}</p>
                     </div>
-                  </div>
-                );
-              })}
-              {actions.length === 0 && (
-                <p className="text-muted-foreground text-center py-4">No actions for this product.</p>
-              )}
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+
+            {/* Response, Action Time & Volume Row */}
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Response</label>
+                <Select value={actionState.response} onValueChange={handleResponseChange}>
+                  <SelectTrigger className="w-full bg-background">
+                    <SelectValue placeholder="Select response" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    {responseOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Estimated Action Time</label>
+                <Input
+                  type="datetime-local"
+                  value={actionState.actionDate}
+                  onChange={(e) => handleDateChange(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground block mb-1">Volume (₺)</label>
+                <Input
+                  type="number"
+                  placeholder="Enter volume"
+                  value={actionState.volume}
+                  onChange={(e) => handleVolumeChange(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+            </div>
+
+            {/* Response Explanation */}
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Response Explanation</label>
+              <Textarea
+                placeholder="Explain your response..."
+                value={actionState.responseText}
+                onChange={(e) => handleResponseTextChange(e.target.value)}
+                className="min-h-[60px]"
+              />
             </div>
           </div>
 
