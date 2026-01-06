@@ -73,6 +73,25 @@ This document outlines the step-by-step plan to migrate the Account Planning Sys
 
 **Note:** `gap` and `actionsCount` are computed fields, not stored.
 
+#### `product_thresholds`
+
+| Column           | Type             | Constraints                                        | Description                               |
+| ---------------- | ---------------- | -------------------------------------------------- | ----------------------------------------- |
+| id               | uuid             | PK, default gen_random_uuid()                      | Unique identifier                         |
+| sector           | customer_sector  | NOT NULL                                           | Customer sector enum                      |
+| segment          | customer_segment | NOT NULL                                           | Customer segment enum                     |
+| product_id       | uuid             | FK to products, NOT NULL                           | Product reference                         |
+| threshold_value  | numeric          | NOT NULL, default 0                                | Target threshold value                    |
+| calculation_date | date             | NOT NULL, default CURRENT_DATE                     | Date when threshold was calculated        |
+| version_num      | integer          | NOT NULL, default 1                                | Version number for tracking changes       |
+| is_active        | boolean          | NOT NULL, default true                             | Whether threshold is currently active     |
+| created_at       | timestamptz      | default now()                                      | Creation timestamp                        |
+| updated_at       | timestamptz      | default now()                                      | Last update timestamp                     |
+
+**Unique constraint:** `(sector, segment, product_id, version_num)`
+
+**Note:** Thresholds are externally calculated values per sector/segment/product combination. Automatic calculation may be added in future phases.
+
 #### `actions`
 
 | Column                | Type        | Constraints                   | Description                                                          |
@@ -95,19 +114,22 @@ This document outlines the step-by-step plan to migrate the Account Planning Sys
 | created_at            | timestamptz | default now()                 | Creation timestamp                                                   |
 | updated_at            | timestamptz | default now()                 | Last update timestamp                                                |
 
-### 1.2 Autopilot Tables (Optional - Phase 2)
+### 1.2 Threshold Management
 
-#### `autopilot_products`
+#### Concept
 
-#### `autopilot_instances`
+Product thresholds define target values per sector/segment/product combination. These values are:
+- Externally calculated by business analysts
+- Uploaded or manually entered by admins
+- Used to compare against customer product holdings to identify gaps
+- Versioned to track historical changes
 
-#### `autopilot_steps`
+#### Future Enhancements
+- Automatic threshold calculation based on market data
+- Threshold recommendation engine
+- Historical trend analysis
 
----
-
-## Phase 2: Row Level Security (RLS)
-
-### 2.1 RLS Policies
+### 1.3 Autopilot Tables (Optional - Phase 2)
 
 All tables will have RLS enabled with the following policies:
 
@@ -300,8 +322,17 @@ Indexes: Performance indexes on foreign keys and common filters
 - [ ] Dashboard page
 - [ ] ActionsAgenda page
 
-### ⏳ Phase 6: Testing & Validation
+### ✅ Phase 6: Product Thresholds - COMPLETED (2026-01-06)
+- Created `product_thresholds` table with sector/segment/product combinations
+- Seeded 644 threshold records (7 sectors × 4 segments × 23 products)
+- Created `useProductThresholds` hook with CRUD operations
+- Created Thresholds management page (`/thresholds`) with:
+  - Filters (sector, segment, product, active status)
+  - Pagination (20 items per page)
+  - Inline editing of threshold values
+  - Active/inactive toggle
+  - CSV export functionality
+  - CSV upload (placeholder for future implementation)
+- Added navigation link in sidebar
 
----
-
-**Status**: ✅ Phase 1 Complete - Ready to seed products table
+### ⏳ Phase 7: Testing & Validation
