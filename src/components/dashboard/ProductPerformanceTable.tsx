@@ -158,12 +158,12 @@ export function ProductPerformanceTable() {
               <TableRow className="border-border">
                 <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
                 <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">YTD</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MTD</TableHead>
                 <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
                 <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs">YoY</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MoM</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">YTD</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MTD</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
