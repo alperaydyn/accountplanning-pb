@@ -112,11 +112,41 @@ The Account Planning System is a corporate banking relationship management appli
 
 - Each customer-product relationship has:
   - **Current Value**: Current balance/volume/usage of the product
-  - **Threshold**: Target or benchmark value for the product (possibly set by Portfolio Manager or system)
+  - **Threshold**: Target or benchmark value for the product (derived from Product Thresholds based on customer's sector/segment)
   - **Gap**: Calculated as `threshold - currentValue`, representing growth opportunity
   - **Actions Count**: Number of planned actions related to this product for this customer
 - For **external products**, the `externalData` field tracks competitive product holdings
 - A negative gap indicates the customer exceeds the threshold (over-performing)
+
+---
+
+### Product Threshold
+
+**Definition**: A target or benchmark value for a specific product, varying by customer sector and segment. These values are used to calculate gaps and identify growth opportunities.
+
+**Code Location**:
+
+- Database table: `product_thresholds`
+- Hook: `src/hooks/useProductThresholds.ts`
+- UI: `src/pages/Thresholds.tsx`
+
+**Business Rules**:
+
+- Thresholds are defined per **sector/segment/product** combination (e.g., "Tourism + Large Enterprise + TL Cash Loan = 75M TL")
+- Values are **externally calculated** by business analysts based on:
+  - Market benchmarks
+  - Sector-specific characteristics
+  - Segment size expectations
+- Each threshold record includes:
+  - **Threshold Value**: Target amount/volume
+  - **Calculation Date**: When the threshold was determined
+  - **Version Number**: For tracking historical changes
+  - **Active/Inactive Status**: Only active thresholds are used in calculations
+- Thresholds can be:
+  - Uploaded via CSV for bulk updates
+  - Edited individually through the UI
+  - Deactivated (not deleted) to preserve history
+- **Future Enhancement**: Automatic threshold calculation based on market data and AI models
 
 ---
 

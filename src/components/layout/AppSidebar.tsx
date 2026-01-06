@@ -1,5 +1,5 @@
 import { useLocation } from "react-router-dom";
-import { LayoutDashboard, Users, Calendar, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Calendar, Settings, LogOut, Target } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -26,6 +26,7 @@ const mainNavItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Customers", url: "/customers", icon: Users },
   { title: "Actions Agenda", url: "/agenda", icon: Calendar },
+  { title: "Thresholds", url: "/thresholds", icon: Target },
 ];
 
 const settingsNavItems = [
