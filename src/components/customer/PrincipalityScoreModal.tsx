@@ -7,12 +7,18 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Customer } from "@/types";
+
+interface CustomerScoreData {
+  name: string;
+  sector: string;
+  segment: string;
+  principalityScore: number;
+}
 
 interface PrincipalityScoreModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  customer: Customer;
+  customer: CustomerScoreData;
   totalBalance: number;
 }
 
@@ -24,7 +30,7 @@ interface ScoreAxis {
   volume: number;
 }
 
-const generateScoreBreakdown = (customer: Customer, totalBalance: number): ScoreAxis[] => {
+const generateScoreBreakdown = (customer: CustomerScoreData, totalBalance: number): ScoreAxis[] => {
   // Generate realistic breakdown scores that average to principality score
   const baseScore = customer.principalityScore;
   const variance = 15;
