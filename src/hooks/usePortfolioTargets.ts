@@ -32,6 +32,7 @@ export interface PortfolioTarget {
     id: string;
     name: string;
     category: string;
+    display_order: number;
   };
 }
 
@@ -45,9 +46,8 @@ export function usePortfolioTargets(recordDate?: string) {
         .from("portfolio_targets")
         .select(`
           *,
-          products (id, name, category)
-        `)
-        .order("products(name)");
+          products (id, name, category, display_order)
+        `);
 
       if (recordDate) {
         query = query.eq("record_date", recordDate);
@@ -55,7 +55,15 @@ export function usePortfolioTargets(recordDate?: string) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return data as PortfolioTarget[];
+      
+      // Sort by product display_order
+      const sorted = (data as PortfolioTarget[]).sort((a, b) => {
+        const orderA = a.products?.display_order ?? 999;
+        const orderB = b.products?.display_order ?? 999;
+        return orderA - orderB;
+      });
+      
+      return sorted;
     },
     enabled: !!manager?.id,
   });
