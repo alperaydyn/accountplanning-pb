@@ -297,7 +297,13 @@ const CustomerDetail = () => {
 
           {viewMode === "products" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {customerProducts.map((cp) => {
+              {[...customerProducts]
+                .sort((a, b) => {
+                  const productA = getProductById(a.product_id);
+                  const productB = getProductById(b.product_id);
+                  return (productA?.display_order ?? 999) - (productB?.display_order ?? 999);
+                })
+                .map((cp) => {
                 const product = getProductById(cp.product_id);
                 if (!product) return null;
                 const threshold = cp.threshold || 0;
