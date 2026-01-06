@@ -76,28 +76,18 @@ Product volume patterns by sector:
 
     const userPrompt = `Generate a new Turkish commercial banking customer with realistic data.
 
-Return a JSON object with this exact structure:
-{
-  "name": "Company name in Turkish (A.Ş., Ltd., etc.)",
-  "sector": "One of the available sectors",
-  "segment": "One of the available segments",
-  "status": "One of the available statuses",
-  "principality_score": 0-100 (higher for better status),
-  "products": [
-    {
-      "product_id": "UUID from the list below",
-      "current_value": estimated volume in TL
-    }
-  ]
-}
+IMPORTANT:
+- You MUST respond by calling the create_customer tool.
+- Do NOT write any normal text.
+- Keep values realistic and follow the rules exactly.
 
-Available products (product_id -> name):
-${PRODUCTS.map(p => `${p.id} -> ${p.name}`).join("\n")}
-
-IMPORTANT: 
+Rules recap:
 - TL Vadesiz Mevduat (${MANDATORY_PRODUCT_ID}) is MANDATORY for all customers
 - Product count must match the status rules
-- Volumes should be realistic for the segment size`;
+- Volumes should be realistic for the segment size
+
+Available products (product_id -> name):
+${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -134,16 +124,19 @@ IMPORTANT:
                         current_value: { type: "number" },
                       },
                       required: ["product_id", "current_value"],
+                      additionalProperties: false,
                     },
                   },
                 },
                 required: ["name", "sector", "segment", "status", "principality_score", "products"],
+                additionalProperties: false,
               },
             },
           },
         ],
         tool_choice: { type: "function", function: { name: "create_customer" } },
-        max_completion_tokens: 1000,
+        // GPT-5 can spend many tokens on internal reasoning; keep this high so we still get a tool call.
+        max_completion_tokens: 8000,
       }),
     });
 
