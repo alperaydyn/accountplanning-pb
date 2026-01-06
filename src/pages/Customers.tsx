@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Users, Loader2, Plus, Sparkles } from "lucide-react";
+import { Search, Users, Loader2, Plus, Sparkles, Package } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,6 +14,8 @@ import { useProducts } from "@/hooks/useProducts";
 import { useActions, ACTION_STATUSES } from "@/hooks/useActions";
 import { CreateCustomerModal } from "@/components/customer/CreateCustomerModal";
 import { Database } from "@/integrations/supabase/types";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 type CustomerStatus = Database['public']['Enums']['customer_status'];
 
@@ -59,6 +61,30 @@ const Customers = () => {
   const { data: customerGroups = [] } = useCustomerGroups();
   const { data: products = [] } = useProducts();
   const { data: allActions = [] } = useActions();
+
+  // Fetch product counts for all customers
+  const customerIds = customers.map((c) => c.id);
+  const { data: productCounts = [] } = useQuery({
+    queryKey: ["customer-product-counts", customerIds],
+    queryFn: async () => {
+      if (customerIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from("customer_products")
+        .select("customer_id")
+        .in("customer_id", customerIds);
+      if (error) throw error;
+      return data;
+    },
+    enabled: customerIds.length > 0,
+  });
+
+  const productCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    productCounts.forEach((row) => {
+      map.set(row.customer_id, (map.get(row.customer_id) || 0) + 1);
+    });
+    return map;
+  }, [productCounts]);
 
   // Filter by product (need to check customer_products) - for now just filter actions
   const getCustomerIdsWithActionStatus = (status: string): Set<string> => {
@@ -196,6 +222,7 @@ const Customers = () => {
                     <TableHead>Sector</TableHead>
                     <TableHead>Segment</TableHead>
                     <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Products</TableHead>
                     <TableHead className="text-center">Actions</TableHead>
                     <TableHead>Last Activity</TableHead>
                   </TableRow>
@@ -226,6 +253,12 @@ const Customers = () => {
                         <TableCell className="text-center">
                           <Badge className={getStatusBadgeClass(customer.status)}>
                             {customer.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge variant="outline" className="gap-1">
+                            <Package className="h-3 w-3" />
+                            {productCountMap.get(customer.id) || 0}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
