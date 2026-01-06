@@ -390,13 +390,18 @@ const CustomerDetail = () => {
                     <Card 
                       key={productId} 
                       className={cn(
-                        "transition-all",
-                        actionsCount > 0 && "cursor-pointer hover:shadow-md border-info/50",
+                        "cursor-pointer transition-all hover:shadow-md",
+                        actionsCount > 0 && "border-info/50",
                         !isOwned && "bg-muted/30"
                       )}
                       onClick={() => {
                         if (actionsCount > 0) {
                           setSelectedActionId(actionsForProduct[0].id);
+                        } else {
+                          // Open Add Action panel with this product pre-selected
+                          setNewActionProduct(productId);
+                          setShowAddAction(true);
+                          setViewMode("actions");
                         }
                       }}
                     >
