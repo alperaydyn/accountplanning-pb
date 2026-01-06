@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Loader2, Sparkles, RefreshCw, Check } from "lucide-react";
+import { Loader2, Sparkles, RefreshCw, Check, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -47,6 +50,9 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [generatedCustomer, setGeneratedCustomer] = useState<GeneratedCustomer | null>(null);
+  const [batchCount, setBatchCount] = useState<number>(1);
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, names: [] as string[] });
   const queryClient = useQueryClient();
   const { data: products = [] } = useProducts();
   const { data: portfolioManager } = usePortfolioManager();
@@ -54,6 +60,101 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const getProductName = (productId: string) => {
     const product = products.find(p => p.id === productId);
     return product?.name || productId;
+  };
+
+  const generateAndSaveCustomer = async (): Promise<string | null> => {
+    if (!portfolioManager) return null;
+
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-customer`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      if (response.status === 429) {
+        throw new Error("Rate limit exceeded");
+      }
+      if (response.status === 402) {
+        throw new Error("AI credits exhausted");
+      }
+      throw new Error(error.error || "Failed to generate customer");
+    }
+
+    const customerData: GeneratedCustomer = await response.json();
+
+    // Save customer
+    const { data: customer, error: customerError } = await supabase
+      .from("customers")
+      .insert({
+        name: customerData.name,
+        sector: customerData.sector as CustomerSector,
+        segment: customerData.segment as CustomerSegment,
+        status: customerData.status as CustomerStatus,
+        principality_score: Math.round(customerData.principality_score),
+        portfolio_manager_id: portfolioManager.id,
+        last_activity_date: new Date().toISOString().split("T")[0],
+      })
+      .select()
+      .single();
+
+    if (customerError) throw customerError;
+
+    // Save products
+    if (customerData.products.length > 0) {
+      const customerProducts = customerData.products.map(p => ({
+        customer_id: customer.id,
+        product_id: p.product_id,
+        current_value: p.current_value,
+      }));
+
+      const { error: productsError } = await supabase
+        .from("customer_products")
+        .insert(customerProducts);
+
+      if (productsError) throw productsError;
+    }
+
+    return customerData.name;
+  };
+
+  const handleBatchGenerate = async () => {
+    if (!portfolioManager || batchCount < 1) return;
+
+    setIsBatchMode(true);
+    setBatchProgress({ current: 0, total: batchCount, names: [] });
+
+    let successCount = 0;
+    const createdNames: string[] = [];
+
+    for (let i = 0; i < batchCount; i++) {
+      try {
+        const name = await generateAndSaveCustomer();
+        if (name) {
+          successCount++;
+          createdNames.push(name);
+          setBatchProgress({ current: i + 1, total: batchCount, names: [...createdNames] });
+        }
+      } catch (error) {
+        console.error(`Error generating customer ${i + 1}:`, error);
+        if (error instanceof Error && (error.message.includes("Rate limit") || error.message.includes("credits"))) {
+          toast.error(error.message);
+          break;
+        }
+      }
+    }
+
+    queryClient.invalidateQueries({ queryKey: ["customers"] });
+    toast.success(`Created ${successCount} customers`);
+    
+    setTimeout(() => {
+      setIsBatchMode(false);
+      setBatchProgress({ current: 0, total: 0, names: [] });
+      onOpenChange(false);
+    }, 1500);
   };
 
   const handleGenerate = async () => {
@@ -97,7 +198,6 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
 
     setIsSaving(true);
     try {
-      // Create customer
       const { data: customer, error: customerError } = await supabase
         .from("customers")
         .insert({
@@ -105,7 +205,6 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
           sector: generatedCustomer.sector as CustomerSector,
           segment: generatedCustomer.segment as CustomerSegment,
           status: generatedCustomer.status as CustomerStatus,
-          // DB column is integer
           principality_score: Math.round(generatedCustomer.principality_score),
           portfolio_manager_id: portfolioManager.id,
           last_activity_date: new Date().toISOString().split("T")[0],
@@ -115,7 +214,6 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
 
       if (customerError) throw customerError;
 
-      // Create customer products
       if (generatedCustomer.products.length > 0) {
         const customerProducts = generatedCustomer.products.map(p => ({
           customer_id: customer.id,
@@ -143,6 +241,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   };
 
   const handleClose = () => {
+    if (isBatchMode) return; // Prevent closing during batch
     onOpenChange(false);
     setGeneratedCustomer(null);
   };
@@ -158,16 +257,62 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {!generatedCustomer && !isGenerating && (
-            <div className="text-center py-8">
-              <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-muted-foreground mb-4">
-                Click generate to create a new customer with AI-generated data including realistic product holdings.
-              </p>
-              <Button onClick={handleGenerate}>
-                <Sparkles className="h-4 w-4 mr-2" />
-                Generate Customer
-              </Button>
+          {isBatchMode && (
+            <div className="space-y-4">
+              <div className="text-center">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-primary" />
+                <p className="text-sm text-muted-foreground">
+                  Creating customers... {batchProgress.current} / {batchProgress.total}
+                </p>
+              </div>
+              <Progress value={(batchProgress.current / batchProgress.total) * 100} />
+              {batchProgress.names.length > 0 && (
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {batchProgress.names.map((name, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm p-2 rounded bg-muted/30">
+                      <Check className="h-4 w-4 text-green-500" />
+                      <span>{name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!isBatchMode && !generatedCustomer && !isGenerating && (
+            <div className="space-y-6">
+              {/* Batch Generation */}
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Label htmlFor="batch-count" className="text-sm font-medium">Batch Generation</Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Input
+                    id="batch-count"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={batchCount}
+                    onChange={(e) => setBatchCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                    className="w-24"
+                  />
+                  <span className="text-sm text-muted-foreground">customers (max 50)</span>
+                </div>
+                <Button onClick={handleBatchGenerate} className="w-full" variant="default">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate & Save {batchCount} Customers
+                </Button>
+              </div>
+
+              {/* Single Generation */}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-3">Or generate one at a time with preview</p>
+                <Button onClick={handleGenerate} variant="outline">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Generate Single Customer
+                </Button>
+              </div>
             </div>
           )}
 

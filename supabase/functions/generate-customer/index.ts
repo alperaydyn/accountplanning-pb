@@ -48,7 +48,14 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a Turkish banking customer data generator. Generate realistic Turkish company names and data for a commercial banking CRM system.
+    const systemPrompt = `You are a creative Turkish banking customer data generator. Generate unique and realistic Turkish company names for a commercial banking CRM system.
+
+COMPANY NAMING GUIDELINES (be creative and varied):
+- Use diverse Turkish business naming patterns: [Founder Surname] + [Industry], [Location] + [Service], [Adjective] + [Noun], abbreviations, etc.
+- Mix styles: "Yıldız Turizm", "ABC Lojistik", "Karadeniz Enerji", "Güneş & Oğulları", "Merkez Gıda A.Ş.", "Anadolu Tarım Ltd.", "EKO Perakende"
+- Include suffixes like A.Ş., Ltd., Şti., & Oğulları, Grup, Holding occasionally
+- Use Turkish-specific words: Yıldız, Güneş, Anadolu, Karadeniz, Marmara, Ege, etc.
+- Avoid generic names - each company should feel distinct and memorable
 
 Available sectors: ${SECTORS.join(", ")}
 Available segments: ${SEGMENTS.join(", ")} (TİCARİ = largest, MİKRO = smallest)
