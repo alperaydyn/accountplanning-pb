@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Users, Loader2 } from "lucide-react";
+import { Search, Users, Loader2, Plus, Sparkles } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { useCustomers, SECTORS, SEGMENTS, STATUSES, Customer } from "@/hooks/use
 import { useCustomerGroups } from "@/hooks/useCustomerGroups";
 import { useProducts } from "@/hooks/useProducts";
 import { useActions, ACTION_STATUSES } from "@/hooks/useActions";
+import { CreateCustomerModal } from "@/components/customer/CreateCustomerModal";
 import { Database } from "@/integrations/supabase/types";
 
 type CustomerStatus = Database['public']['Enums']['customer_status'];
@@ -34,6 +36,7 @@ const Customers = () => {
   const [actionStatusFilter, setActionStatusFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   // Initialize filters from URL params
   useEffect(() => {
@@ -108,11 +111,19 @@ const Customers = () => {
   return (
     <AppLayout>
       <div className="space-y-6">
-        <div>
-          <PageBreadcrumb items={[{ label: "Customers" }]} />
-          <h1 className="text-2xl font-bold text-foreground">Customers</h1>
-          <p className="text-muted-foreground mt-1">Manage your customer portfolio and plan actions.</p>
+        <div className="flex justify-between items-start">
+          <div>
+            <PageBreadcrumb items={[{ label: "Customers" }]} />
+            <h1 className="text-2xl font-bold text-foreground">Customers</h1>
+            <p className="text-muted-foreground mt-1">Manage your customer portfolio and plan actions.</p>
+          </div>
+          <Button onClick={() => setCreateModalOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-2" />
+            Create Customer
+          </Button>
         </div>
+
+        <CreateCustomerModal open={createModalOpen} onOpenChange={setCreateModalOpen} />
 
         <Card>
           <CardHeader className="pb-4">
