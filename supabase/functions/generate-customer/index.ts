@@ -48,14 +48,7 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are a creative Turkish banking customer data generator. Generate unique and realistic Turkish company names for a commercial banking CRM system.
-
-COMPANY NAMING GUIDELINES (be creative and varied):
-- Use diverse Turkish business naming patterns: [Founder Surname] + [Industry], [Location] + [Service], [Adjective] + [Noun], abbreviations, etc.
-- Mix styles: "Yıldız Turizm", "ABC Lojistik", "Karadeniz Enerji", "Güneş & Oğulları", "Merkez Gıda A.Ş.", "Anadolu Tarım Ltd.", "EKO Perakende"
-- Include suffixes like A.Ş., Ltd., Şti., & Oğulları, Grup, Holding occasionally
-- Use Turkish-specific words: Yıldız, Güneş, Anadolu, Karadeniz, Marmara, Ege, etc.
-- Avoid generic names - each company should feel distinct and memorable
+    const systemPrompt = `You are a Turkish banking customer data generator. Generate realistic Turkish company names and data for a commercial banking CRM system.
 
 Available sectors: ${SECTORS.join(", ")}
 Available segments: ${SEGMENTS.join(", ")} (TİCARİ = largest, MİKRO = smallest)
@@ -63,9 +56,9 @@ Available statuses: ${STATUSES.join(", ")}
 
 IMPORTANT - Status probability distribution (follow this strictly):
 - Yeni Müşteri: 25% chance
-- Aktif: 35% chance
-- Strong Target: 25% chance
-- Target: 10% chance (rare)
+- Aktif: 50% chance
+- Target: 15% chance (rare)
+- Strong Target: 10% chance
 - Ana Banka: 5% chance (very rare)
 
 Product count rules by status:
@@ -171,9 +164,9 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
 
     const data = await response.json();
     console.log("OpenAI response:", JSON.stringify(data, null, 2));
-    
+
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    
+
     if (!toolCall?.function?.arguments) {
       console.error("Missing tool call in response:", JSON.stringify(data, null, 2));
       throw new Error("No valid response from AI");
@@ -189,7 +182,7 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
     }));
     // Ensure mandatory product is included
     const hasMandatory = customerData.products.some(
-      (p: { product_id: string }) => p.product_id === MANDATORY_PRODUCT_ID
+      (p: { product_id: string }) => p.product_id === MANDATORY_PRODUCT_ID,
     );
     if (!hasMandatory) {
       customerData.products.unshift({
@@ -203,9 +196,9 @@ ${PRODUCTS.map((p) => `${p.id} -> ${p.name}`).join("\n")}`;
     });
   } catch (error) {
     console.error("Error generating customer:", error);
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
