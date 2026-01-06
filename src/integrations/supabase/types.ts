@@ -407,6 +407,7 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at: string
           description: string | null
+          display_order: number
           id: string
           is_external: boolean
           name: string
@@ -415,6 +416,7 @@ export type Database = {
           category: Database["public"]["Enums"]["product_category"]
           created_at?: string
           description?: string | null
+          display_order?: number
           id?: string
           is_external?: boolean
           name: string
@@ -423,6 +425,7 @@ export type Database = {
           category?: Database["public"]["Enums"]["product_category"]
           created_at?: string
           description?: string | null
+          display_order?: number
           id?: string
           is_external?: boolean
           name?: string

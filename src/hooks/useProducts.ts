@@ -10,6 +10,7 @@ export interface Product {
   category: ProductCategory;
   is_external: boolean;
   description: string | null;
+  display_order: number;
   created_at: string;
 }
 
@@ -20,7 +21,7 @@ export const useProducts = () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .order('name');
+        .order('display_order');
 
       if (error) throw error;
       return data as Product[];
@@ -57,7 +58,7 @@ export const useProductsByCategory = (category: ProductCategory | undefined) => 
         .from('products')
         .select('*')
         .eq('category', category)
-        .order('name');
+        .order('display_order');
 
       if (error) throw error;
       return data as Product[];
