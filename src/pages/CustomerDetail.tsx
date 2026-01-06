@@ -52,7 +52,7 @@ type ViewMode = "products" | "actions" | "autopilot";
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const navigate = useNavigate();
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("products");
   const [priorityFilter, setPriorityFilter] = useState<DBActionPriority | "all">("all");
   const [statusFilter, setStatusFilter] = useState<DBActionStatus | "all">("all");
@@ -379,7 +379,10 @@ const CustomerDetail = () => {
                   <Card 
                     key={cp.id} 
                     className={cn("cursor-pointer transition-all hover:shadow-md", actionsCount > 0 && "border-info/50")}
-                    onClick={() => setSelectedProductId(cp.product_id)}
+                    onClick={() => {
+                      const firstAction = customerActions.find(a => a.product_id === cp.product_id);
+                      if (firstAction) setSelectedActionId(firstAction.id);
+                    }}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
@@ -445,7 +448,7 @@ const CustomerDetail = () => {
                     variant="outline"
                     onClick={handleGenerateActions}
                     disabled={isGeneratingActions}
-                    className="border-primary/50 text-primary hover:bg-primary/10"
+                    className="border-violet-500/50 text-violet-600 hover:bg-violet-50 dark:hover:bg-violet-950/20"
                   >
                     {isGeneratingActions ? (
                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -632,7 +635,7 @@ const CustomerDetail = () => {
                       <TableRow 
                         key={action.id} 
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedProductId(action.product_id)}
+                        onClick={() => setSelectedActionId(action.id)}
                       >
                         <TableCell className="font-medium">{product?.name || "Unknown"}</TableCell>
                         <TableCell>{action.name}</TableCell>
@@ -676,10 +679,10 @@ const CustomerDetail = () => {
       </div>
 
       <ActionPlanningModal
-        open={!!selectedProductId}
-        onOpenChange={(open) => !open && setSelectedProductId(null)}
+        open={!!selectedActionId}
+        onOpenChange={(open) => !open && setSelectedActionId(null)}
         customerId={customerId || ""}
-        productId={selectedProductId || ""}
+        actionId={selectedActionId || ""}
       />
 
       <PrincipalityScoreModal
