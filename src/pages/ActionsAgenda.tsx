@@ -11,7 +11,6 @@ import { useActions, Action } from "@/hooks/useActions";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { Database } from "@/integrations/supabase/types";
-import { AIActionAssistant } from "@/components/actions/AIActionAssistant";
 
 type ViewMode = "daily" | "weekly" | "monthly";
 type ActionStatus = Database['public']['Enums']['action_status'];
@@ -37,7 +36,6 @@ export default function ActionsAgenda() {
   
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [showAIAssistant, setShowAIAssistant] = useState(false);
   
   const { data: actions = [] } = useActions();
   const { data: customers = [] } = useCustomers();
@@ -169,16 +167,8 @@ export default function ActionsAgenda() {
           </CardHeader>
         </Card>
 
-        {/* AI Assistant */}
-        {showAIAssistant && (
-          <AIActionAssistant 
-            isOpen={showAIAssistant} 
-            onClose={() => setShowAIAssistant(false)} 
-          />
-        )}
-
         {/* Empty State for no actions */}
-        {totalActionsInView === 0 && !showAIAssistant && (
+        {totalActionsInView === 0 && (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
               <div className="p-4 rounded-full bg-violet-500/10 mb-4">
@@ -193,11 +183,13 @@ export default function ActionsAgenda() {
                   : "You don't have any actions planned for this month."}
               </p>
               <Button 
-                onClick={() => setShowAIAssistant(true)}
+                asChild
                 className="bg-violet-500 hover:bg-violet-600 text-white"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Let AI find the best customers for you
+                <Link to="/ai-assistant">
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Let AI find the best customers for you
+                </Link>
               </Button>
             </CardContent>
           </Card>
