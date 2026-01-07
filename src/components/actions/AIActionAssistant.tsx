@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, X, Loader2, User, Bot } from "lucide-react";
+import { Sparkles, Send, X, Loader2, User, Bot, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -38,6 +38,7 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -170,6 +171,34 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
+        </div>
+        
+        {/* Privacy Notice */}
+        <div className="mt-3 rounded-lg border border-border/50 bg-muted/30 p-2.5">
+          <button
+            type="button"
+            onClick={() => setShowPrivacyDetails(!showPrivacyDetails)}
+            className="flex items-center gap-2 w-full text-left"
+          >
+            <ShieldCheck className="h-4 w-4 text-green-600" />
+            <span className="text-xs text-muted-foreground flex-1">
+              Your customer identities are preserved
+            </span>
+            {showPrivacyDetails ? (
+              <ChevronUp className="h-3 w-3 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-3 w-3 text-muted-foreground" />
+            )}
+          </button>
+          
+          {showPrivacyDetails && (
+            <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground space-y-1.5">
+              <p>• Customer names are not directly shared with the AI</p>
+              <p>• Undetectable one-time IDs are generated for each session separately</p>
+              <p>• Incoming IDs are mapped to customers inside your browser session</p>
+              <p>• Sensitive information in notes is masked before sending the prompt</p>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent className="p-0">
