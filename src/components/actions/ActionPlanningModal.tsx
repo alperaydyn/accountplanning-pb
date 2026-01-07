@@ -315,9 +315,9 @@ export function ActionPlanningModal({
           )}
 
           {/* Single Action */}
-          <div className="border rounded-lg p-4 space-y-4">
+          <div className="border rounded-lg p-4 space-y-4 bg-muted/30">
             {/* Action Name & Description */}
-            <div>
+            <div className="min-h-[72px]">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="font-medium text-base">{action.name}</span>
                 <Badge variant="outline" className={priorityColors[action.priority]}>
@@ -344,7 +344,7 @@ export function ActionPlanningModal({
                   </Button>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">{action.description}</p>
+              <p className="text-sm text-muted-foreground line-clamp-2 h-10">{action.description}</p>
               
               {/* Hints Panel */}
               <Collapsible open={hintsExpanded}>
