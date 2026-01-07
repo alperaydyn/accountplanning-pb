@@ -34,39 +34,47 @@ serve(async (req) => {
       throw new Error("Missing required parameter: products array");
     }
 
-    // Optimize tokens: compact product summary
+    // Build product name to ID mapping for the response
+    const productMap = products.reduce((acc: Record<string, string>, p: ProductSummary) => {
+      acc[p.name] = p.id;
+      return acc;
+    }, {});
+
+    // Optimize tokens: compact product summary (no IDs in prompt)
     const productSummaries = products.map((p: ProductSummary) => 
-      `${p.name}|${p.status}|S:${p.stockTar}%|F:${p.flowTar}%|C:${p.countTar}%|V:${p.volumeTar}%|PA:${p.pendingActions}`
+      `${p.name}|${p.status}|PA:${p.pendingActions}`
     ).join(";");
 
-    const systemPrompt = `You are a banking portfolio AI analyst. Generate 1-3 actionable insights based on product performance data.
+    const systemPrompt = `Sen bir banka portföy analisti AI'sın. Ürün performans verilerine göre 1-3 aksiyon odaklı içgörü üret.
 
-Insight types:
-- critical: Urgent action needed (status critical/melting with low HGO%)
-- warning: Needs attention (at_risk/growing/ticket_size/diversity status)
-- info: Opportunities (high pending actions, growth potential)
+İçgörü türleri:
+- critical: Acil aksiyon gerekli (kritik veya eriyen ürünler)
+- warning: Dikkat gerekli (riskli, büyüyen, işlem boyutu veya çeşitlilik sorunları)
+- info: Fırsatlar (bekleyen aksiyonlar, büyüme potansiyeli)
 
-Product statuses meaning:
-- critical: Overall performance <50%
-- at_risk: Performance 50-80%
-- on_track: Performance ≥80%
-- melting: Stock good, Flow bad (losing momentum)
-- growing: Flow good, Stock bad (building up)
-- ticket_size: Count good, Volume bad (small transactions)
-- diversity: Volume good, Count bad (few large customers)
+Durum açıklamaları:
+- kritik: Genel performans düşük
+- riskli: Performans orta seviyede
+- hedefe uygun: Performans iyi
+- eriyen: Stok iyi ama akış düşük (momentum kaybı)
+- büyüyen: Akış iyi ama stok düşük (gelişme aşamasında)
+- işlem boyutu: Müşteri sayısı iyi ama hacim düşük (küçük işlemler)
+- çeşitlilik: Hacim iyi ama müşteri sayısı düşük (az sayıda büyük müşteri)
 
-Data format: name|status|S:stockHGO%|F:flowHGO%|C:countHGO%|V:volumeHGO%|PA:pendingActions
+KURALLAR:
+- Teknik detaylar kullanma (ID'ler, yüzdeler vb.)
+- Ürün isimlerini aynen kullan
+- Açıklamaları iş diliyle yaz
+- Somut aksiyon önerileri ver`;
 
-Generate Turkish descriptions for insights. Be specific about product names.`;
+    const userPrompt = `Ürünler: ${productSummaries}
 
-    const userPrompt = `Products: ${productSummaries}
+Şunlara odaklan:
+1. Acil müdahale gerektiren kritik ürünler
+2. Uyarı işaretleri olan ürünler (eriyen/büyüyen/işlem boyutu/çeşitlilik)
+3. Bekleyen aksiyonlardan veya büyüme kalıplarından fırsatlar
 
-Generate insights focusing on:
-1. Critical products requiring immediate action
-2. Products with warning signs (melting/growing/ticket_size/diversity)
-3. Opportunities from pending actions or growth patterns
-
-IMPORTANT: Call generate_insights tool with your analysis.`;
+generate_insights aracını çağır.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -75,7 +83,7 @@ IMPORTANT: Call generate_insights tool with your analysis.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "openai/gpt-5-mini",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -95,16 +103,16 @@ IMPORTANT: Call generate_insights tool with your analysis.`;
                       type: "object",
                       properties: {
                         type: { type: "string", enum: ["critical", "warning", "info"] },
-                        title: { type: "string", description: "Short title in English (max 5 words)" },
-                        message: { type: "string", description: "Brief message in English describing the issue" },
-                        detailedDescription: { type: "string", description: "Detailed explanation in Turkish with recommended actions" },
-                        productIds: { 
+                        title: { type: "string", description: "Kısa başlık Türkçe (max 5 kelime)" },
+                        message: { type: "string", description: "Kısa açıklama Türkçe" },
+                        detailedDescription: { type: "string", description: "Detaylı açıklama ve önerilen aksiyonlar Türkçe" },
+                        productNames: { 
                           type: "array", 
                           items: { type: "string" },
-                          description: "Array of product IDs related to this insight"
+                          description: "Bu içgörüyle ilgili ürün isimleri (tam olarak verildiği gibi)"
                         },
                       },
-                      required: ["type", "title", "message", "detailedDescription", "productIds"],
+                      required: ["type", "title", "message", "detailedDescription", "productNames"],
                       additionalProperties: false,
                     },
                     minItems: 1,
@@ -151,7 +159,16 @@ IMPORTANT: Call generate_insights tool with your analysis.`;
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify({ insights: result.insights || [] }), {
+    // Map product names to IDs for frontend linking
+    const insightsWithIds = (result.insights || []).map((insight: any) => ({
+      ...insight,
+      products: (insight.productNames || []).map((name: string) => ({
+        name,
+        id: productMap[name] || null,
+      })),
+    }));
+
+    return new Response(JSON.stringify({ insights: insightsWithIds }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

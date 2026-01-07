@@ -3,12 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePortfolioTargets } from "./usePortfolioTargets";
 import { useActions } from "./useActions";
 
+export interface InsightProduct {
+  name: string;
+  id: string | null;
+}
+
 export interface Insight {
   type: "critical" | "warning" | "info";
   title: string;
   message: string;
   detailedDescription: string;
-  productIds: string[];
+  products: InsightProduct[];
 }
 
 type ProductStatus = "on_track" | "at_risk" | "critical" | "melting" | "growing" | "ticket_size" | "diversity";
@@ -101,7 +106,7 @@ export function useInsights() {
             message: "All products are performing on track with no urgent actions needed.",
             detailedDescription:
               "Tüm ürünler hedeflerini karşılamaktadır. Portföy sağlıklı bir durumda devam etmektedir. Mevcut stratejileri sürdürmeniz ve fırsatları değerlendirmeniz önerilir.",
-            productIds: [],
+            products: [],
           },
         ];
       }
