@@ -28,7 +28,7 @@ import {
   useAddChatMessage,
   ChatMessage,
 } from "@/hooks/useAIChatSessions";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -44,11 +44,14 @@ const WELCOME_MESSAGE = `Merhaba! Bugün hangi müşterilere odaklanmanız gerek
 • "Kredi ürünleri için takip gereken müşteriler kim?"`;
 
 export default function AIAssistant() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [totalUsage, setTotalUsage] = useState({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
+  const [planMyDayTriggered, setPlanMyDayTriggered] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -64,42 +67,7 @@ export default function AIAssistant() {
   const { data: products = [] } = useProducts();
   const { data: actions = [] } = useActions();
 
-  // Auto-select first session or create one
-  useEffect(() => {
-    if (!sessionsLoading && sessions.length > 0 && !activeSessionId) {
-      setActiveSessionId(sessions[0].id);
-    }
-  }, [sessions, sessionsLoading, activeSessionId]);
-
-  // Calculate total usage from messages
-  useEffect(() => {
-    const usage = messages.reduce(
-      (acc, msg) => {
-        if (msg.usage) {
-          acc.prompt_tokens += msg.usage.prompt_tokens;
-          acc.completion_tokens += msg.usage.completion_tokens;
-          acc.total_tokens += msg.usage.total_tokens;
-        }
-        return acc;
-      },
-      { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-    );
-    setTotalUsage(usage);
-  }, [messages]);
-
-  useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [activeSessionId]);
-
-  // Prepare customer data with temp IDs
+  // Prepare customer data with temp IDs (moved up for early access)
   const preparedCustomerData = useMemo(() => {
     return customers.map((customer, index) => {
       const tempId = `C${index + 1}`;
@@ -143,6 +111,117 @@ export default function AIAssistant() {
     });
     return mapping;
   }, [preparedCustomerData]);
+
+  // Auto-select first session or create one
+  useEffect(() => {
+    if (!sessionsLoading && sessions.length > 0 && !activeSessionId) {
+      setActiveSessionId(sessions[0].id);
+    }
+  }, [sessions, sessionsLoading, activeSessionId]);
+
+  const sendMessage = async (sessionId: string, messageContent: string) => {
+    setIsLoading(true);
+
+    try {
+      // Save user message
+      await addMessage.mutateAsync({
+        sessionId,
+        role: "user",
+        content: messageContent,
+      });
+
+      // Get chat history (last 5 messages)
+      const chatHistory = messages.slice(-5).map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      const { data, error } = await supabase.functions.invoke("ai-action-assistant", {
+        body: {
+          message: messageContent,
+          customers: preparedCustomerData,
+          chatHistory,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.error) {
+        toast.error(data.error);
+        setIsLoading(false);
+        return;
+      }
+
+      // Save assistant message
+      await addMessage.mutateAsync({
+        sessionId,
+        role: "assistant",
+        content: data.content,
+        customerMapping: tempIdToRealId,
+        usage: data.usage,
+      });
+    } catch (error) {
+      console.error("AI assistant error:", error);
+      toast.error("AI asistanla iletişim kurulamadı");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePlanMyDay = async () => {
+    try {
+      const session = await createSession.mutateAsync(undefined);
+      setActiveSessionId(session.id);
+      
+      // Wait a tick for state to update, then send the message
+      setTimeout(async () => {
+        await sendMessage(session.id, "plan my day");
+        updateTitle.mutate({ sessionId: session.id, title: "Günümü Planla" });
+      }, 100);
+    } catch (error) {
+      toast.error("Yeni sohbet oluşturulamadı");
+    }
+  };
+
+  // Handle "plan my day" trigger from URL
+  useEffect(() => {
+    const prompt = searchParams.get("prompt");
+    if (prompt === "plan-my-day" && !planMyDayTriggered && !sessionsLoading && preparedCustomerData.length > 0) {
+      setPlanMyDayTriggered(true);
+      // Clear the URL param
+      setSearchParams({}, { replace: true });
+      // Create new session and send "plan my day"
+      handlePlanMyDay();
+    }
+  }, [searchParams, sessionsLoading, planMyDayTriggered, preparedCustomerData]);
+
+  // Calculate total usage from messages
+  useEffect(() => {
+    const usage = messages.reduce(
+      (acc, msg) => {
+        if (msg.usage) {
+          acc.prompt_tokens += msg.usage.prompt_tokens;
+          acc.completion_tokens += msg.usage.completion_tokens;
+          acc.total_tokens += msg.usage.total_tokens;
+        }
+        return acc;
+      },
+      { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    );
+    setTotalUsage(usage);
+  }, [messages]);
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [activeSessionId]);
 
   const parseResponseWithLinks = (content: string, mapping: Record<string, string> | null) => {
     if (!mapping) return [content];
@@ -197,59 +276,14 @@ export default function AIAssistant() {
 
     const userContent = input.trim();
     setInput("");
-    setIsLoading(true);
 
-    try {
-      // Save user message
-      await addMessage.mutateAsync({
-        sessionId: activeSessionId,
-        role: "user",
-        content: userContent,
-      });
-
-      // Get chat history (last 5 messages)
-      const chatHistory = messages.slice(-5).map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
-
-      const { data, error } = await supabase.functions.invoke("ai-action-assistant", {
-        body: {
-          message: userContent,
-          customers: preparedCustomerData,
-          chatHistory,
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.error) {
-        toast.error(data.error);
-        setIsLoading(false);
-        return;
-      }
-
-      // Save assistant message
-      await addMessage.mutateAsync({
-        sessionId: activeSessionId,
-        role: "assistant",
-        content: data.content,
-        customerMapping: tempIdToRealId,
-        usage: data.usage,
-      });
-
-      // Update session title based on first user message
-      const currentMessages = messages;
-      if (currentMessages.length === 0) {
-        const title = userContent.slice(0, 50) + (userContent.length > 50 ? "..." : "");
-        updateTitle.mutate({ sessionId: activeSessionId, title });
-      }
-    } catch (error) {
-      console.error("AI assistant error:", error);
-      toast.error("AI asistanla iletişim kurulamadı");
-    } finally {
-      setIsLoading(false);
+    // Update session title based on first user message
+    if (messages.length === 0) {
+      const title = userContent.slice(0, 50) + (userContent.length > 50 ? "..." : "");
+      updateTitle.mutate({ sessionId: activeSessionId, title });
     }
+
+    await sendMessage(activeSessionId, userContent);
   };
 
   const calculateCost = (usage: { prompt_tokens: number; completion_tokens: number }) => {

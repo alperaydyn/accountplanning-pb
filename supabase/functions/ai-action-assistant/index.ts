@@ -42,7 +42,37 @@ Customer ${c.tempId}:
 - Products (${c.products.length}): ${c.products.map(p => `${p.name} (${p.category}, ${p.current_value.toLocaleString()} TL)`).join(", ") || "None"}
 - Active Actions (${c.actions.length}): ${c.actions.map(a => `${a.name} [${a.priority}/${a.status}]`).join(", ") || "None"}`).join("\n");
 
-    const systemPrompt = `You are an AI assistant helping a Relationship Manager (RM) prioritize customers for sales actions.
+    // Check if this is a "plan my day" request
+    const isPlanMyDay = message.toLowerCase().includes("plan my day") || 
+                        message.toLowerCase().includes("günümü planla");
+
+    let systemPrompt: string;
+
+    if (isPlanMyDay) {
+      systemPrompt = `You are an AI assistant helping a Relationship Manager (RM) plan their day for maximum performance.
+
+When the user asks to "plan my day", you should:
+1. Start with an encouraging opener: "Gününüz planlanıyor! Sizi zirveye taşımak için buradayım. 🚀"
+2. Analyze their customer portfolio and identify the TOP 5 customers to focus on TODAY
+3. For each customer, provide:
+   - Why they should be prioritized (status, principality score, pending actions)
+   - What specific action to take
+   - Expected impact
+
+Available customer data uses temporary IDs for privacy (like C1, C2, etc.). Always refer to customers by their temp IDs.
+
+Prioritization criteria:
+- High principality score customers needing attention
+- Strong Target / Target status customers with cross-sell opportunities
+- Customers with pending actions that need follow-up
+- Balance between quick wins and high-value prospects
+
+Always respond in Turkish. Be motivational and action-oriented.
+
+Customer Portfolio:
+${customerContext}`;
+    } else {
+      systemPrompt = `You are an AI assistant helping a Relationship Manager (RM) prioritize customers for sales actions.
 
 Your role is to analyze customer portfolios and recommend which customers to focus on based on the RM's query.
 
@@ -62,6 +92,7 @@ When listing customers, format as:
 
 Customer Portfolio:
 ${customerContext}`;
+    }
 
     // Build messages with history (max 5 previous messages)
     const recentHistory = (chatHistory || []).slice(-5);
