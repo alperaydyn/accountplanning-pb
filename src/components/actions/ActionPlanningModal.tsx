@@ -180,9 +180,9 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
                 </Select>
               </div>
               <div>
-                <label className="text-xs text-muted-foreground block mb-1">Estimated Action Time</label>
+                <label className="text-xs text-muted-foreground block mb-1">Estimated Action Date</label>
                 <Input
-                  type="datetime-local"
+                  type="date"
                   value={actionState.actionDate}
                   onChange={(e) => handleDateChange(e.target.value)}
                   className="w-full"
