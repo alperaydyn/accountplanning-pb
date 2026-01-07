@@ -152,35 +152,17 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
         <CardTitle className="text-lg font-semibold text-card-foreground">
           Product Performance
         </CardTitle>
-        <div className="flex items-center gap-2">
-          {noData && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateRecords}
-              disabled={createTargets.isPending}
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              Create Records
-            </Button>
-          )}
-          <Select
-            value={effectiveDate}
-            onValueChange={handleDateChange}
-            disabled={datesLoading || recordDates.length === 0}
+        {noData && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCreateRecords}
+            disabled={createTargets.isPending}
           >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select date" />
-            </SelectTrigger>
-            <SelectContent>
-              {recordDates.map((date) => (
-                <SelectItem key={date} value={date}>
-                  {date}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <Plus className="h-4 w-4 mr-1" />
+            Create Records
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         {targetsLoading ? (
