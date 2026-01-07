@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Minus, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +23,11 @@ import { useActions } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+interface ProductPerformanceTableProps {
+  selectedDate?: string;
+  onDateChange?: (date: string | undefined) => void;
+}
+
 type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
 
 const statusColors: Record<ProductStatus, string> = {
@@ -46,10 +50,9 @@ const statusLabels: Record<ProductStatus, string> = {
   diversity: "Diversity ⚠",
 };
 
-export function ProductPerformanceTable() {
+export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductPerformanceTableProps) {
   const navigate = useNavigate();
   const { data: recordDates = [], isLoading: datesLoading } = useRecordDates();
-  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
   
   // Set default to first available date
   const effectiveDate = selectedDate || recordDates[0];
@@ -131,10 +134,14 @@ export function ProductPerformanceTable() {
     try {
       await createTargets.mutateAsync(recordDate);
       toast.success(`Records created for ${recordDate}`);
-      setSelectedDate(recordDate);
+      onDateChange?.(recordDate);
     } catch (error) {
       toast.error("Failed to create records");
     }
+  };
+
+  const handleDateChange = (date: string) => {
+    onDateChange?.(date);
   };
 
   const noData = !targetsLoading && targets.length === 0;
@@ -159,7 +166,7 @@ export function ProductPerformanceTable() {
           )}
           <Select
             value={effectiveDate}
-            onValueChange={setSelectedDate}
+            onValueChange={handleDateChange}
             disabled={datesLoading || recordDates.length === 0}
           >
             <SelectTrigger className="w-[140px]">
