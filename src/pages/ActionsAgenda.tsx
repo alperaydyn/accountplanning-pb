@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
@@ -32,10 +32,15 @@ const priorityColors = {
 
 export default function ActionsAgenda() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const filterStatus = searchParams.get("status");
   
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  const handleAIPlanMyDay = () => {
+    navigate("/ai-assistant?prompt=plan-my-day");
+  };
   
   const { data: actions = [] } = useActions();
   const { data: customers = [] } = useCustomers();
@@ -183,13 +188,11 @@ export default function ActionsAgenda() {
                   : "You don't have any actions planned for this month."}
               </p>
               <Button 
-                asChild
+                onClick={handleAIPlanMyDay}
                 className="bg-violet-500 hover:bg-violet-600 text-white"
               >
-                <Link to="/ai-assistant">
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Let AI find the best customers for you
-                </Link>
+                <Sparkles className="h-4 w-4 mr-2" />
+                Let AI find the best customers for you
               </Button>
             </CardContent>
           </Card>
