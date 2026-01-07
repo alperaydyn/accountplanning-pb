@@ -267,6 +267,76 @@ export type Database = {
           },
         ]
       }
+      ai_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          customer_mapping: Json | null
+          id: string
+          role: string
+          session_id: string
+          usage: Json | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          customer_mapping?: Json | null
+          id?: string
+          role: string
+          session_id: string
+          usage?: Json | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          customer_mapping?: Json | null
+          id?: string
+          role?: string
+          session_id?: string
+          usage?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "ai_chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          portfolio_manager_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          portfolio_manager_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          portfolio_manager_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_chat_sessions_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_insights: {
         Row: {
           created_at: string

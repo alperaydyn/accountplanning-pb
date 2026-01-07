@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
 import ActionsAgenda from "./pages/ActionsAgenda";
+import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
 import Thresholds from "./pages/Thresholds";
 import Auth from "./pages/Auth";
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
             <Route path="/customers/:customerId" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
             <Route path="/agenda" element={<ProtectedRoute><ActionsAgenda /></ProtectedRoute>} />
+            <Route path="/ai-assistant" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
             <Route path="/thresholds" element={<ProtectedRoute><Thresholds /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
