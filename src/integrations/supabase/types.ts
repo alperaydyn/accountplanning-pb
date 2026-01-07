@@ -267,6 +267,42 @@ export type Database = {
           },
         ]
       }
+      ai_insights: {
+        Row: {
+          created_at: string
+          feedback: string | null
+          id: string
+          insights: Json
+          model_name: string
+          portfolio_manager_id: string
+          record_date: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          insights?: Json
+          model_name?: string
+          portfolio_manager_id: string
+          record_date?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          insights?: Json
+          model_name?: string
+          portfolio_manager_id?: string
+          record_date?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       customer_groups: {
         Row: {
           created_at: string
