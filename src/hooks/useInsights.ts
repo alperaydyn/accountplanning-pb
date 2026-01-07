@@ -62,31 +62,48 @@ function calculateStatus(
   return "on_track";
 }
 
-function getCurrentMonth(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
-}
-
-export function useInsights() {
+export function useInsights(recordDate?: string) {
   const queryClient = useQueryClient();
-  const { data: targets, isLoading: targetsLoading } = usePortfolioTargets();
+  const { data: targets, isLoading: targetsLoading } = usePortfolioTargets(recordDate);
   const { data: actions, isLoading: actionsLoading } = useActions();
   const { data: portfolioManager, isLoading: pmLoading } = usePortfolioManager();
 
-  const fetchOrGenerateInsights = async (): Promise<StoredInsights | null> => {
-    if (!targets || targets.length === 0 || !portfolioManager) return null;
+  // Fetch all versions for the selected record date
+  const versionsQuery = useQuery({
+    queryKey: ["insight-versions", portfolioManager?.id, recordDate],
+    queryFn: async () => {
+      if (!portfolioManager || !recordDate) return [];
+      
+      const { data, error } = await supabase
+        .from("ai_insights")
+        .select("version, created_at")
+        .eq("portfolio_manager_id", portfolioManager.id)
+        .eq("record_date", recordDate)
+        .order("version", { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!portfolioManager && !!recordDate,
+  });
 
-    const recordDate = getCurrentMonth();
+  const fetchOrGenerateInsights = async (selectedVersion?: number): Promise<StoredInsights | null> => {
+    if (!targets || targets.length === 0 || !portfolioManager || !recordDate) return null;
 
-    // First, try to fetch existing insights for this month
-    const { data: existingInsights, error: fetchError } = await supabase
+    // Fetch existing insights for this date
+    let query = supabase
       .from("ai_insights")
       .select("*")
       .eq("portfolio_manager_id", portfolioManager.id)
-      .eq("record_date", recordDate)
-      .order("version", { ascending: false })
-      .limit(1)
-      .single();
+      .eq("record_date", recordDate);
+    
+    if (selectedVersion !== undefined) {
+      query = query.eq("version", selectedVersion);
+    } else {
+      query = query.order("version", { ascending: false }).limit(1);
+    }
+
+    const { data: existingInsights, error: fetchError } = await query.single();
 
     if (existingInsights && !fetchError) {
       return {
@@ -104,7 +121,7 @@ export function useInsights() {
     targetsData: typeof targets,
     actionsData: typeof actions,
     portfolioManagerId: string,
-    recordDate: string,
+    insightRecordDate: string,
     version: number
   ): Promise<StoredInsights | null> => {
     if (!targetsData || targetsData.length === 0) return null;
@@ -180,7 +197,7 @@ export function useInsights() {
       .from("ai_insights")
       .insert([{
         portfolio_manager_id: portfolioManagerId,
-        record_date: recordDate,
+        record_date: insightRecordDate,
         version,
         model_name: MODEL_NAME,
         insights: JSON.parse(JSON.stringify(insights)),
@@ -193,7 +210,7 @@ export function useInsights() {
       // Return insights even if save fails
       return {
         id: "",
-        record_date: recordDate,
+        record_date: insightRecordDate,
         version,
         model_name: MODEL_NAME,
         insights,
@@ -201,6 +218,9 @@ export function useInsights() {
         created_at: new Date().toISOString(),
       };
     }
+
+    // Invalidate versions query to refresh the list
+    queryClient.invalidateQueries({ queryKey: ["insight-versions", portfolioManagerId, insightRecordDate] });
 
     return {
       ...savedInsights,
@@ -210,22 +230,29 @@ export function useInsights() {
   };
 
   const query = useQuery({
-    queryKey: ["insights", portfolioManager?.id, targets?.length, actions?.length],
-    queryFn: fetchOrGenerateInsights,
-    enabled: !targetsLoading && !actionsLoading && !pmLoading && !!targets && targets.length > 0 && !!portfolioManager,
+    queryKey: ["insights", portfolioManager?.id, recordDate],
+    queryFn: () => fetchOrGenerateInsights(),
+    enabled: !targetsLoading && !actionsLoading && !pmLoading && !!targets && targets.length > 0 && !!portfolioManager && !!recordDate,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes
     refetchOnWindowFocus: false,
   });
 
+  const selectVersionMutation = useMutation({
+    mutationFn: async (version: number) => {
+      return fetchOrGenerateInsights(version);
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["insights", portfolioManager?.id, recordDate], data);
+    },
+  });
+
   const refreshMutation = useMutation({
     mutationFn: async () => {
-      if (!targets || targets.length === 0 || !portfolioManager) {
+      if (!targets || targets.length === 0 || !portfolioManager || !recordDate) {
         throw new Error("No data available");
       }
 
-      const recordDate = getCurrentMonth();
-
-      // Get the latest version for this month
+      // Get the latest version for this date
       const { data: latestInsights } = await supabase
         .from("ai_insights")
         .select("version")
@@ -240,7 +267,7 @@ export function useInsights() {
       return generateNewInsights(targets, actions, portfolioManager.id, recordDate, newVersion);
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["insights", portfolioManager?.id, targets?.length, actions?.length], data);
+      queryClient.setQueryData(["insights", portfolioManager?.id, recordDate], data);
       toast.success("Insights regenerated");
     },
     onError: (error) => {
@@ -262,7 +289,7 @@ export function useInsights() {
     onSuccess: (feedback, { insightId }) => {
       // Update the cached data
       queryClient.setQueryData(
-        ["insights", portfolioManager?.id, targets?.length, actions?.length],
+        ["insights", portfolioManager?.id, recordDate],
         (old: StoredInsights | null) => {
           if (!old || old.id !== insightId) return old;
           return { ...old, feedback };
@@ -277,6 +304,10 @@ export function useInsights() {
 
   return {
     ...query,
+    versions: versionsQuery.data || [],
+    isLoadingVersions: versionsQuery.isLoading,
+    selectVersion: selectVersionMutation.mutate,
+    isSelectingVersion: selectVersionMutation.isPending,
     refreshInsights: refreshMutation.mutate,
     isRefreshing: refreshMutation.isPending,
     submitFeedback: feedbackMutation.mutate,

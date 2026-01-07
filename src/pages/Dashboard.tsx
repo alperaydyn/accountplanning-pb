@@ -1,8 +1,16 @@
+import { useState } from "react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { SummaryCards, ProductPerformanceTable, InsightsPanel, RepresentativeBadges } from "@/components/dashboard";
 import { currentUser } from "@/data/portfolio";
+import { useRecordDates } from "@/hooks/usePortfolioTargets";
 
 const Dashboard = () => {
+  const { data: recordDates = [] } = useRecordDates();
+  const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  
+  // Use first available date as default
+  const effectiveDate = selectedDate || recordDates[0];
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -24,10 +32,13 @@ const Dashboard = () => {
         <SummaryCards />
 
         {/* AI Insights Panel */}
-        <InsightsPanel />
+        <InsightsPanel recordDate={effectiveDate} />
 
         {/* Product Performance Table */}
-        <ProductPerformanceTable />
+        <ProductPerformanceTable 
+          selectedDate={selectedDate}
+          onDateChange={setSelectedDate}
+        />
       </div>
     </AppLayout>
   );

@@ -1,13 +1,23 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown } from "lucide-react";
+import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInsights, Insight, InsightProduct, StoredInsights } from "@/hooks/useInsights";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useInsights, Insight, StoredInsights } from "@/hooks/useInsights";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
+
+interface InsightsPanelProps {
+  recordDate?: string;
+}
 
 const statusColors: Record<string, string> = {
   on_track: "bg-success/10 text-success border-success/20",
@@ -29,12 +39,23 @@ const statusLabels: Record<string, string> = {
   diversity: "Diversity ⚠",
 };
 
-export function InsightsPanel() {
+export function InsightsPanel({ recordDate }: InsightsPanelProps) {
   const navigate = useNavigate();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
   
-  const { data: storedInsights, isLoading, error, refreshInsights, isRefreshing, submitFeedback, isSubmittingFeedback } = useInsights();
-  const { data: targets } = usePortfolioTargets();
+  const { 
+    data: storedInsights, 
+    isLoading, 
+    error, 
+    refreshInsights, 
+    isRefreshing, 
+    submitFeedback, 
+    isSubmittingFeedback,
+    versions,
+    selectVersion,
+    isSelectingVersion,
+  } = useInsights(recordDate);
+  const { data: targets } = usePortfolioTargets(recordDate);
 
   const insights = storedInsights?.insights || [];
 
@@ -105,12 +126,21 @@ export function InsightsPanel() {
     return "on_track";
   };
 
-  const formatDate = (dateStr: string) => {
+  const formatVersionTime = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+    return date.toLocaleString("tr-TR", { 
+      month: "short", 
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   };
 
-  if (isLoading || isRefreshing) {
+  if (!recordDate) {
+    return null;
+  }
+
+  if (isLoading || isRefreshing || isSelectingVersion) {
     return (
       <Card className="bg-card border-border">
         <CardHeader>
@@ -122,7 +152,7 @@ export function InsightsPanel() {
         <CardContent className="space-y-3">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span>AI is analyzing product performance...</span>
+            <span>AI is analyzing product performance for {recordDate}...</span>
           </div>
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
@@ -170,8 +200,34 @@ export function InsightsPanel() {
                   {storedInsights.model_name}
                 </Badge>
                 <span className="text-xs text-muted-foreground">
-                  {formatDate(storedInsights.record_date)} • v{storedInsights.version}
+                  {recordDate}
                 </span>
+                {versions.length > 1 ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs gap-0.5">
+                        v{storedInsights.version}
+                        <ChevronDown className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="min-w-[140px]">
+                      {versions.map((v) => (
+                        <DropdownMenuItem
+                          key={v.version}
+                          onClick={() => selectVersion(v.version)}
+                          className={v.version === storedInsights.version ? "bg-muted" : ""}
+                        >
+                          <span className="font-medium">v{v.version}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {formatVersionTime(v.created_at)}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : (
+                  <span className="text-xs text-muted-foreground">v{storedInsights.version}</span>
+                )}
               </div>
             )}
           </div>
