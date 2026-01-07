@@ -30,8 +30,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
-import { Pencil, Upload, Download, Filter, X } from 'lucide-react';
+import { Pencil, Upload, Download, Filter, X, ShieldAlert } from 'lucide-react';
 import {
   useProductThresholds,
   useUpdateProductThreshold,
@@ -39,6 +40,7 @@ import {
   type ProductThresholdWithProduct,
 } from '@/hooks/useProductThresholds';
 import { useProducts } from '@/hooks/useProducts';
+import { useIsAdmin } from '@/hooks/useUserRole';
 import type { Database } from '@/integrations/supabase/types';
 
 type Sector = Database['public']['Enums']['customer_sector'];
@@ -72,6 +74,7 @@ export default function Thresholds() {
   const { data: thresholds, isLoading } = useProductThresholds(filters);
   const { data: products } = useProducts();
   const updateThreshold = useUpdateProductThreshold();
+  const { isAdmin, isLoading: isLoadingRole } = useIsAdmin();
 
   // Pagination
   const paginatedThresholds = useMemo(() => {
@@ -104,7 +107,7 @@ export default function Thresholds() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingThreshold) return;
+    if (!editingThreshold || !isAdmin) return;
 
     try {
       await updateThreshold.mutateAsync({
@@ -119,13 +122,22 @@ export default function Thresholds() {
     } catch (error) {
       toast({
         title: 'Hata',
-        description: 'Eşik değeri güncellenirken bir hata oluştu.',
+        description: 'Eşik değeri güncellenirken bir hata oluştu. Yalnızca yöneticiler düzenleme yapabilir.',
         variant: 'destructive',
       });
     }
   };
 
   const handleToggleActive = async (threshold: ProductThresholdWithProduct) => {
+    if (!isAdmin) {
+      toast({
+        title: 'Yetki Hatası',
+        description: 'Yalnızca yöneticiler eşik değerlerini düzenleyebilir.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       await updateThreshold.mutateAsync({
         id: threshold.id,
@@ -204,6 +216,16 @@ export default function Thresholds() {
             </Button>
           </div>
         </div>
+
+        {/* Admin Notice */}
+        {!isLoadingRole && !isAdmin && (
+          <Alert>
+            <ShieldAlert className="h-4 w-4" />
+            <AlertDescription>
+              Eşik değerlerini görüntüleyebilirsiniz ancak düzenleme yapabilmek için yönetici yetkisi gereklidir.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Filters */}
         {showFilters && (
@@ -367,16 +389,19 @@ export default function Thresholds() {
                             <Switch
                               checked={threshold.is_active}
                               onCheckedChange={() => handleToggleActive(threshold)}
+                              disabled={!isAdmin}
                             />
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditClick(threshold)}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEditClick(threshold)}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))
