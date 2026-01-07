@@ -1,25 +1,37 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
-import { Lightbulb } from "lucide-react";
+import { Lightbulb, Save } from "lucide-react";
 import { useCustomerById } from "@/hooks/useCustomers";
 import { useCustomerProducts } from "@/hooks/useCustomerProducts";
 import { useProducts } from "@/hooks/useProducts";
 import { useActionsByCustomer } from "@/hooks/useActions";
-import { useActionUpdates } from "@/hooks/useActionUpdates";
+import { useActionUpdates, useCreateActionUpdate } from "@/hooks/useActionUpdates";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
+import { Database } from "@/integrations/supabase/types";
 interface ActionPlanningModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId: string;
   actionId: string;
 }
+
+type ActionStatus = Database['public']['Enums']['action_status'];
+
+const statusMapping: Record<string, ActionStatus> = {
+  "Beklemede": "Beklemede",
+  "Planlandı": "Planlandı",
+  "Tamamlandı": "Tamamlandı",
+  "Ertelendi": "Ertelendi",
+  "İlgilenmiyor": "İlgilenmiyor",
+  "Uygun Değil": "Uygun Değil",
+};
 
 const priorityColors = {
   high: "bg-destructive/10 text-destructive border-destructive/20",
@@ -36,6 +48,18 @@ const responseOptions = [
   { value: "Uygun Değil", label: "Not Possible" },
 ];
 
+// Format number with thousand separators
+const formatWithThousandSeparator = (value: string): string => {
+  const numericValue = value.replace(/[^\d]/g, '');
+  if (!numericValue) return '';
+  return Number(numericValue).toLocaleString('tr-TR');
+};
+
+// Parse formatted number back to raw number
+const parseFormattedNumber = (value: string): number => {
+  return Number(value.replace(/[^\d]/g, '')) || 0;
+};
+
 export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }: ActionPlanningModalProps) {
   const [customerExplanation, setCustomerExplanation] = useState("");
   const [actionState, setActionState] = useState<{ response: string; actionDate: string; volume: string; responseText: string }>({
@@ -46,11 +70,13 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
   });
   const [hintsExpanded, setHintsExpanded] = useState(false);
   
+  const { toast } = useToast();
   const { data: customer } = useCustomerById(customerId);
   const { data: allProducts = [] } = useProducts();
   const { data: customerProducts = [] } = useCustomerProducts(customerId);
   const { data: customerActions = [] } = useActionsByCustomer(customerId);
   const { data: updates = [] } = useActionUpdates(actionId);
+  const createActionUpdate = useCreateActionUpdate();
   
   const action = customerActions.find(a => a.id === actionId);
   const product = action ? allProducts.find(p => p.id === action.product_id) : null;
@@ -67,12 +93,47 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
     setActionState(prev => ({ ...prev, actionDate }));
   };
 
-  const handleVolumeChange = (volume: string) => {
-    setActionState(prev => ({ ...prev, volume }));
+  const handleVolumeChange = (value: string) => {
+    // Format with thousand separator for display
+    const formatted = formatWithThousandSeparator(value);
+    setActionState(prev => ({ ...prev, volume: formatted }));
   };
 
   const handleResponseTextChange = (responseText: string) => {
     setActionState(prev => ({ ...prev, responseText }));
+  };
+
+  const handleSave = async () => {
+    const newStatus = statusMapping[actionState.response];
+    const newValue = parseFormattedNumber(actionState.volume);
+    
+    try {
+      await createActionUpdate.mutateAsync({
+        action_id: actionId,
+        update_type: 'response',
+        previous_status: action.current_status,
+        new_status: newStatus,
+        previous_value: action.current_value ?? undefined,
+        new_value: newValue || undefined,
+        previous_date: action.current_planned_date ?? undefined,
+        new_date: actionState.actionDate || undefined,
+        response_text: actionState.responseText || undefined,
+        notes: customerExplanation || undefined,
+      });
+
+      toast({
+        title: "Action saved",
+        description: "The action response has been saved successfully.",
+      });
+
+      onOpenChange(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save action response. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const currentValue = customerProduct ? Number(customerProduct.current_value) : 0;
@@ -191,7 +252,7 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
               <div>
                 <label className="text-xs text-muted-foreground block mb-1">Volume (₺)</label>
                 <Input
-                  type="number"
+                  type="text"
                   placeholder="Enter volume"
                   value={actionState.volume}
                   onChange={(e) => handleVolumeChange(e.target.value)}
@@ -223,6 +284,16 @@ export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }
             />
           </div>
         </div>
+
+        <DialogFooter className="mt-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={createActionUpdate.isPending}>
+            <Save className="h-4 w-4 mr-2" />
+            {createActionUpdate.isPending ? "Saving..." : "Save Action"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
