@@ -1,82 +1,66 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink } from "lucide-react";
+import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { getProductPerformance } from "@/data/portfolio";
-import { ProductPerformance } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useInsights, Insight } from "@/hooks/useInsights";
+import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
-interface Insight {
-  type: 'critical' | 'warning' | 'info';
-  icon: typeof AlertTriangle;
-  title: string;
-  message: string;
-  products: ProductPerformance[];
-  detailedDescription: string;
-}
+const statusColors: Record<string, string> = {
+  on_track: "bg-success/10 text-success border-success/20",
+  at_risk: "bg-warning/10 text-warning border-warning/20",
+  critical: "bg-destructive/10 text-destructive border-destructive/20",
+  melting: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  growing: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  ticket_size: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  diversity: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
+};
+
+const statusLabels: Record<string, string> = {
+  on_track: "On Track",
+  at_risk: "At Risk",
+  critical: "Critical",
+  melting: "Melting",
+  growing: "Growing",
+  ticket_size: "Ticket Size ⚠",
+  diversity: "Diversity ⚠",
+};
 
 export function InsightsPanel() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const products = getProductPerformance();
-  const criticalProducts = products.filter(p => p.status === 'critical');
-  const atRiskProducts = products.filter(p => p.status === 'at_risk');
-  const highPendingActions = products.filter(p => p.actionsNotPlanned > 3);
+  const { data: insights, isLoading, error } = useInsights();
+  const { data: targets } = usePortfolioTargets();
 
-  const insights: Insight[] = [
-    ...(criticalProducts.length > 0 ? [{
-      type: 'critical' as const,
-      icon: AlertTriangle,
-      title: 'Critical Products Identified',
-      message: `${criticalProducts.map(p => p.productName).join(', ')} showing negative YoY growth. Immediate action recommended.`,
-      products: criticalProducts,
-      detailedDescription: `Bu ürünler yıllık bazda negatif büyüme göstermektedir. Müşteri kaybı ve hacim düşüşü yaşanmaktadır. Acil müdahale gerektiren durumlar için müşteri ziyaretleri planlanmalı ve rekabet analizi yapılmalıdır. Ürün fiyatlaması ve müşteri ihtiyaçları yeniden değerlendirilmelidir.`,
-    }] : []),
-    ...(atRiskProducts.length > 0 ? [{
-      type: 'warning' as const,
-      icon: TrendingDown,
-      title: 'Products At Risk',
-      message: `${atRiskProducts.length} products showing below-target performance. Consider prioritizing customer outreach.`,
-      products: atRiskProducts,
-      detailedDescription: `Bu ürünler hedefin altında performans göstermektedir. Büyüme oranları beklentilerin altında kalmaktadır. Müşteri iletişimini artırarak ve çapraz satış fırsatlarını değerlendirerek performansı iyileştirebilirsiniz. Proaktif yaklaşım ile bu ürünlerin kritik kategoriye düşmesi önlenebilir.`,
-    }] : []),
-    ...(highPendingActions.length > 0 ? [{
-      type: 'info' as const,
-      icon: Lightbulb,
-      title: 'Action Opportunities',
-      message: `${highPendingActions.length} products have high pending action counts. Review and assign to increase engagement.`,
-      products: highPendingActions,
-      detailedDescription: `Bu ürünler için planlanması gereken çok sayıda aksiyon bulunmaktadır. Bekleyen aksiyonların planlanması ve takibi ile müşteri etkileşimi artırılabilir. Aksiyonları önceliklendirerek portföy yönetimini optimize edebilirsiniz.`,
-    }] : []),
-  ];
-
-  const getIconColor = (type: 'critical' | 'warning' | 'info') => {
+  const getIconForType = (type: "critical" | "warning" | "info") => {
     switch (type) {
-      case 'critical': return 'text-destructive';
-      case 'warning': return 'text-warning';
-      case 'info': return 'text-info';
+      case "critical": return AlertTriangle;
+      case "warning": return TrendingDown;
+      case "info": return Lightbulb;
     }
   };
 
-  const getBgColor = (type: 'critical' | 'warning' | 'info') => {
+  const getIconColor = (type: "critical" | "warning" | "info") => {
     switch (type) {
-      case 'critical': return 'bg-destructive/5 border-destructive/20';
-      case 'warning': return 'bg-warning/5 border-warning/20';
-      case 'info': return 'bg-info/5 border-info/20';
+      case "critical": return "text-destructive";
+      case "warning": return "text-warning";
+      case "info": return "text-info";
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'critical':
-        return <Badge variant="destructive">Critical</Badge>;
-      case 'at_risk':
-        return <Badge className="bg-warning/20 text-warning-foreground border-warning">At Risk</Badge>;
-      default:
-        return <Badge variant="secondary">On Track</Badge>;
+  const getBgColor = (type: "critical" | "warning" | "info") => {
+    switch (type) {
+      case "critical": return "bg-destructive/5 border-destructive/20";
+      case "warning": return "bg-warning/5 border-warning/20";
+      case "info": return "bg-info/5 border-info/20";
     }
   };
 
@@ -85,36 +69,131 @@ export function InsightsPanel() {
     navigate(`/customers?product=${productId}`);
   };
 
-  if (insights.length === 0) {
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["insights"] });
+      toast.success("Insights refreshed");
+    } catch {
+      toast.error("Failed to refresh insights");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Get product details for the selected insight
+  const getProductsForInsight = (productIds: string[]) => {
+    if (!targets) return [];
+    return targets.filter((t) => productIds.includes(t.product_id));
+  };
+
+  const calculateStatus = (t: typeof targets extends (infer U)[] | undefined ? U : never) => {
+    const stockCountTar = Number(t.stock_count_tar) || 0;
+    const stockVolumeTar = Number(t.stock_volume_tar) || 0;
+    const flowCountTar = Number(t.flow_count_tar) || 0;
+    const flowVolumeTar = Number(t.flow_volume_tar) || 0;
+
+    const stockAvg = (stockCountTar + stockVolumeTar) / 2;
+    const flowAvg = (flowCountTar + flowVolumeTar) / 2;
+    const countAvg = (stockCountTar + flowCountTar) / 2;
+    const volumeAvg = (stockVolumeTar + flowVolumeTar) / 2;
+
+    const stockOk = stockAvg >= 80;
+    const flowOk = flowAvg >= 80;
+    const countOk = countAvg >= 80;
+    const volumeOk = volumeAvg >= 80;
+
+    const overallAvg = (stockCountTar + stockVolumeTar + flowCountTar + flowVolumeTar) / 4;
+
+    if (stockOk && !flowOk) return "melting";
+    if (!stockOk && flowOk) return "growing";
+    if (countOk && !volumeOk) return "ticket_size";
+    if (!countOk && volumeOk) return "diversity";
+
+    if (overallAvg < 50) return "critical";
+    if (overallAvg < 80) return "at_risk";
+    return "on_track";
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+            <Loader2 className="h-5 w-5 text-info animate-spin" />
+            AI Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="bg-card border-border">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" />
+            AI Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Failed to load insights. Please try again later.</p>
+          <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-2">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!insights || insights.length === 0) {
     return null;
   }
 
   return (
     <>
       <Card className="bg-card border-border">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
             <Lightbulb className="h-5 w-5 text-info" />
             AI Insights
           </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="h-8 w-8"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+          </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {insights.map((insight, index) => (
-            <div
-              key={index}
-              className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
-              onClick={() => setSelectedInsight(insight)}
-            >
-              <div className="flex items-start gap-3">
-                <insight.icon className={`h-5 w-5 mt-0.5 ${getIconColor(insight.type)}`} />
-                <div className="flex-1">
-                  <h4 className="font-medium text-card-foreground">{insight.title}</h4>
-                  <p className="text-sm text-muted-foreground mt-1">{insight.message}</p>
+          {insights.map((insight, index) => {
+            const Icon = getIconForType(insight.type);
+            return (
+              <div
+                key={index}
+                className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
+                onClick={() => setSelectedInsight(insight)}
+              >
+                <div className="flex items-start gap-3">
+                  <Icon className={`h-5 w-5 mt-0.5 ${getIconColor(insight.type)}`} />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-card-foreground">{insight.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1">{insight.message}</p>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </div>
-            </div>
-          ))}
+            );
+          })}
         </CardContent>
       </Card>
 
@@ -124,7 +203,10 @@ export function InsightsPanel() {
             <>
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
-                  <selectedInsight.icon className={`h-5 w-5 ${getIconColor(selectedInsight.type)}`} />
+                  {(() => {
+                    const Icon = getIconForType(selectedInsight.type);
+                    return <Icon className={`h-5 w-5 ${getIconColor(selectedInsight.type)}`} />;
+                  })()}
                   {selectedInsight.title}
                 </DialogTitle>
                 <DialogDescription className="text-base">
@@ -132,34 +214,41 @@ export function InsightsPanel() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="mt-4">
-                <h4 className="font-medium text-foreground mb-3">İlgili Ürünler</h4>
-                <div className="space-y-2">
-                  {selectedInsight.products.map((product) => (
-                    <div
-                      key={product.productId}
-                      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
-                      onClick={() => handleProductClick(product.productId)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div>
-                          <p className="font-medium text-foreground">{product.productName}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {product.stock.count} müşteri • YoY: {product.stock.yoy > 0 ? '+' : ''}{product.stock.yoy}
-                          </p>
+              {selectedInsight.productIds.length > 0 && (
+                <div className="mt-4">
+                  <h4 className="font-medium text-foreground mb-3">İlgili Ürünler</h4>
+                  <div className="space-y-2">
+                    {getProductsForInsight(selectedInsight.productIds).map((target) => {
+                      const status = calculateStatus(target);
+                      return (
+                        <div
+                          key={target.product_id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
+                          onClick={() => handleProductClick(target.product_id)}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div>
+                              <p className="font-medium text-foreground">{target.products?.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Stock: {target.stock_count} • HGO: {Math.round((Number(target.stock_count_tar) + Number(target.stock_volume_tar) + Number(target.flow_count_tar) + Number(target.flow_volume_tar)) / 4)}%
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge className={statusColors[status]}>
+                              {statusLabels[status]}
+                            </Badge>
+                            <Button variant="ghost" size="sm" className="gap-1">
+                              <ExternalLink className="h-4 w-4" />
+                              Müşterileri Gör
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {getStatusBadge(product.status)}
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <ExternalLink className="h-4 w-4" />
-                          Müşterileri Gör
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </>
           )}
         </DialogContent>
