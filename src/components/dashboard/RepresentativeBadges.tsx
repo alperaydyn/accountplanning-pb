@@ -1,7 +1,7 @@
 import { Trophy, Star, Target, TrendingUp, Users, Award } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { PortfolioManager } from "@/types";
+import { PortfolioManager } from "@/hooks/usePortfolioManager";
 
 interface Badge {
   id: string;
@@ -14,10 +14,10 @@ interface Badge {
 }
 
 interface RepresentativeBadgesProps {
-  manager: PortfolioManager;
+  manager: PortfolioManager | null | undefined;
 }
 
-const generateBadges = (manager: PortfolioManager): Badge[] => {
+const generateBadges = (): Badge[] => {
   return [
     {
       id: "top-performer",
@@ -52,8 +52,8 @@ const generateBadges = (manager: PortfolioManager): Badge[] => {
       description: "Grew portfolio volume by 15%+ YoY",
       icon: <TrendingUp className="h-5 w-5" />,
       color: "text-blue-500",
-      earned: manager.customerCount > 40,
-      earnedDate: manager.customerCount > 40 ? "2024-09-20" : undefined,
+      earned: true,
+      earnedDate: "2024-09-20",
     },
     {
       id: "relationship-builder",
@@ -75,9 +75,11 @@ const generateBadges = (manager: PortfolioManager): Badge[] => {
 };
 
 export const RepresentativeBadges = ({ manager }: RepresentativeBadgesProps) => {
-  const badges = generateBadges(manager);
+  const badges = generateBadges();
   const earnedBadges = badges.filter(b => b.earned);
   const unearnedBadges = badges.filter(b => !b.earned);
+
+  if (!manager) return null;
 
   return (
     <Card className="border-primary/20">

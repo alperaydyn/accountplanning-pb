@@ -9,6 +9,7 @@ import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
 import { useProductThresholds } from "@/hooks/useProductThresholds";
 import { useProducts } from "@/hooks/useProducts";
+import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
 
 interface ScoreAxis {
   name: string;
@@ -17,19 +18,24 @@ interface ScoreAxis {
   description: string;
 }
 
+interface SummaryCardsProps {
+  recordDate?: string;
+}
+
 const getProgressColor = (score: number) => {
   if (score >= 80) return "bg-success";
   if (score >= 60) return "bg-warning";
   return "bg-destructive";
 };
 
-export function SummaryCards() {
+export function SummaryCards({ recordDate }: SummaryCardsProps) {
   const navigate = useNavigate();
   const { data: summary, isLoading } = usePortfolioSummary();
   const { data: customers = [] } = useCustomers();
   const { data: customerProducts = [] } = useAllCustomerProducts();
   const { data: thresholds = [] } = useProductThresholds();
   const { data: products = [] } = useProducts();
+  const { data: portfolioTargets = [] } = usePortfolioTargets(recordDate);
   const [showScoreModal, setShowScoreModal] = useState(false);
 
   // Mock total portfolio volume
@@ -40,9 +46,42 @@ export function SummaryCards() {
   const targetCount = customers.filter(c => c.status === 'Target' || c.status === 'Strong Target').length;
   const restCount = customers.length - primaryCount - targetCount;
 
-  // Mock benchmark score
-  const benchmarkScore = 47;
-  const benchmarkMax = 60;
+  // Calculate benchmark score from portfolio_targets HGO% >= 75%
+  const benchmarkData = useMemo(() => {
+    if (portfolioTargets.length === 0) return { score: 0, total: 0 };
+
+    let hgoAbove75 = 0;
+    let totalHgos = 0;
+
+    portfolioTargets.forEach((target) => {
+      // Stock Count HGO%
+      if (target.stock_count_target > 0) {
+        totalHgos++;
+        const stockCountHgo = (target.stock_count / target.stock_count_target) * 100;
+        if (stockCountHgo >= 75) hgoAbove75++;
+      }
+      // Stock Volume HGO%
+      if (target.stock_volume_target > 0) {
+        totalHgos++;
+        const stockVolumeHgo = (target.stock_volume / target.stock_volume_target) * 100;
+        if (stockVolumeHgo >= 75) hgoAbove75++;
+      }
+      // Flow Count HGO%
+      if (target.flow_count_target > 0) {
+        totalHgos++;
+        const flowCountHgo = (target.flow_count / target.flow_count_target) * 100;
+        if (flowCountHgo >= 75) hgoAbove75++;
+      }
+      // Flow Volume HGO%
+      if (target.flow_volume_target > 0) {
+        totalHgos++;
+        const flowVolumeHgo = (target.flow_volume / target.flow_volume_target) * 100;
+        if (flowVolumeHgo >= 75) hgoAbove75++;
+      }
+    });
+
+    return { score: hgoAbove75, total: totalHgos };
+  }, [portfolioTargets]);
 
   const primaryBankScore = summary?.primaryBankScore ?? 0;
 
@@ -198,8 +237,8 @@ export function SummaryCards() {
     },
     {
       title: "Benchmark Score",
-      value: `${benchmarkScore}/${benchmarkMax}`,
-      subtitle: "Portfolio benchmark",
+      value: `${benchmarkData.score}/${benchmarkData.total}`,
+      subtitle: `${benchmarkData.total > 0 ? Math.round((benchmarkData.score / benchmarkData.total) * 100) : 0}% HGO ≥ 75%`,
       icon: Target,
     },
     {
