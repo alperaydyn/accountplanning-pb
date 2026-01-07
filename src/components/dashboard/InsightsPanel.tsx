@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInsights, Insight } from "@/hooks/useInsights";
+import { useInsights, Insight, InsightProduct } from "@/hooks/useInsights";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -82,9 +82,15 @@ export function InsightsPanel() {
   };
 
   // Get product details for the selected insight
-  const getProductsForInsight = (productIds: string[]) => {
+  const getProductsForInsight = (products: InsightProduct[]) => {
     if (!targets) return [];
-    return targets.filter((t) => productIds.includes(t.product_id));
+    return products
+      .filter((p) => p.id)
+      .map((p) => {
+        const target = targets.find((t) => t.product_id === p.id);
+        return target ? { ...target, productName: p.name } : null;
+      })
+      .filter(Boolean);
   };
 
   const calculateStatus = (t: typeof targets extends (infer U)[] | undefined ? U : never) => {
@@ -214,24 +220,39 @@ export function InsightsPanel() {
                 </DialogDescription>
               </DialogHeader>
 
-              {selectedInsight.productIds.length > 0 && (
+              {selectedInsight.products.length > 0 && (
                 <div className="mt-4">
                   <h4 className="font-medium text-foreground mb-3">İlgili Ürünler</h4>
                   <div className="space-y-2">
-                    {getProductsForInsight(selectedInsight.productIds).map((target) => {
-                      const status = calculateStatus(target);
+                    {selectedInsight.products.map((product, idx) => {
+                      if (!product.id) {
+                        return (
+                          <div
+                            key={idx}
+                            className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                          >
+                            <p className="font-medium text-foreground">{product.name}</p>
+                          </div>
+                        );
+                      }
+                      
+                      const target = targets?.find((t) => t.product_id === product.id);
+                      const status = target ? calculateStatus(target) : "at_risk";
+                      
                       return (
                         <div
-                          key={target.product_id}
+                          key={product.id}
                           className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => handleProductClick(target.product_id)}
+                          onClick={() => handleProductClick(product.id!)}
                         >
                           <div className="flex items-center gap-3">
                             <div>
-                              <p className="font-medium text-foreground">{target.products?.name}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Stock: {target.stock_count} • HGO: {Math.round((Number(target.stock_count_tar) + Number(target.stock_volume_tar) + Number(target.flow_count_tar) + Number(target.flow_volume_tar)) / 4)}%
-                              </p>
+                              <p className="font-medium text-foreground">{product.name}</p>
+                              {target && (
+                                <p className="text-sm text-muted-foreground">
+                                  Stock: {target.stock_count} • HGO: {Math.round((Number(target.stock_count_tar) + Number(target.stock_volume_tar) + Number(target.flow_count_tar) + Number(target.flow_volume_tar)) / 4)}%
+                                </p>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center gap-3">
