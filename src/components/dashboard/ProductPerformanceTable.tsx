@@ -24,16 +24,26 @@ import { useActions } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const statusColors = {
+type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
+
+const statusColors: Record<ProductStatus, string> = {
   on_track: "bg-success/10 text-success border-success/20",
   at_risk: "bg-warning/10 text-warning border-warning/20",
   critical: "bg-destructive/10 text-destructive border-destructive/20",
+  melting: "bg-orange-500/10 text-orange-600 border-orange-500/20",
+  growing: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  ticket_size: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+  diversity: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
 };
 
-const statusLabels = {
+const statusLabels: Record<ProductStatus, string> = {
   on_track: "On Track",
   at_risk: "At Risk",
   critical: "Critical",
+  melting: "Melting",
+  growing: "Growing",
+  ticket_size: "Ticket Size ⚠",
+  diversity: "Diversity ⚠",
 };
 
 export function ProductPerformanceTable() {
@@ -73,17 +83,37 @@ export function ProductPerformanceTable() {
     );
   };
 
-  const getProductStatus = (target: typeof targets[0]): 'on_track' | 'at_risk' | 'critical' => {
-    // Combined calculation: average of stock/flow count/volume HGO%
+  const getProductStatus = (target: typeof targets[0]): ProductStatus => {
     const stockCountTar = Number(target.stock_count_tar) || 0;
     const stockVolumeTar = Number(target.stock_volume_tar) || 0;
     const flowCountTar = Number(target.flow_count_tar) || 0;
     const flowVolumeTar = Number(target.flow_volume_tar) || 0;
     
-    const avgTar = (stockCountTar + stockVolumeTar + flowCountTar + flowVolumeTar) / 4;
+    const GOOD_THRESHOLD = 80;
+    const BAD_THRESHOLD = 50;
     
-    if (avgTar < 50) return 'critical';
-    if (avgTar < 80) return 'at_risk';
+    // Calculate averages for stock vs flow and count vs volume
+    const stockAvg = (stockCountTar + stockVolumeTar) / 2;
+    const flowAvg = (flowCountTar + flowVolumeTar) / 2;
+    const countAvg = (stockCountTar + flowCountTar) / 2;
+    const volumeAvg = (stockVolumeTar + flowVolumeTar) / 2;
+    
+    const stockOk = stockAvg >= GOOD_THRESHOLD;
+    const flowOk = flowAvg >= GOOD_THRESHOLD;
+    const countOk = countAvg >= GOOD_THRESHOLD;
+    const volumeOk = volumeAvg >= GOOD_THRESHOLD;
+    
+    const overallAvg = (stockCountTar + stockVolumeTar + flowCountTar + flowVolumeTar) / 4;
+    
+    // Check for specific warning scenarios
+    if (stockOk && !flowOk) return 'melting';      // Stock good, flow bad → losing momentum
+    if (!stockOk && flowOk) return 'growing';       // Flow good, stock bad → building up
+    if (countOk && !volumeOk) return 'ticket_size'; // Count good, volume bad → small tickets
+    if (!countOk && volumeOk) return 'diversity';   // Volume good, count bad → few large customers
+    
+    // General status based on overall average
+    if (overallAvg < BAD_THRESHOLD) return 'critical';
+    if (overallAvg < GOOD_THRESHOLD) return 'at_risk';
     return 'on_track';
   };
 
