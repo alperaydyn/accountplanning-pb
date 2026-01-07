@@ -53,7 +53,8 @@ type ViewMode = "products" | "actions" | "autopilot";
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const navigate = useNavigate();
-  const [selectedActionId, setSelectedActionId] = useState<string | null>(null);
+  const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
+  const [initialActionId, setInitialActionId] = useState<string | undefined>(undefined);
   const [viewMode, setViewMode] = useState<ViewMode>("products");
   const [priorityFilter, setPriorityFilter] = useState<DBActionPriority | "all">("all");
   const [statusFilter, setStatusFilter] = useState<DBActionStatus | "all">("all");
@@ -63,6 +64,17 @@ const CustomerDetail = () => {
   const [sortColumn, setSortColumn] = useState<SortColumn>("gap");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [isGeneratingActions, setIsGeneratingActions] = useState(false);
+
+  // Helper to open planning modal with actions
+  const openPlanningModal = (actionIds: string[], startActionId?: string) => {
+    setSelectedActionIds(actionIds);
+    setInitialActionId(startActionId);
+  };
+
+  const closePlanningModal = () => {
+    setSelectedActionIds([]);
+    setInitialActionId(undefined);
+  };
 
   // Database hooks
   const { data: customer, isLoading: customerLoading } = useCustomerById(customerId);
@@ -376,7 +388,8 @@ const CustomerDetail = () => {
                       )}
                       onClick={() => {
                         if (actionsCount > 0) {
-                          setSelectedActionId(actionsForProduct[0].id);
+                          // Open with all actions for this product
+                          openPlanningModal(actionsForProduct.map(a => a.id), actionsForProduct[0].id);
                         } else {
                           // Open Add Action modal with this product pre-selected
                           handleOpenAddAction(productId);
@@ -524,7 +537,7 @@ const CustomerDetail = () => {
                       <TableRow 
                         key={action.id} 
                         className="cursor-pointer hover:bg-muted/50"
-                        onClick={() => setSelectedActionId(action.id)}
+                        onClick={() => openPlanningModal([action.id], action.id)}
                       >
                         <TableCell className="font-medium">{product?.name || "Unknown"}</TableCell>
                         <TableCell>{action.name}</TableCell>
@@ -568,10 +581,11 @@ const CustomerDetail = () => {
       </div>
 
       <ActionPlanningModal
-        open={!!selectedActionId}
-        onOpenChange={(open) => !open && setSelectedActionId(null)}
+        open={selectedActionIds.length > 0}
+        onOpenChange={(open) => !open && closePlanningModal()}
         customerId={customerId || ""}
-        actionId={selectedActionId || ""}
+        actionIds={selectedActionIds}
+        initialActionId={initialActionId}
       />
 
       <AddActionModal
