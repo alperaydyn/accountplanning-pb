@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useSearchParams, Link } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useActions, Action } from "@/hooks/useActions";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { Database } from "@/integrations/supabase/types";
+import { AIActionAssistant } from "@/components/actions/AIActionAssistant";
 
 type ViewMode = "daily" | "weekly" | "monthly";
 type ActionStatus = Database['public']['Enums']['action_status'];
@@ -36,6 +37,7 @@ export default function ActionsAgenda() {
   
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [showAIAssistant, setShowAIAssistant] = useState(false);
   
   const { data: actions = [] } = useActions();
   const { data: customers = [] } = useCustomers();
@@ -167,7 +169,41 @@ export default function ActionsAgenda() {
           </CardHeader>
         </Card>
 
-        {viewMode === "monthly" ? (
+        {/* AI Assistant */}
+        {showAIAssistant && (
+          <AIActionAssistant 
+            isOpen={showAIAssistant} 
+            onClose={() => setShowAIAssistant(false)} 
+          />
+        )}
+
+        {/* Empty State for no actions */}
+        {totalActionsInView === 0 && !showAIAssistant && (
+          <Card className="border-dashed">
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <div className="p-4 rounded-full bg-violet-500/10 mb-4">
+                <Sparkles className="h-8 w-8 text-violet-500" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No actions planned</h3>
+              <p className="text-muted-foreground text-center max-w-md mb-6">
+                {viewMode === "daily" 
+                  ? "You don't have any actions planned for this day." 
+                  : viewMode === "weekly"
+                  ? "You don't have any actions planned for this week."
+                  : "You don't have any actions planned for this month."}
+              </p>
+              <Button 
+                onClick={() => setShowAIAssistant(true)}
+                className="bg-violet-500 hover:bg-violet-600 text-white"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Let AI find the best customers for you
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {totalActionsInView > 0 && viewMode === "monthly" ? (
           <div className="grid grid-cols-7 gap-2">
             {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
               <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
@@ -206,7 +242,7 @@ export default function ActionsAgenda() {
               );
             })}
           </div>
-        ) : viewMode === "weekly" ? (
+        ) : totalActionsInView > 0 && viewMode === "weekly" ? (
           <Card>
             <CardContent className="p-0 divide-y divide-border">
               {days.map(day => {
@@ -257,7 +293,7 @@ export default function ActionsAgenda() {
               })}
             </CardContent>
           </Card>
-        ) : (
+        ) : totalActionsInView > 0 && viewMode === "daily" ? (
           <div className="grid grid-cols-1 gap-4">
             {days.map(day => {
               const dayActions = getActionsForDay(day);
@@ -312,7 +348,7 @@ export default function ActionsAgenda() {
               );
             })}
           </div>
-        )}
+        ) : null}
       </div>
     </AppLayout>
   );
