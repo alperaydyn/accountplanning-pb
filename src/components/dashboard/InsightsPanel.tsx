@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useInsights, Insight, InsightProduct } from "@/hooks/useInsights";
+import { useInsights, Insight, InsightProduct, StoredInsights } from "@/hooks/useInsights";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   on_track: "bg-success/10 text-success border-success/20",
@@ -33,12 +31,12 @@ const statusLabels: Record<string, string> = {
 
 export function InsightsPanel() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
-  const { data: insights, isLoading, error } = useInsights();
+  const { data: storedInsights, isLoading, error, refreshInsights, isRefreshing, submitFeedback, isSubmittingFeedback } = useInsights();
   const { data: targets } = usePortfolioTargets();
+
+  const insights = storedInsights?.insights || [];
 
   const getIconForType = (type: "critical" | "warning" | "info") => {
     switch (type) {
@@ -69,28 +67,14 @@ export function InsightsPanel() {
     navigate(`/customers?product=${productId}`);
   };
 
-  const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await queryClient.invalidateQueries({ queryKey: ["insights"] });
-      toast.success("Insights refreshed");
-    } catch {
-      toast.error("Failed to refresh insights");
-    } finally {
-      setIsRefreshing(false);
-    }
+  const handleRefresh = () => {
+    refreshInsights();
   };
 
-  // Get product details for the selected insight
-  const getProductsForInsight = (products: InsightProduct[]) => {
-    if (!targets) return [];
-    return products
-      .filter((p) => p.id)
-      .map((p) => {
-        const target = targets.find((t) => t.product_id === p.id);
-        return target ? { ...target, productName: p.name } : null;
-      })
-      .filter(Boolean);
+  const handleFeedback = (feedback: "like" | "dislike") => {
+    if (!storedInsights?.id) return;
+    const newFeedback = storedInsights.feedback === feedback ? null : feedback;
+    submitFeedback({ insightId: storedInsights.id, feedback: newFeedback });
   };
 
   const calculateStatus = (t: typeof targets extends (infer U)[] | undefined ? U : never) => {
@@ -121,16 +105,25 @@ export function InsightsPanel() {
     return "on_track";
   };
 
-  if (isLoading) {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("tr-TR", { month: "long", year: "numeric" });
+  };
+
+  if (isLoading || isRefreshing) {
     return (
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-            <Loader2 className="h-5 w-5 text-info animate-spin" />
+            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
             AI Insights
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>AI is analyzing product performance...</span>
+          </div>
           <Skeleton className="h-20 w-full" />
           <Skeleton className="h-20 w-full" />
         </CardContent>
@@ -143,7 +136,7 @@ export function InsightsPanel() {
       <Card className="bg-card border-border">
         <CardHeader>
           <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-destructive" />
+            <Sparkles className="h-5 w-5 text-primary" />
             AI Insights
           </CardTitle>
         </CardHeader>
@@ -166,19 +159,51 @@ export function InsightsPanel() {
     <>
       <Card className="bg-card border-border">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-            <Lightbulb className="h-5 w-5 text-info" />
-            AI Insights
-          </CardTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            className="h-8 w-8"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          </Button>
+          <div>
+            <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Insights
+            </CardTitle>
+            {storedInsights && (
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="outline" className="text-xs font-normal">
+                  {storedInsights.model_name}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {formatDate(storedInsights.record_date)} • v{storedInsights.version}
+                </span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleFeedback("like")}
+              disabled={isSubmittingFeedback || !storedInsights?.id}
+              className={`h-8 w-8 ${storedInsights?.feedback === "like" ? "text-success bg-success/10" : ""}`}
+            >
+              <ThumbsUp className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleFeedback("dislike")}
+              disabled={isSubmittingFeedback || !storedInsights?.id}
+              className={`h-8 w-8 ${storedInsights?.feedback === "dislike" ? "text-destructive bg-destructive/10" : ""}`}
+            >
+              <ThumbsDown className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="h-8 w-8"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {insights.map((insight, index) => {
