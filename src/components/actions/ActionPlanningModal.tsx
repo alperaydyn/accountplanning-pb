@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,15 +60,26 @@ const parseFormattedNumber = (value: string): number => {
   return Number(value.replace(/[^\d]/g, '')) || 0;
 };
 
+const getDefaultState = () => ({
+  response: "Beklemede",
+  actionDate: "",
+  volume: "",
+  responseText: "",
+});
+
 export function ActionPlanningModal({ open, onOpenChange, customerId, actionId }: ActionPlanningModalProps) {
   const [customerExplanation, setCustomerExplanation] = useState("");
-  const [actionState, setActionState] = useState<{ response: string; actionDate: string; volume: string; responseText: string }>({
-    response: "Beklemede",
-    actionDate: "",
-    volume: "",
-    responseText: "",
-  });
+  const [actionState, setActionState] = useState(getDefaultState());
   const [hintsExpanded, setHintsExpanded] = useState(false);
+
+  // Reset fields when actionId changes or modal closes
+  useEffect(() => {
+    if (!open || actionId) {
+      setActionState(getDefaultState());
+      setCustomerExplanation("");
+      setHintsExpanded(false);
+    }
+  }, [actionId, open]);
   
   const { toast } = useToast();
   const { data: customer } = useCustomerById(customerId);

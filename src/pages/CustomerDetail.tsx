@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Sparkles } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Sparkles, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { useCustomerById } from "@/hooks/useCustomers";
 import { useCustomerProducts, CustomerProduct } from "@/hooks/useCustomerProducts";
 import { useProducts, Product } from "@/hooks/useProducts";
+import { useProductThresholds } from "@/hooks/useProductThresholds";
 import { useActionsByCustomer, useCreateAction, ACTION_STATUSES, ACTION_TYPE_LABELS } from "@/hooks/useActions";
 import { useActionTemplates, ActionTemplate, ActionTemplateField } from "@/hooks/useActionTemplates";
 import { ActionPlanningModal } from "@/components/actions/ActionPlanningModal";
@@ -69,6 +70,13 @@ const CustomerDetail = () => {
   const { data: customerActions = [], isLoading: actionsLoading } = useActionsByCustomer(customerId);
   const { data: allProducts = [] } = useProducts();
   const createAction = useCreateAction();
+  
+  // Fetch thresholds for customer's sector/segment (for non-owned products)
+  const { data: thresholds = [] } = useProductThresholds({
+    sector: customer?.sector,
+    segment: customer?.segment,
+    isActive: true,
+  });
   
   const handleOpenAddAction = (productId?: string) => {
     setPreselectedProductId(productId || "");
@@ -347,11 +355,15 @@ const CustomerDetail = () => {
 
                 return productsToDisplay.map(({ productId, product, customerProduct, actionsForProduct }) => {
                   if (!product) return null;
-                  const threshold = customerProduct?.threshold || 0;
-                  const gap = customerProduct?.gap || 0;
-                  const currentValue = customerProduct ? Number(customerProduct.current_value) : 0;
-                  const isAboveThreshold = currentValue >= threshold;
+                  
+                  // Get threshold from customerProduct if owned, otherwise from thresholds table
+                  const threshold = customerProduct?.threshold || 
+                    thresholds.find(t => t.product_id === productId)?.threshold_value || 0;
+                  const currentValue = customerProduct ? Number(customerProduct.current_value) : null;
+                  const gap = customerProduct?.gap || (currentValue !== null ? Number(threshold) - currentValue : 0);
+                  const isAboveThreshold = currentValue !== null && currentValue >= threshold;
                   const actionsCount = actionsForProduct.length;
+                  const plannedActionsCount = actionsForProduct.filter(a => a.current_status === 'Planlandı').length;
                   const isOwned = !!customerProduct;
                   
                   return (
@@ -375,8 +387,20 @@ const CustomerDetail = () => {
                         <div className="flex items-start justify-between">
                           <CardTitle className="text-sm font-medium">{product.name}</CardTitle>
                           {actionsCount > 0 && (
-                            <Badge variant="outline" className="bg-info/10 text-info border-info/20">
-                              {actionsCount} action{actionsCount > 1 ? 's' : ''}
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                "gap-1",
+                                plannedActionsCount > 0 
+                                  ? "bg-success/10 text-success border-success/20" 
+                                  : "bg-info/10 text-info border-info/20"
+                              )}
+                            >
+                              {plannedActionsCount > 0 && <CalendarCheck className="h-3 w-3" />}
+                              {plannedActionsCount > 0 
+                                ? `${plannedActionsCount}/${actionsCount} planned`
+                                : `${actionsCount} action${actionsCount > 1 ? 's' : ''}`
+                              }
                             </Badge>
                           )}
                         </div>
@@ -388,19 +412,21 @@ const CustomerDetail = () => {
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span className="text-muted-foreground">Current</span>
-                            <span className="font-medium">₺{currentValue.toLocaleString()}</span>
+                            {isOwned ? (
+                              <span className="font-medium">₺{currentValue?.toLocaleString()}</span>
+                            ) : (
+                              <span className="text-muted-foreground italic">Not owned</span>
+                            )}
+                          </div>
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Threshold</span>
+                            <span>₺{Number(threshold).toLocaleString()}</span>
                           </div>
                           {isOwned && (
-                            <>
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Threshold</span>
-                                <span>₺{threshold.toLocaleString()}</span>
-                              </div>
-                              <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
-                                {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                                <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(gap).toLocaleString()}`}</span>
-                              </div>
-                            </>
+                            <div className={cn("flex items-center gap-1 text-sm", isAboveThreshold ? "text-success" : "text-destructive")}>
+                              {isAboveThreshold ? <TrendingUp className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                              <span>{isAboveThreshold ? "Above threshold" : `Gap: ₺${Math.abs(gap).toLocaleString()}`}</span>
+                            </div>
                           )}
                         </div>
                       </CardContent>
