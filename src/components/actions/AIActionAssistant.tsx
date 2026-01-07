@@ -1,26 +1,24 @@
-import { useState, useRef, useEffect } from "react";
-import { Sparkles, Send, X, Loader2, User, Bot, ShieldCheck, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Sparkles, Send, X, Loader2, User, Bot, ShieldCheck, ChevronDown, ChevronUp, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
 import { useProducts } from "@/hooks/useProducts";
+import { useActions } from "@/hooks/useActions";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  suggestions?: CustomerSuggestion[];
-}
-
-interface CustomerSuggestion {
-  customerId: string;
-  customerName: string;
-  reason: string;
-  priority: "high" | "medium" | "low";
+  customerMapping?: Record<string, string>; // tempId -> realId
+  usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
 }
 
 interface AIActionAssistantProps {
@@ -28,22 +26,31 @@ interface AIActionAssistantProps {
   onClose: () => void;
 }
 
+// GPT-5-mini pricing (per 1M tokens) - estimate
+const PRICING = {
+  input: 0.15, // $0.15 per 1M input tokens
+  output: 0.60, // $0.60 per 1M output tokens
+};
+
 export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hello! I can help you find the best customers to focus on today. Tell me what you're looking for - for example:\n\n• \"Which customers should I prioritize this week?\"\n• \"Find customers in the retail sector with high potential\"\n• \"Who needs follow-up on credit products?\"",
+      content: "Merhaba! Bugün hangi müşterilere odaklanmanız gerektiğini bulmanıza yardımcı olabilirim. Örneğin:\n\n• \"Bu hafta hangi müşterilere öncelik vermeliyim?\"\n• \"Perakende sektöründeki yüksek potansiyelli müşterileri bul\"\n• \"Kredi ürünleri için takip gereken müşteriler kim?\"",
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
+  const [totalUsage, setTotalUsage] = useState({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: customers = [] } = useCustomers();
+  const { data: customerProducts = [] } = useAllCustomerProducts();
   const { data: products = [] } = useProducts();
+  const { data: actions = [] } = useActions();
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -57,63 +64,78 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
     }
   }, [messages]);
 
-  const generateSuggestions = (query: string): CustomerSuggestion[] => {
-    // Simple keyword-based matching for demo purposes
-    const queryLower = query.toLowerCase();
-    let filteredCustomers = [...customers];
+  // Generate temporary IDs and prepare customer data with products and actions
+  const preparedCustomerData = useMemo(() => {
+    return customers.map((customer, index) => {
+      const tempId = `C${index + 1}`;
+      const customerProductList = customerProducts
+        .filter((cp) => cp.customer_id === customer.id)
+        .map((cp) => {
+          const product = products.find((p) => p.id === cp.product_id);
+          return {
+            name: product?.name || "Unknown",
+            category: product?.category || "Unknown",
+            current_value: cp.current_value || 0,
+          };
+        });
 
-    // Filter by sector if mentioned
-    const sectors = ["turizm", "ulaşım", "perakende", "gayrimenkul", "tarım", "sağlık", "enerji", "retail", "tourism", "transport", "health", "energy", "agriculture", "real estate"];
-    const sectorMap: Record<string, string> = {
-      "retail": "Perakende",
-      "tourism": "Turizm",
-      "transport": "Ulaşım",
-      "health": "Sağlık",
-      "energy": "Enerji",
-      "agriculture": "Tarım Hayvancılık",
-      "real estate": "Gayrimenkul",
-    };
-    
-    for (const sector of sectors) {
-      if (queryLower.includes(sector)) {
-        const mappedSector = sectorMap[sector] || sector.charAt(0).toUpperCase() + sector.slice(1);
-        filteredCustomers = filteredCustomers.filter(c => 
-          c.sector.toLowerCase().includes(sector) || c.sector === mappedSector
-        );
-        break;
+      const customerActions = actions
+        .filter((a) => a.customer_id === customer.id)
+        .map((a) => ({
+          name: a.name,
+          description: a.description,
+          priority: a.priority,
+          status: a.current_status,
+        }));
+
+      return {
+        id: customer.id,
+        tempId,
+        segment: customer.segment,
+        sector: customer.sector,
+        status: customer.status,
+        principality_score: customer.principality_score,
+        products: customerProductList,
+        actions: customerActions,
+      };
+    });
+  }, [customers, customerProducts, products, actions]);
+
+  // Create mapping from tempId to realId
+  const tempIdToRealId = useMemo(() => {
+    const mapping: Record<string, string> = {};
+    preparedCustomerData.forEach((c) => {
+      mapping[c.tempId] = c.id;
+    });
+    return mapping;
+  }, [preparedCustomerData]);
+
+  // Parse AI response to find customer references and create links
+  const parseResponseWithLinks = (content: string, mapping: Record<string, string>) => {
+    // Match patterns like C1, C2, [C1], **C1**, etc.
+    const regex = /\*?\*?\[?(C\d+)\]?\*?\*?/g;
+    const parts: (string | { tempId: string; realId: string })[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      const tempId = match[1];
+      const realId = mapping[tempId];
+
+      if (realId) {
+        if (match.index > lastIndex) {
+          parts.push(content.slice(lastIndex, match.index));
+        }
+        parts.push({ tempId, realId });
+        lastIndex = regex.lastIndex;
       }
     }
 
-    // Filter by segment if mentioned
-    if (queryLower.includes("mikro") || queryLower.includes("micro")) {
-      filteredCustomers = filteredCustomers.filter(c => c.segment === "MİKRO");
-    } else if (queryLower.includes("ticari") || queryLower.includes("commercial")) {
-      filteredCustomers = filteredCustomers.filter(c => c.segment === "TİCARİ");
-    } else if (queryLower.includes("obi") || queryLower.includes("sme")) {
-      filteredCustomers = filteredCustomers.filter(c => c.segment === "OBİ");
+    if (lastIndex < content.length) {
+      parts.push(content.slice(lastIndex));
     }
 
-    // Filter by status if mentioned
-    if (queryLower.includes("target") || queryLower.includes("hedef")) {
-      filteredCustomers = filteredCustomers.filter(c => 
-        c.status === "Target" || c.status === "Strong Target"
-      );
-    } else if (queryLower.includes("active") || queryLower.includes("aktif")) {
-      filteredCustomers = filteredCustomers.filter(c => c.status === "Aktif");
-    } else if (queryLower.includes("new") || queryLower.includes("yeni")) {
-      filteredCustomers = filteredCustomers.filter(c => c.status === "Yeni Müşteri");
-    }
-
-    // Prioritize by principality score
-    filteredCustomers.sort((a, b) => (b.principality_score || 0) - (a.principality_score || 0));
-
-    // Take top 5
-    return filteredCustomers.slice(0, 5).map((customer, index) => ({
-      customerId: customer.id,
-      customerName: customer.name,
-      reason: `${customer.segment} segment, ${customer.sector} sector${customer.principality_score ? `, ${customer.principality_score}% principality score` : ""}`,
-      priority: index < 2 ? "high" : index < 4 ? "medium" : "low",
-    }));
+    return parts;
   };
 
   const handleSend = async () => {
@@ -129,28 +151,85 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
     setInput("");
     setIsLoading(true);
 
-    // Simulate AI processing
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      // Prepare chat history (last 5 messages excluding welcome)
+      const chatHistory = messages
+        .filter((m) => m.id !== "welcome")
+        .slice(-5)
+        .map((m) => ({ role: m.role, content: m.content }));
 
-    const suggestions = generateSuggestions(userMessage.content);
+      const { data, error } = await supabase.functions.invoke("ai-action-assistant", {
+        body: {
+          message: userMessage.content,
+          customers: preparedCustomerData,
+          chatHistory,
+        },
+      });
 
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: suggestions.length > 0
-        ? `Based on your request, here are the top ${suggestions.length} customers I recommend focusing on:`
-        : "I couldn't find any customers matching your criteria. Try broadening your search or asking about a different segment or sector.",
-      suggestions: suggestions.length > 0 ? suggestions : undefined,
-    };
+      if (error) throw error;
 
-    setMessages((prev) => [...prev, assistantMessage]);
-    setIsLoading(false);
+      if (data.error) {
+        toast.error(data.error);
+        setIsLoading(false);
+        return;
+      }
+
+      const usage = data.usage || { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 };
+
+      setTotalUsage((prev) => ({
+        prompt_tokens: prev.prompt_tokens + usage.prompt_tokens,
+        completion_tokens: prev.completion_tokens + usage.completion_tokens,
+        total_tokens: prev.total_tokens + usage.total_tokens,
+      }));
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: data.content,
+        customerMapping: tempIdToRealId,
+        usage,
+      };
+
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error("AI assistant error:", error);
+      toast.error("AI asistanla iletişim kurulamadı");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const priorityColors = {
-    high: "bg-destructive/10 text-destructive border-destructive/20",
-    medium: "bg-warning/10 text-warning border-warning/20",
-    low: "bg-muted text-muted-foreground border-border",
+  const calculateCost = (usage: { prompt_tokens: number; completion_tokens: number }) => {
+    const inputCost = (usage.prompt_tokens / 1_000_000) * PRICING.input;
+    const outputCost = (usage.completion_tokens / 1_000_000) * PRICING.output;
+    return inputCost + outputCost;
+  };
+
+  const renderMessageContent = (message: Message) => {
+    if (message.role === "user" || !message.customerMapping) {
+      return <p className="text-sm whitespace-pre-line">{message.content}</p>;
+    }
+
+    const parts = parseResponseWithLinks(message.content, message.customerMapping);
+
+    return (
+      <p className="text-sm whitespace-pre-line">
+        {parts.map((part, index) => {
+          if (typeof part === "string") {
+            return <span key={index}>{part}</span>;
+          }
+          return (
+            <Link
+              key={index}
+              to={`/customers/${part.realId}`}
+              className="font-medium text-primary hover:underline"
+            >
+              {part.tempId}
+            </Link>
+          );
+        })}
+      </p>
+    );
   };
 
   if (!isOpen) return null;
@@ -172,7 +251,7 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
             <X className="h-4 w-4" />
           </Button>
         </div>
-        
+
         {/* Privacy Notice */}
         <div className="mt-3 rounded-lg border border-border/50 bg-muted/30 p-2.5">
           <button
@@ -190,7 +269,7 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
               <ChevronDown className="h-3 w-3 text-muted-foreground" />
             )}
           </button>
-          
+
           {showPrivacyDetails && (
             <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground space-y-1.5">
               <p>• Customer names are not directly shared with the AI</p>
@@ -216,37 +295,10 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
                 )}
                 <div
                   className={`max-w-[80%] rounded-lg p-3 ${
-                    message.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted"
+                    message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
                   }`}
                 >
-                  <p className="text-sm whitespace-pre-line">{message.content}</p>
-                  
-                  {message.suggestions && message.suggestions.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {message.suggestions.map((suggestion, index) => (
-                        <Link
-                          key={suggestion.customerId}
-                          to={`/customers/${suggestion.customerId}`}
-                          className={`block p-2 rounded border hover:bg-background/80 transition-colors ${priorityColors[suggestion.priority]}`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium text-sm">
-                              {index + 1}. {suggestion.customerName}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={`text-[10px] ${priorityColors[suggestion.priority]}`}
-                            >
-                              {suggestion.priority}
-                            </Badge>
-                          </div>
-                          <p className="text-xs mt-1 opacity-80">{suggestion.reason}</p>
-                        </Link>
-                      ))}
-                    </div>
-                  )}
+                  {renderMessageContent(message)}
                 </div>
                 {message.role === "user" && (
                   <div className="p-1.5 rounded-full bg-primary/10 h-fit">
@@ -263,14 +315,14 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
                 <div className="bg-muted rounded-lg p-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Analyzing your portfolio...
+                    Portföyünüz analiz ediliyor...
                   </div>
                 </div>
               </div>
             )}
           </div>
         </ScrollArea>
-        
+
         <div className="border-t p-3">
           <form
             onSubmit={(e) => {
@@ -283,7 +335,7 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about customers to focus on..."
+              placeholder="Odaklanılacak müşterileri sorun..."
               disabled={isLoading}
               className="flex-1"
             />
@@ -291,6 +343,25 @@ export function AIActionAssistant({ isOpen, onClose }: AIActionAssistantProps) {
               <Send className="h-4 w-4" />
             </Button>
           </form>
+        </div>
+
+        {/* Token Counter & Cost */}
+        <div className="border-t px-3 py-2 bg-muted/20">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center gap-4">
+              <span>
+                <span className="font-medium">{totalUsage.total_tokens.toLocaleString()}</span> tokens
+              </span>
+              <span className="text-muted-foreground/60">
+                (↑{totalUsage.prompt_tokens.toLocaleString()} / ↓{totalUsage.completion_tokens.toLocaleString()})
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Coins className="h-3 w-3" />
+              <span className="font-medium">${calculateCost(totalUsage).toFixed(4)}</span>
+              <span className="text-muted-foreground/60">est.</span>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

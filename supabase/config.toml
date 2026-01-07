@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.generate-actions]
 verify_jwt = false
+
+[functions.ai-action-assistant]
+verify_jwt = false
