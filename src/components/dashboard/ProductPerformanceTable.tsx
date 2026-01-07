@@ -74,8 +74,16 @@ export function ProductPerformanceTable() {
   };
 
   const getProductStatus = (target: typeof targets[0]): 'on_track' | 'at_risk' | 'critical' => {
-    if (target.stock_count_delta_ytd < 0) return 'critical';
-    if (target.stock_count_delta_ytd < 2) return 'at_risk';
+    // Combined calculation: average of stock/flow count/volume HGO%
+    const stockCountTar = Number(target.stock_count_tar) || 0;
+    const stockVolumeTar = Number(target.stock_volume_tar) || 0;
+    const flowCountTar = Number(target.flow_count_tar) || 0;
+    const flowVolumeTar = Number(target.flow_volume_tar) || 0;
+    
+    const avgTar = (stockCountTar + stockVolumeTar + flowCountTar + flowVolumeTar) / 4;
+    
+    if (avgTar < 50) return 'critical';
+    if (avgTar < 80) return 'at_risk';
     return 'on_track';
   };
 
