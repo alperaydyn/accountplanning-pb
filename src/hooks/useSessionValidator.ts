@@ -26,18 +26,37 @@ export const useSessionValidator = () => {
         return false;
       }
 
-      // Check if token is about to expire (within 60 seconds)
+      // Check token expiration
       const expiresAt = session.expires_at;
       if (expiresAt) {
         const now = Math.floor(Date.now() / 1000);
         const timeToExpiry = expiresAt - now;
         
+        // Token already expired
         if (timeToExpiry < 0) {
           console.warn('Token has expired, redirecting to login');
-          toast.error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+          toast.error('Oturum süreniz doldu. Lütfen tekrar giriş yapın.', {
+            duration: 5000,
+            description: 'Güvenliğiniz için yeniden giriş yapmanız gerekmektedir.'
+          });
           await signOut();
           navigate('/auth', { replace: true });
           return false;
+        }
+        
+        // Proactive refresh: if token expires within 5 minutes (300 seconds)
+        if (timeToExpiry > 0 && timeToExpiry < 300) {
+          console.log('Token expiring soon, attempting refresh...');
+          const { error: refreshError } = await supabase.auth.refreshSession();
+          if (refreshError) {
+            console.warn('Failed to refresh token:', refreshError);
+            toast.warning('Oturumunuz yakında sona erecek. Lütfen sayfayı yenileyin.', {
+              duration: 10000,
+              description: 'Çalışmanızı kaybetmemek için kaydedin.'
+            });
+          } else {
+            console.log('Token refreshed proactively');
+          }
         }
       }
 
