@@ -5,11 +5,13 @@ import { SummaryCards, ProductPerformanceTable, InsightsPanel, RepresentativeBad
 import { useRecordDates } from "@/hooks/usePortfolioTargets";
 import { usePortfolioManager } from "@/hooks/usePortfolioManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const Dashboard = () => {
   const { data: recordDates = [] } = useRecordDates();
   const { data: portfolioManager } = usePortfolioManager();
   const [selectedDate, setSelectedDate] = useState<string | undefined>(undefined);
+  const { t } = useLanguage();
   
   // Use first available date as default
   const effectiveDate = selectedDate || recordDates[0];
@@ -25,10 +27,10 @@ const Dashboard = () => {
           <div>
             <PageBreadcrumb items={[]} />
             <h1 className="text-2xl font-bold text-foreground">
-              Portfolio Dashboard
+              {t.dashboard.portfolioDashboard}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Welcome back, {userName}. Here's your portfolio overview.
+              {t.dashboard.welcomeBack}, {userName}. {t.dashboard.portfolioOverview}
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -37,7 +39,7 @@ const Dashboard = () => {
               <Calendar className="h-4 w-4 text-muted-foreground" />
               <Select value={effectiveDate} onValueChange={setSelectedDate}>
                 <SelectTrigger className="w-[140px] border-0 bg-transparent h-auto p-0 focus:ring-0">
-                  <SelectValue placeholder="Select date" />
+                  <SelectValue placeholder={t.dashboard.selectDate} />
                 </SelectTrigger>
                 <SelectContent>
                   {recordDates.map((date) => (

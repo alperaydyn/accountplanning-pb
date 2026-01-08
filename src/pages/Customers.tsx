@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Users, Loader2, Plus, Sparkles, Package } from "lucide-react";
+import { Search, Users, Loader2, Sparkles, Package } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useCustomers, SECTORS, SEGMENTS, STATUSES, Customer } from "@/hooks/useCustomers";
+import { useCustomers, STATUSES, Customer } from "@/hooks/useCustomers";
 import { useCustomerGroups } from "@/hooks/useCustomerGroups";
 import { useProducts } from "@/hooks/useProducts";
 import { useActions, ACTION_STATUSES } from "@/hooks/useActions";
@@ -16,6 +16,7 @@ import { CreateCustomerModal } from "@/components/customer/CreateCustomerModal";
 import { Database } from "@/integrations/supabase/types";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type CustomerStatus = Database['public']['Enums']['customer_status'];
 
@@ -39,6 +40,7 @@ const Customers = () => {
   const [productFilter, setProductFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const { t } = useLanguage();
 
   // Initialize filters from URL params
   useEffect(() => {
@@ -139,13 +141,13 @@ const Customers = () => {
       <div className="space-y-6">
         <div className="flex justify-between items-start">
           <div>
-            <PageBreadcrumb items={[{ label: "Customers" }]} />
-            <h1 className="text-2xl font-bold text-foreground">Customers</h1>
-            <p className="text-muted-foreground mt-1">Manage your customer portfolio and plan actions.</p>
+            <PageBreadcrumb items={[{ label: t.customers.title }]} />
+            <h1 className="text-2xl font-bold text-foreground">{t.customers.title}</h1>
+            <p className="text-muted-foreground mt-1">{t.customers.description}</p>
           </div>
           <Button onClick={() => setCreateModalOpen(true)}>
             <Sparkles className="h-4 w-4 mr-2" />
-            Create Customer
+            {t.customers.generateCustomer}
           </Button>
         </div>
 
@@ -156,15 +158,15 @@ const Customers = () => {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search customers..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+                <Input placeholder={t.customers.searchPlaceholder} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-40"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectTrigger className="w-40"><SelectValue placeholder={t.common.status} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="all">{t.customers.allStatuses}</SelectItem>
                     {STATUSES.map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                      <SelectItem key={status} value={status}>{t.customerStatusLabels[status] || status}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -177,29 +179,29 @@ const Customers = () => {
                   }
                   setSearchParams(searchParams);
                 }}>
-                  <SelectTrigger className="w-44"><SelectValue placeholder="Product" /></SelectTrigger>
+                  <SelectTrigger className="w-44"><SelectValue placeholder={t.customers.products} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Products</SelectItem>
+                    <SelectItem value="all">{t.customers.allProducts}</SelectItem>
                     {products.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={groupFilter} onValueChange={updateGroupFilter}>
-                  <SelectTrigger className="w-44"><SelectValue placeholder="Customer Group" /></SelectTrigger>
+                  <SelectTrigger className="w-44"><SelectValue placeholder={t.customers.group} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Groups</SelectItem>
+                    <SelectItem value="all">{t.customers.allGroups}</SelectItem>
                     {customerGroups.map(g => (
                       <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={actionStatusFilter} onValueChange={setActionStatusFilter}>
-                  <SelectTrigger className="w-40"><SelectValue placeholder="Action Status" /></SelectTrigger>
+                  <SelectTrigger className="w-40"><SelectValue placeholder={t.common.actions} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="all">{t.customers.allStatuses}</SelectItem>
                     {ACTION_STATUSES.slice(0, 3).map(status => (
-                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                      <SelectItem key={status} value={status}>{t.statusLabels[status] || status}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -210,21 +212,21 @@ const Customers = () => {
             {filteredCustomers.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
                 <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">No customers found</p>
-                <p className="text-sm">Add your first customer to get started.</p>
+                <p className="text-lg font-medium">{t.customers.noCustomers}</p>
+                <p className="text-sm">{t.customers.noCustomersDescription}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Group</TableHead>
-                    <TableHead>Sector</TableHead>
-                    <TableHead>Segment</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-center">Products</TableHead>
-                    <TableHead className="text-center">Actions</TableHead>
-                    <TableHead>Last Activity</TableHead>
+                    <TableHead>{t.customers.customerName}</TableHead>
+                    <TableHead>{t.customers.group}</TableHead>
+                    <TableHead>{t.customers.sector}</TableHead>
+                    <TableHead>{t.customers.segment}</TableHead>
+                    <TableHead className="text-center">{t.common.status}</TableHead>
+                    <TableHead className="text-center">{t.customers.products}</TableHead>
+                    <TableHead className="text-center">{t.common.actions}</TableHead>
+                    <TableHead>{t.customers.lastActivity}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -248,11 +250,11 @@ const Customers = () => {
                             <span className="text-muted-foreground text-sm">-</span>
                           )}
                         </TableCell>
-                        <TableCell>{customer.sector}</TableCell>
-                        <TableCell>{customer.segment}</TableCell>
+                        <TableCell>{t.sectorLabels[customer.sector] || customer.sector}</TableCell>
+                        <TableCell>{t.segmentLabels[customer.segment] || customer.segment}</TableCell>
                         <TableCell className="text-center">
                           <Badge className={getStatusBadgeClass(customer.status)}>
-                            {customer.status}
+                            {t.customerStatusLabels[customer.status] || customer.status}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">

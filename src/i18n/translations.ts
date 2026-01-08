@@ -82,6 +82,41 @@ export interface Translations {
     regenerateInsights: string;
     noInsightsYet: string;
     insightsDescription: string;
+    primaryBankScore: string;
+    benchmarkScore: string;
+    primary: string;
+    target: string;
+    rest: string;
+    planned: string;
+    completed: string;
+    pending: string;
+    customers: string;
+    primaryBank: string;
+    externalProducts: string;
+    internalProducts: string;
+    scoreBreakdown: string;
+    scoreExplanation: string;
+    onTrack: string;
+    atRisk: string;
+    critical: string;
+    melting: string;
+    growing: string;
+    ticketSize: string;
+    diversity: string;
+    relatedProducts: string;
+    viewCustomers: string;
+    noDataAvailable: string;
+    type: string;
+    stock: string;
+    flow: string;
+    customerCount: string;
+    volume: string;
+    hgo: string;
+    ytd: string;
+    mtd: string;
+    retry: string;
+    analyzing: string;
+    failedToLoad: string;
   };
 
   // Customers
@@ -186,6 +221,43 @@ export interface Translations {
     chatHistory: string;
     noPreviousChats: string;
     deleteChat: string;
+    welcomeMessage: string;
+    startNewChat: string;
+    privacyNotice: string;
+    privacyDetail1: string;
+    privacyDetail2: string;
+    privacyDetail3: string;
+    privacyDetail4: string;
+    communicationError: string;
+    planMyDay: string;
+  };
+
+  // Customer Detail
+  customerDetail: {
+    principalityScore: string;
+    customerNotFound: string;
+    generateActions: string;
+    generatingActions: string;
+    actionsGenerated: string;
+    noActionsGenerated: string;
+    actionGenerationFailed: string;
+    gap: string;
+    threshold: string;
+    currentValue: string;
+    owned: string;
+    notOwned: string;
+    actionFor: string;
+    priority: string;
+    high: string;
+    medium: string;
+    low: string;
+  };
+
+  // NotFound
+  notFound: {
+    title: string;
+    message: string;
+    returnHome: string;
   };
 
   // Languages
@@ -331,6 +403,41 @@ export const translations: Record<Language, Translations> = {
       regenerateInsights: 'Yeniden Oluştur',
       noInsightsYet: 'Henüz içgörü yok',
       insightsDescription: 'AI içgörüleri oluşturmak için butona tıklayın.',
+      primaryBankScore: 'Ana Banka Skoru',
+      benchmarkScore: 'Kıyaslama Skoru',
+      primary: 'Ana Banka',
+      target: 'Hedef',
+      rest: 'Diğer',
+      planned: 'Planlı',
+      completed: 'Tamamlanan',
+      pending: 'Bekleyen',
+      customers: 'Müşteri',
+      primaryBank: 'Ana Banka',
+      externalProducts: 'Harici Ürünler',
+      internalProducts: 'Dahili Ürünler',
+      scoreBreakdown: 'Portföy Prensiplik Skor Dağılımı',
+      scoreExplanation: 'Ana Banka Skoru, müşterilerinizin bankamızla olan ilişkisinin derinliğini dört ana eksende ölçer.',
+      onTrack: 'Yolunda',
+      atRisk: 'Riskli',
+      critical: 'Kritik',
+      melting: 'Eriyen',
+      growing: 'Büyüyen',
+      ticketSize: 'Bilet Büyüklüğü ⚠',
+      diversity: 'Çeşitlilik ⚠',
+      relatedProducts: 'İlgili Ürünler',
+      viewCustomers: 'Müşterileri Gör',
+      noDataAvailable: 'Veri mevcut değil. Hedefleri başlatmak için "Kayıt Oluştur" butonuna tıklayın.',
+      type: 'Tip',
+      stock: 'Stok',
+      flow: 'Akış',
+      customerCount: 'Müşteri Sayısı',
+      volume: 'Hacim',
+      hgo: 'HGO',
+      ytd: 'YBB',
+      mtd: 'ABB',
+      retry: 'Tekrar Dene',
+      analyzing: 'AI ürün performansını analiz ediyor',
+      failedToLoad: 'İçgörüler yüklenemedi. Lütfen daha sonra tekrar deneyin.',
     },
     customers: {
       title: 'Müşteriler',
@@ -425,6 +532,39 @@ export const translations: Record<Language, Translations> = {
       chatHistory: 'Sohbet Geçmişi',
       noPreviousChats: 'Önceki sohbet bulunamadı',
       deleteChat: 'Sohbeti Sil',
+      welcomeMessage: 'Merhaba! Bugün hangi müşterilere odaklanmanız gerektiğini bulmanıza yardımcı olabilirim.',
+      startNewChat: 'Yeni sohbet başlat',
+      privacyNotice: 'Müşteri kimlikleriniz korunmaktadır',
+      privacyDetail1: 'Müşteri isimleri doğrudan AI ile paylaşılmaz',
+      privacyDetail2: 'Her oturum için algılanamaz tek seferlik ID\'ler oluşturulur',
+      privacyDetail3: 'Gelen ID\'ler tarayıcı oturumunuzda müşterilere eşlenir',
+      privacyDetail4: 'Notlardaki hassas bilgiler prompt gönderilmeden önce maskelenir',
+      communicationError: 'AI asistanla iletişim kurulamadı',
+      planMyDay: 'Günümü Planla',
+    },
+    customerDetail: {
+      principalityScore: 'Prensiplik Skoru',
+      customerNotFound: 'Müşteri bulunamadı',
+      generateActions: 'Aksiyon Oluştur',
+      generatingActions: 'Aksiyon oluşturuluyor...',
+      actionsGenerated: 'aksiyon başarıyla oluşturuldu',
+      noActionsGenerated: 'Bu müşteri için aksiyon oluşturulmadı',
+      actionGenerationFailed: 'Aksiyon oluşturulamadı',
+      gap: 'Fark',
+      threshold: 'Eşik',
+      currentValue: 'Mevcut Değer',
+      owned: 'Sahip',
+      notOwned: 'Sahip Değil',
+      actionFor: 'için aksiyon',
+      priority: 'Öncelik',
+      high: 'Yüksek',
+      medium: 'Orta',
+      low: 'Düşük',
+    },
+    notFound: {
+      title: '404',
+      message: 'Sayfa bulunamadı',
+      returnHome: 'Ana Sayfaya Dön',
     },
     languages: {
       turkish: 'Türkçe',
@@ -554,6 +694,41 @@ export const translations: Record<Language, Translations> = {
       regenerateInsights: 'Regenerate',
       noInsightsYet: 'No insights yet',
       insightsDescription: 'Click the button to generate AI insights.',
+      primaryBankScore: 'Primary Bank Score',
+      benchmarkScore: 'Benchmark Score',
+      primary: 'Primary',
+      target: 'Target',
+      rest: 'Rest',
+      planned: 'Planned',
+      completed: 'Completed',
+      pending: 'Pending',
+      customers: 'Customers',
+      primaryBank: 'Primary Bank',
+      externalProducts: 'External Products',
+      internalProducts: 'Internal Products',
+      scoreBreakdown: 'Portfolio Principality Score Breakdown',
+      scoreExplanation: 'The Primary Bank Score measures how much of your customers\' banking relationships are concentrated at our bank across four key axes.',
+      onTrack: 'On Track',
+      atRisk: 'At Risk',
+      critical: 'Critical',
+      melting: 'Melting',
+      growing: 'Growing',
+      ticketSize: 'Ticket Size ⚠',
+      diversity: 'Diversity ⚠',
+      relatedProducts: 'Related Products',
+      viewCustomers: 'View Customers',
+      noDataAvailable: 'No data available. Click "Create Records" to initialize targets.',
+      type: 'Type',
+      stock: 'Stock',
+      flow: 'Flow',
+      customerCount: 'Customer Count',
+      volume: 'Volume',
+      hgo: 'HGO',
+      ytd: 'YTD',
+      mtd: 'MTD',
+      retry: 'Retry',
+      analyzing: 'AI is analyzing product performance',
+      failedToLoad: 'Failed to load insights. Please try again later.',
     },
     customers: {
       title: 'Customers',
@@ -648,6 +823,39 @@ export const translations: Record<Language, Translations> = {
       chatHistory: 'Chat History',
       noPreviousChats: 'No previous chats found',
       deleteChat: 'Delete Chat',
+      welcomeMessage: 'Hello! I can help you find which customers to focus on today.',
+      startNewChat: 'Start new chat',
+      privacyNotice: 'Your customer identities are preserved',
+      privacyDetail1: 'Customer names are not directly shared with the AI',
+      privacyDetail2: 'Undetectable one-time IDs are generated for each session separately',
+      privacyDetail3: 'Incoming IDs are mapped to customers inside your browser session',
+      privacyDetail4: 'Sensitive information in notes is masked before sending the prompt',
+      communicationError: 'Failed to communicate with AI assistant',
+      planMyDay: 'Plan My Day',
+    },
+    customerDetail: {
+      principalityScore: 'Principality Score',
+      customerNotFound: 'Customer not found',
+      generateActions: 'Generate Actions',
+      generatingActions: 'Generating actions...',
+      actionsGenerated: 'actions generated successfully',
+      noActionsGenerated: 'No actions were generated for this customer',
+      actionGenerationFailed: 'Failed to generate actions',
+      gap: 'Gap',
+      threshold: 'Threshold',
+      currentValue: 'Current Value',
+      owned: 'Owned',
+      notOwned: 'Not Owned',
+      actionFor: 'action for',
+      priority: 'Priority',
+      high: 'High',
+      medium: 'Medium',
+      low: 'Low',
+    },
+    notFound: {
+      title: '404',
+      message: 'Page not found',
+      returnHome: 'Return to Home',
     },
     languages: {
       turkish: 'Türkçe',
@@ -777,6 +985,41 @@ export const translations: Record<Language, Translations> = {
       regenerateInsights: 'Regenerar',
       noInsightsYet: 'Sin perspectivas aún',
       insightsDescription: 'Haga clic en el botón para generar perspectivas AI.',
+      primaryBankScore: 'Puntuación Banco Principal',
+      benchmarkScore: 'Puntuación de Referencia',
+      primary: 'Principal',
+      target: 'Objetivo',
+      rest: 'Resto',
+      planned: 'Planificado',
+      completed: 'Completado',
+      pending: 'Pendiente',
+      customers: 'Clientes',
+      primaryBank: 'Banco Principal',
+      externalProducts: 'Productos Externos',
+      internalProducts: 'Productos Internos',
+      scoreBreakdown: 'Desglose de Puntuación de Principalidad de Cartera',
+      scoreExplanation: 'La Puntuación de Banco Principal mide cuánto de las relaciones bancarias de sus clientes están concentradas en nuestro banco a través de cuatro ejes clave.',
+      onTrack: 'En Camino',
+      atRisk: 'En Riesgo',
+      critical: 'Crítico',
+      melting: 'Derritiendo',
+      growing: 'Creciendo',
+      ticketSize: 'Tamaño de Ticket ⚠',
+      diversity: 'Diversidad ⚠',
+      relatedProducts: 'Productos Relacionados',
+      viewCustomers: 'Ver Clientes',
+      noDataAvailable: 'No hay datos disponibles. Haga clic en "Crear Registros" para inicializar objetivos.',
+      type: 'Tipo',
+      stock: 'Stock',
+      flow: 'Flujo',
+      customerCount: 'Cantidad de Clientes',
+      volume: 'Volumen',
+      hgo: 'HGO',
+      ytd: 'AÑO',
+      mtd: 'MES',
+      retry: 'Reintentar',
+      analyzing: 'AI está analizando el rendimiento del producto',
+      failedToLoad: 'Error al cargar perspectivas. Por favor intente de nuevo.',
     },
     customers: {
       title: 'Clientes',
@@ -871,6 +1114,39 @@ export const translations: Record<Language, Translations> = {
       chatHistory: 'Historial de Chat',
       noPreviousChats: 'No se encontraron chats anteriores',
       deleteChat: 'Eliminar Chat',
+      welcomeMessage: '¡Hola! Puedo ayudarte a encontrar en qué clientes enfocarte hoy.',
+      startNewChat: 'Iniciar nueva conversación',
+      privacyNotice: 'Las identidades de sus clientes están protegidas',
+      privacyDetail1: 'Los nombres de los clientes no se comparten directamente con la IA',
+      privacyDetail2: 'Se generan IDs únicos indetectables para cada sesión por separado',
+      privacyDetail3: 'Los IDs entrantes se asignan a clientes dentro de su sesión del navegador',
+      privacyDetail4: 'La información sensible en las notas se enmascara antes de enviar el prompt',
+      communicationError: 'Error al comunicarse con el asistente AI',
+      planMyDay: 'Planificar Mi Día',
+    },
+    customerDetail: {
+      principalityScore: 'Puntuación de Principalidad',
+      customerNotFound: 'Cliente no encontrado',
+      generateActions: 'Generar Acciones',
+      generatingActions: 'Generando acciones...',
+      actionsGenerated: 'acciones generadas exitosamente',
+      noActionsGenerated: 'No se generaron acciones para este cliente',
+      actionGenerationFailed: 'Error al generar acciones',
+      gap: 'Brecha',
+      threshold: 'Umbral',
+      currentValue: 'Valor Actual',
+      owned: 'Propio',
+      notOwned: 'No Propio',
+      actionFor: 'acción para',
+      priority: 'Prioridad',
+      high: 'Alta',
+      medium: 'Media',
+      low: 'Baja',
+    },
+    notFound: {
+      title: '404',
+      message: 'Página no encontrada',
+      returnHome: 'Volver al Inicio',
     },
     languages: {
       turkish: 'Türkçe',
