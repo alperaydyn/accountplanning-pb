@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Loader2, Sparkles, RefreshCw, Check, Users } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Loader2, Sparkles, RefreshCw, Check, Users, X } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,7 +52,8 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const [generatedCustomer, setGeneratedCustomer] = useState<GeneratedCustomer | null>(null);
   const [batchCount, setBatchCount] = useState<number>(1);
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, names: [] as string[] });
+  const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, names: [] as string[], currentStep: '' });
+  const cancelledRef = useRef(false);
   const queryClient = useQueryClient();
   const { data: products = [] } = useProducts();
   const { data: portfolioManager } = usePortfolioManager();
@@ -62,7 +63,8 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     setIsSaving(false);
     setGeneratedCustomer(null);
     setIsBatchMode(false);
-    setBatchProgress({ current: 0, total: 0, names: [] });
+    setBatchProgress({ current: 0, total: 0, names: [], currentStep: '' });
+    cancelledRef.current = false;
   }, []);
 
   useEffect(() => {
@@ -152,23 +154,72 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     return customerData.name;
   };
 
+  const handleCancelBatch = () => {
+    cancelledRef.current = true;
+  };
+
   const handleBatchGenerate = async () => {
     if (!portfolioManager || batchCount < 1) return;
 
+    cancelledRef.current = false;
     setIsBatchMode(true);
-    setBatchProgress({ current: 0, total: batchCount, names: [] });
+    setBatchProgress({ current: 0, total: batchCount, names: [], currentStep: 'Starting...' });
 
     let successCount = 0;
     const createdNames: string[] = [];
 
     for (let i = 0; i < batchCount; i++) {
+      if (cancelledRef.current) {
+        toast.info(`Cancelled. Created ${successCount} customers.`);
+        break;
+      }
+
       try {
-        const name = await generateAndSaveCustomer();
-        if (name) {
-          successCount++;
-          createdNames.push(name);
-          setBatchProgress({ current: i + 1, total: batchCount, names: [...createdNames] });
+        setBatchProgress(prev => ({ ...prev, currentStep: `Generating customer ${i + 1}...` }));
+        const customerData = await invokeGenerateCustomer();
+        
+        if (cancelledRef.current) {
+          toast.info(`Cancelled. Created ${successCount} customers.`);
+          break;
         }
+
+        setBatchProgress(prev => ({ ...prev, currentStep: `Saving "${customerData.name}"...` }));
+        
+        // Save customer
+        const { data: customer, error: customerError } = await supabase
+          .from("customers")
+          .insert({
+            name: customerData.name,
+            sector: customerData.sector as CustomerSector,
+            segment: customerData.segment as CustomerSegment,
+            status: customerData.status as CustomerStatus,
+            principality_score: Math.round(customerData.principality_score),
+            portfolio_manager_id: portfolioManager.id,
+            last_activity_date: new Date().toISOString().split("T")[0],
+          })
+          .select()
+          .single();
+
+        if (customerError) throw customerError;
+
+        // Save products
+        if (customerData.products.length > 0) {
+          const customerProducts = customerData.products.map((p) => ({
+            customer_id: customer.id,
+            product_id: p.product_id,
+            current_value: p.current_value,
+          }));
+
+          const { error: productsError } = await supabase
+            .from("customer_products")
+            .insert(customerProducts);
+
+          if (productsError) throw productsError;
+        }
+
+        successCount++;
+        createdNames.push(customerData.name);
+        setBatchProgress({ current: i + 1, total: batchCount, names: [...createdNames], currentStep: '' });
       } catch (error) {
         console.error(`Error generating customer ${i + 1}:`, error);
 
@@ -191,11 +242,13 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     }
 
     queryClient.invalidateQueries({ queryKey: ["customers"] });
-    toast.success(`Created ${successCount} customers`);
+    if (!cancelledRef.current) {
+      toast.success(`Created ${successCount} customers`);
+    }
     
     setTimeout(() => {
       setIsBatchMode(false);
-      setBatchProgress({ current: 0, total: 0, names: [] });
+      setBatchProgress({ current: 0, total: 0, names: [], currentStep: '' });
       onOpenChange(false);
     }, 1500);
   };
@@ -296,8 +349,22 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
                 <p className="text-sm text-muted-foreground">
                   Creating customers... {batchProgress.current} / {batchProgress.total}
                 </p>
+                {batchProgress.currentStep && (
+                  <p className="text-xs text-muted-foreground/70 mt-1">{batchProgress.currentStep}</p>
+                )}
               </div>
               <Progress value={(batchProgress.current / batchProgress.total) * 100} />
+              <div className="flex justify-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCancelBatch}
+                  className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </div>
               {batchProgress.names.length > 0 && (
                 <div className="max-h-40 overflow-y-auto space-y-1">
                   {batchProgress.names.map((name, i) => (
