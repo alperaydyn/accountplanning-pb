@@ -274,7 +274,10 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
       }
     }
 
-    queryClient.invalidateQueries({ queryKey: ["customers"] });
+    // Invalidate and wait for refetch before showing success
+    await queryClient.invalidateQueries({ queryKey: ["customers"] });
+    await queryClient.invalidateQueries({ queryKey: ["customer-product-counts"] });
+    
     if (!cancelledRef.current) {
       toast.success(`Created ${successCount} customers`);
     }
@@ -283,7 +286,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
       setIsBatchMode(false);
       setBatchProgress({ current: 0, total: 0, names: [], currentStep: '' });
       onOpenChange(false);
-    }, 1500);
+    }, 1000);
   };
 
   const handleGenerate = async () => {
