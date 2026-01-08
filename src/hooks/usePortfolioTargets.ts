@@ -98,40 +98,66 @@ export function useCreatePortfolioTargets() {
     mutationFn: async (recordDate: string) => {
       if (!manager?.id) throw new Error("No portfolio manager found");
 
+      // Delete existing records for this date first (upsert behavior)
+      await supabase
+        .from("portfolio_targets")
+        .delete()
+        .eq("portfolio_manager_id", manager.id)
+        .eq("record_date", recordDate);
+
       // Get all products
       const { data: products, error: productsError } = await supabase
         .from("products")
-        .select("id");
+        .select("id, name");
 
       if (productsError) throw productsError;
 
-      // Create targets for each product
-      const targets = products.map((product) => ({
-        portfolio_manager_id: manager.id,
-        product_id: product.id,
-        record_date: recordDate,
-        measure_date: new Date().toISOString().split("T")[0],
-        stock_count: 0,
-        stock_count_target: 0,
-        stock_count_tar: 0,
-        stock_count_delta_ytd: 0,
-        stock_count_delta_mtd: 0,
-        stock_volume: 0,
-        stock_volume_target: 0,
-        stock_volume_tar: 0,
-        stock_volume_delta_ytd: 0,
-        stock_volume_delta_mtd: 0,
-        flow_count: 0,
-        flow_count_target: 0,
-        flow_count_tar: 0,
-        flow_count_delta_ytd: 0,
-        flow_count_delta_mtd: 0,
-        flow_volume: 0,
-        flow_volume_target: 0,
-        flow_volume_tar: 0,
-        flow_volume_delta_ytd: 0,
-        flow_volume_delta_mtd: 0,
-      }));
+      // Generate realistic sample data for each product
+      const targets = products.map((product) => {
+        // Random realistic values
+        const stockCount = Math.floor(Math.random() * 80) + 20; // 20-100
+        const stockTarget = Math.floor(Math.random() * 40) + 80; // 80-120
+        const stockTar = Math.floor((stockCount / stockTarget) * 100); // HGO %
+        
+        const flowCount = Math.floor(Math.random() * 30) + 5; // 5-35
+        const flowTarget = Math.floor(Math.random() * 20) + 25; // 25-45
+        const flowTar = Math.floor((flowCount / flowTarget) * 100);
+        
+        const stockVolume = (Math.random() * 50 + 10).toFixed(2); // 10-60M
+        const stockVolumeTarget = (Math.random() * 30 + 40).toFixed(2); // 40-70M
+        const stockVolumeTar = Math.floor((parseFloat(stockVolume) / parseFloat(stockVolumeTarget)) * 100);
+        
+        const flowVolume = (Math.random() * 15 + 2).toFixed(2); // 2-17M
+        const flowVolumeTarget = (Math.random() * 10 + 10).toFixed(2); // 10-20M
+        const flowVolumeTar = Math.floor((parseFloat(flowVolume) / parseFloat(flowVolumeTarget)) * 100);
+
+        return {
+          portfolio_manager_id: manager.id,
+          product_id: product.id,
+          record_date: recordDate,
+          measure_date: new Date().toISOString().split("T")[0],
+          stock_count: stockCount,
+          stock_count_target: stockTarget,
+          stock_count_tar: stockTar,
+          stock_count_delta_ytd: Math.floor(Math.random() * 20) - 5,
+          stock_count_delta_mtd: Math.floor(Math.random() * 10) - 3,
+          stock_volume: parseFloat(stockVolume),
+          stock_volume_target: parseFloat(stockVolumeTarget),
+          stock_volume_tar: stockVolumeTar,
+          stock_volume_delta_ytd: parseFloat((Math.random() * 10 - 3).toFixed(1)),
+          stock_volume_delta_mtd: parseFloat((Math.random() * 5 - 2).toFixed(1)),
+          flow_count: flowCount,
+          flow_count_target: flowTarget,
+          flow_count_tar: flowTar,
+          flow_count_delta_ytd: Math.floor(Math.random() * 15) - 5,
+          flow_count_delta_mtd: Math.floor(Math.random() * 8) - 3,
+          flow_volume: parseFloat(flowVolume),
+          flow_volume_target: parseFloat(flowVolumeTarget),
+          flow_volume_tar: flowVolumeTar,
+          flow_volume_delta_ytd: parseFloat((Math.random() * 5 - 2).toFixed(1)),
+          flow_volume_delta_mtd: parseFloat((Math.random() * 3 - 1).toFixed(1)),
+        };
+      });
 
       const { error } = await supabase.from("portfolio_targets").insert(targets);
       if (error) throw error;
