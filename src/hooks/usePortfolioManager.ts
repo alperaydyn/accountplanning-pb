@@ -14,6 +14,7 @@ export interface PortfolioManager {
 
 export const usePortfolioManager = () => {
   const { user } = useAuth();
+  console.log('[usePortfolioManager] user:', user?.id, 'enabled:', !!user);
 
   return useQuery({
     queryKey: ['portfolio-manager', user?.id],
