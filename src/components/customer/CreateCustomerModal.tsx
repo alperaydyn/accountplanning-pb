@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Loader2, Sparkles, RefreshCw, Check, Users } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -57,14 +57,45 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const { data: products = [] } = useProducts();
   const { data: portfolioManager } = usePortfolioManager();
 
+  const resetState = useCallback(() => {
+    setIsGenerating(false);
+    setIsSaving(false);
+    setGeneratedCustomer(null);
+    setIsBatchMode(false);
+    setBatchProgress({ current: 0, total: 0, names: [] });
+  }, []);
+
+  useEffect(() => {
+    if (!open) resetState();
+  }, [open, resetState]);
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    // Don't allow closing while batch create is running
+    if (isBatchMode && !nextOpen) return;
+
+    if (!nextOpen) resetState();
+    onOpenChange(nextOpen);
+  };
+
   const getProductName = (productId: string) => {
-    const product = products.find(p => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     return product?.name || productId;
   };
 
   const invokeGenerateCustomer = async (): Promise<GeneratedCustomer> => {
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession();
+
+    if (sessionError) throw sessionError;
+    if (!session?.access_token) throw new Error("Unauthorized");
+
     const { data, error } = await supabase.functions.invoke("generate-customer", {
       body: {},
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
     });
 
     if (error) {
@@ -247,14 +278,8 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     }
   };
 
-  const handleClose = () => {
-    if (isBatchMode) return; // Prevent closing during batch
-    onOpenChange(false);
-    setGeneratedCustomer(null);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
