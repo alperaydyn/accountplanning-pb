@@ -163,7 +163,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
 
     cancelledRef.current = false;
     setIsBatchMode(true);
-    setBatchProgress({ current: 0, total: batchCount, names: [], currentStep: 'Starting...' });
+    setBatchProgress({ current: 0, total: batchCount, names: [], currentStep: 'Initializing...' });
 
     let successCount = 0;
     const createdNames: string[] = [];
@@ -175,17 +175,48 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
       }
 
       try {
-        setBatchProgress(prev => ({ ...prev, currentStep: `Generating customer ${i + 1}...` }));
-        const customerData = await invokeGenerateCustomer();
+        // Step 1: Sending request to AI
+        setBatchProgress(prev => ({ ...prev, currentStep: `[${i + 1}/${batchCount}] Sending request to AI...` }));
+        
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+
+        if (sessionError) throw sessionError;
+        if (!session?.access_token) throw new Error("Unauthorized");
+
+        // Step 2: Waiting for AI response
+        setBatchProgress(prev => ({ ...prev, currentStep: `[${i + 1}/${batchCount}] Waiting for AI response...` }));
+        
+        const { data, error } = await supabase.functions.invoke("generate-customer", {
+          body: {},
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+
+        if (error) {
+          const status = (error as any)?.context?.status as number | undefined;
+          if (status === 429) throw new Error("Rate limit exceeded");
+          if (status === 402) throw new Error("AI credits exhausted");
+          if (status === 401 || status === 403) throw new Error("Unauthorized");
+          throw error;
+        }
+
+        if (!data) throw new Error("No data returned");
+        const customerData = data as GeneratedCustomer;
         
         if (cancelledRef.current) {
           toast.info(`Cancelled. Created ${successCount} customers.`);
           break;
         }
 
-        setBatchProgress(prev => ({ ...prev, currentStep: `Saving "${customerData.name}"...` }));
+        // Step 3: Response received
+        setBatchProgress(prev => ({ ...prev, currentStep: `[${i + 1}/${batchCount}] Response received: "${customerData.name}"` }));
+        await new Promise(r => setTimeout(r, 300)); // Brief pause to show the name
+
+        // Step 4: Saving customer to database
+        setBatchProgress(prev => ({ ...prev, currentStep: `[${i + 1}/${batchCount}] Saving customer to database...` }));
         
-        // Save customer
         const { data: customer, error: customerError } = await supabase
           .from("customers")
           .insert({
@@ -202,8 +233,10 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
 
         if (customerError) throw customerError;
 
-        // Save products
+        // Step 5: Saving products
         if (customerData.products.length > 0) {
+          setBatchProgress(prev => ({ ...prev, currentStep: `[${i + 1}/${batchCount}] Saving ${customerData.products.length} products...` }));
+          
           const customerProducts = customerData.products.map((p) => ({
             customer_id: customer.id,
             product_id: p.product_id,
