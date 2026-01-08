@@ -286,11 +286,10 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
       toast.success(`Created ${successCount} customers`);
     }
     
-    setTimeout(() => {
-      setIsBatchMode(false);
-      setBatchProgress({ current: 0, total: 0, names: [], currentStep: '' });
-      onOpenChange(false);
-    }, 1000);
+    // Clean up state and close modal
+    setIsBatchMode(false);
+    setBatchProgress({ current: 0, total: 0, names: [], currentStep: '' });
+    onOpenChange(false);
   };
 
   const handleGenerate = async () => {
