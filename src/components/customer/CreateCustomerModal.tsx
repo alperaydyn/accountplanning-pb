@@ -65,11 +65,16 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const generateAndSaveCustomer = async (): Promise<string | null> => {
     if (!portfolioManager) return null;
 
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      throw new Error("Not authenticated");
+    }
+
     const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-customer`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${session.access_token}`,
       },
     });
 
@@ -162,11 +167,17 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     setGeneratedCustomer(null);
     
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error("Not authenticated");
+        return;
+      }
+
       const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-customer`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          Authorization: `Bearer ${session.access_token}`,
         },
       });
 
