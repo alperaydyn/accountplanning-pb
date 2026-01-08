@@ -193,6 +193,14 @@ export interface Translations {
     notificationsDescription: string;
     projectDocumentation: string;
     backToSettings: string;
+    queryRunner: string;
+    queryRunnerDescription: string;
+    runQuery: string;
+    queryPlaceholder: string;
+    queryError: string;
+    rowsReturned: string;
+    executionTime: string;
+    exampleQueries: string;
   };
 
   // Thresholds
@@ -510,6 +518,14 @@ export const translations: Record<Language, Translations> = {
       notificationsDescription: "Bildirim tercihlerini yönetin",
       projectDocumentation: "Proje Dokümantasyonu",
       backToSettings: "Ayarlara Dön",
+      queryRunner: "SQL Sorgu Çalıştırıcı",
+      queryRunnerDescription: "Kimliği doğrulanmış oturumunuzla SQL sorguları çalıştırın",
+      runQuery: "Sorgu Çalıştır",
+      queryPlaceholder: "SQL sorgunuzu girin...",
+      queryError: "Sorgu Hatası",
+      rowsReturned: "satır döndürüldü",
+      executionTime: "Yürütme süresi",
+      exampleQueries: "Örnek Sorgular",
     },
     thresholds: {
       title: "Eşik Değerleri",
@@ -803,6 +819,14 @@ export const translations: Record<Language, Translations> = {
       notificationsDescription: "Manage notification preferences",
       projectDocumentation: "Project Documentation",
       backToSettings: "Back to Settings",
+      queryRunner: "SQL Query Runner",
+      queryRunnerDescription: "Run SQL queries with your authenticated session",
+      runQuery: "Run Query",
+      queryPlaceholder: "Enter your SQL query...",
+      queryError: "Query Error",
+      rowsReturned: "rows returned",
+      executionTime: "Execution time",
+      exampleQueries: "Example Queries",
     },
     thresholds: {
       title: "Thresholds",
@@ -1096,6 +1120,14 @@ export const translations: Record<Language, Translations> = {
       notificationsDescription: "Administrar preferencias de notificación",
       projectDocumentation: "Documentación del Proyecto",
       backToSettings: "Volver a Configuración",
+      queryRunner: "Ejecutor de Consultas SQL",
+      queryRunnerDescription: "Ejecutar consultas SQL con su sesión autenticada",
+      runQuery: "Ejecutar Consulta",
+      queryPlaceholder: "Ingrese su consulta SQL...",
+      queryError: "Error de Consulta",
+      rowsReturned: "filas devueltas",
+      executionTime: "Tiempo de ejecución",
+      exampleQueries: "Consultas de Ejemplo",
     },
     thresholds: {
       title: "Umbrales",
