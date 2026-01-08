@@ -41,6 +41,7 @@ import {
 } from '@/hooks/useProductThresholds';
 import { useProducts } from '@/hooks/useProducts';
 import { useIsAdmin } from '@/hooks/useUserRole';
+import { useLanguage } from '@/contexts/LanguageContext';
 import type { Database } from '@/integrations/supabase/types';
 
 type Sector = Database['public']['Enums']['customer_sector'];
@@ -65,6 +66,7 @@ const formatDate = (dateStr: string) => {
 
 export default function Thresholds() {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [filters, setFilters] = useState<ThresholdFilters>({});
   const [currentPage, setCurrentPage] = useState(1);
   const [editingThreshold, setEditingThreshold] = useState<ProductThresholdWithProduct | null>(null);
@@ -115,14 +117,14 @@ export default function Thresholds() {
         threshold_value: parseFloat(editValue),
       });
       toast({
-        title: 'Başarılı',
-        description: 'Eşik değeri güncellendi.',
+        title: t.common.save,
+        description: t.thresholds.saveThreshold,
       });
       setEditingThreshold(null);
     } catch (error) {
       toast({
-        title: 'Hata',
-        description: 'Eşik değeri güncellenirken bir hata oluştu. Yalnızca yöneticiler düzenleme yapabilir.',
+        title: t.common.unknown,
+        description: t.thresholds.adminRequired,
         variant: 'destructive',
       });
     }
@@ -131,8 +133,8 @@ export default function Thresholds() {
   const handleToggleActive = async (threshold: ProductThresholdWithProduct) => {
     if (!isAdmin) {
       toast({
-        title: 'Yetki Hatası',
-        description: 'Yalnızca yöneticiler eşik değerlerini düzenleyebilir.',
+        title: t.common.unknown,
+        description: t.thresholds.adminRequired,
         variant: 'destructive',
       });
       return;
@@ -144,13 +146,12 @@ export default function Thresholds() {
         is_active: !threshold.is_active,
       });
       toast({
-        title: 'Başarılı',
-        description: `Eşik değeri ${!threshold.is_active ? 'aktif' : 'pasif'} yapıldı.`,
+        title: t.common.save,
+        description: `${threshold.is_active ? t.thresholds.inactive : t.thresholds.active}`,
       });
     } catch (error) {
       toast({
-        title: 'Hata',
-        description: 'Durum güncellenirken bir hata oluştu.',
+        title: t.common.unknown,
         variant: 'destructive',
       });
     }
@@ -159,28 +160,28 @@ export default function Thresholds() {
   const handleExportCSV = () => {
     if (!thresholds) return;
 
-    const headers = ['Sektör', 'Segment', 'Ürün', 'Kategori', 'Eşik Değeri', 'Hesaplama Tarihi', 'Versiyon', 'Aktif'];
-    const rows = thresholds.map(t => [
-      t.sector,
-      t.segment,
-      t.products?.name || '',
-      t.products?.category || '',
-      t.threshold_value,
-      t.calculation_date,
-      t.version_num,
-      t.is_active ? 'Evet' : 'Hayır',
+    const headers = [t.customers.sector, t.customers.segment, t.thresholds.product, 'Category', t.thresholds.thresholdValue, t.thresholds.calculationDate, t.thresholds.version, t.thresholds.active];
+    const rows = thresholds.map(threshold => [
+      threshold.sector,
+      threshold.segment,
+      threshold.products?.name || '',
+      threshold.products?.category || '',
+      threshold.threshold_value,
+      threshold.calculation_date,
+      threshold.version_num,
+      threshold.is_active ? t.common.yes : t.common.no,
     ]);
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `esik_degerleri_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `thresholds_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
 
     toast({
-      title: 'Başarılı',
-      description: 'CSV dosyası indirildi.',
+      title: t.common.save,
+      description: 'CSV downloaded',
     });
   };
 
@@ -191,15 +192,15 @@ export default function Thresholds() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Eşik Değerleri</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t.thresholds.title}</h1>
             <p className="text-muted-foreground">
-              Sektör, segment ve ürün bazlı hedef eşik değerlerini yönetin
+              {t.thresholds.description}
             </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
               <Filter className="mr-2 h-4 w-4" />
-              Filtreler
+              {t.common.filter}
               {activeFiltersCount > 0 && (
                 <Badge variant="secondary" className="ml-2">
                   {activeFiltersCount}
@@ -208,11 +209,11 @@ export default function Thresholds() {
             </Button>
             <Button variant="outline" onClick={handleExportCSV} disabled={!thresholds?.length}>
               <Download className="mr-2 h-4 w-4" />
-              CSV İndir
+              CSV
             </Button>
             <Button variant="outline" disabled>
               <Upload className="mr-2 h-4 w-4" />
-              CSV Yükle
+              CSV
             </Button>
           </div>
         </div>
@@ -222,7 +223,7 @@ export default function Thresholds() {
           <Alert>
             <ShieldAlert className="h-4 w-4" />
             <AlertDescription>
-              Eşik değerlerini görüntüleyebilirsiniz ancak düzenleme yapabilmek için yönetici yetkisi gereklidir.
+              {t.thresholds.adminRequired}
             </AlertDescription>
           </Alert>
         )}
@@ -233,19 +234,19 @@ export default function Thresholds() {
             <CardContent className="pt-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
-                  <Label>Sektör</Label>
+                  <Label>{t.customers.sector}</Label>
                   <Select
                     value={filters.sector || 'all'}
                     onValueChange={(value) => handleFilterChange('sector', value as Sector)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Tümü" />
+                      <SelectValue placeholder={t.common.all} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tümü</SelectItem>
+                      <SelectItem value="all">{t.common.all}</SelectItem>
                       {SECTORS.map((sector) => (
                         <SelectItem key={sector} value={sector}>
-                          {sector}
+                          {t.sectorLabels[sector] || sector}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -253,19 +254,19 @@ export default function Thresholds() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Segment</Label>
+                  <Label>{t.customers.segment}</Label>
                   <Select
                     value={filters.segment || 'all'}
                     onValueChange={(value) => handleFilterChange('segment', value as Segment)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Tümü" />
+                      <SelectValue placeholder={t.common.all} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tümü</SelectItem>
+                      <SelectItem value="all">{t.common.all}</SelectItem>
                       {SEGMENTS.map((segment) => (
                         <SelectItem key={segment} value={segment}>
-                          {segment}
+                          {t.segmentLabels[segment] || segment}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -273,16 +274,16 @@ export default function Thresholds() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Ürün</Label>
+                  <Label>{t.thresholds.product}</Label>
                   <Select
                     value={filters.productId || 'all'}
                     onValueChange={(value) => handleFilterChange('productId', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Tümü" />
+                      <SelectValue placeholder={t.common.all} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tümü</SelectItem>
+                      <SelectItem value="all">{t.common.all}</SelectItem>
                       {products?.map((product) => (
                         <SelectItem key={product.id} value={product.id}>
                           {product.name}
@@ -293,7 +294,7 @@ export default function Thresholds() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Durum</Label>
+                  <Label>{t.common.status}</Label>
                   <Select
                     value={filters.isActive === undefined ? 'all' : filters.isActive.toString()}
                     onValueChange={(value) =>
@@ -301,12 +302,12 @@ export default function Thresholds() {
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Tümü" />
+                      <SelectValue placeholder={t.common.all} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tümü</SelectItem>
-                      <SelectItem value="true">Aktif</SelectItem>
-                      <SelectItem value="false">Pasif</SelectItem>
+                      <SelectItem value="all">{t.common.all}</SelectItem>
+                      <SelectItem value="true">{t.thresholds.active}</SelectItem>
+                      <SelectItem value="false">{t.thresholds.inactive}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -315,7 +316,7 @@ export default function Thresholds() {
                 <div className="mt-4 flex justify-end">
                   <Button variant="ghost" size="sm" onClick={clearFilters}>
                     <X className="mr-2 h-4 w-4" />
-                    Filtreleri Temizle
+                    {t.common.close}
                   </Button>
                 </div>
               )}
@@ -328,10 +329,10 @@ export default function Thresholds() {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>
-                Eşik Değerleri Listesi
+                {t.thresholds.title}
                 {thresholds && (
                   <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({thresholds.length} kayıt)
+                    ({thresholds.length})
                   </span>
                 )}
               </span>
@@ -349,34 +350,34 @@ export default function Thresholds() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Sektör</TableHead>
-                      <TableHead>Segment</TableHead>
-                      <TableHead>Ürün</TableHead>
-                      <TableHead>Kategori</TableHead>
-                      <TableHead className="text-right">Eşik Değeri</TableHead>
-                      <TableHead>Hesaplama Tarihi</TableHead>
-                      <TableHead className="text-center">Versiyon</TableHead>
-                      <TableHead className="text-center">Aktif</TableHead>
-                      <TableHead className="text-right">İşlemler</TableHead>
+                      <TableHead>{t.customers.sector}</TableHead>
+                      <TableHead>{t.customers.segment}</TableHead>
+                      <TableHead>{t.thresholds.product}</TableHead>
+                      <TableHead>{t.categoryLabels['Kredi']}</TableHead>
+                      <TableHead className="text-right">{t.thresholds.thresholdValue}</TableHead>
+                      <TableHead>{t.thresholds.calculationDate}</TableHead>
+                      <TableHead className="text-center">{t.thresholds.version}</TableHead>
+                      <TableHead className="text-center">{t.thresholds.active}</TableHead>
+                      <TableHead className="text-right">{t.common.actions}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {paginatedThresholds.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                          Eşik değeri bulunamadı
+                          {t.thresholds.noThresholds}
                         </TableCell>
                       </TableRow>
                     ) : (
                       paginatedThresholds.map((threshold) => (
                         <TableRow key={threshold.id}>
-                          <TableCell>{threshold.sector}</TableCell>
-                          <TableCell>{threshold.segment}</TableCell>
+                          <TableCell>{t.sectorLabels[threshold.sector] || threshold.sector}</TableCell>
+                          <TableCell>{t.segmentLabels[threshold.segment] || threshold.segment}</TableCell>
                           <TableCell className="font-medium">
                             {threshold.products?.name}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline">{threshold.products?.category}</Badge>
+                            <Badge variant="outline">{t.categoryLabels[threshold.products?.category as keyof typeof t.categoryLabels] || threshold.products?.category}</Badge>
                           </TableCell>
                           <TableCell className="text-right font-mono">
                             {formatCurrency(Number(threshold.threshold_value))}
@@ -413,7 +414,7 @@ export default function Thresholds() {
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">
                     <p className="text-sm text-muted-foreground">
-                      Sayfa {currentPage} / {totalPages}
+                      {currentPage} / {totalPages}
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -422,7 +423,7 @@ export default function Thresholds() {
                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                         disabled={currentPage === 1}
                       >
-                        Önceki
+                        {t.common.previous}
                       </Button>
                       <Button
                         variant="outline"
@@ -430,7 +431,7 @@ export default function Thresholds() {
                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                         disabled={currentPage === totalPages}
                       >
-                        Sonraki
+                        {t.common.next}
                       </Button>
                     </div>
                   </div>
@@ -444,29 +445,29 @@ export default function Thresholds() {
         <Dialog open={!!editingThreshold} onOpenChange={() => setEditingThreshold(null)}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Eşik Değeri Düzenle</DialogTitle>
+              <DialogTitle>{t.thresholds.editThreshold}</DialogTitle>
               <DialogDescription>
-                {editingThreshold?.products?.name} - {editingThreshold?.sector} / {editingThreshold?.segment}
+                {editingThreshold?.products?.name} - {t.sectorLabels[editingThreshold?.sector as keyof typeof t.sectorLabels] || editingThreshold?.sector} / {t.segmentLabels[editingThreshold?.segment as keyof typeof t.segmentLabels] || editingThreshold?.segment}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="threshold-value">Eşik Değeri</Label>
+                <Label htmlFor="threshold-value">{t.thresholds.thresholdValue}</Label>
                 <Input
                   id="threshold-value"
                   type="number"
                   value={editValue}
                   onChange={(e) => setEditValue(e.target.value)}
-                  placeholder="Eşik değeri girin"
+                  placeholder={t.thresholds.thresholdValue}
                 />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditingThreshold(null)}>
-                İptal
+                {t.common.cancel}
               </Button>
               <Button onClick={handleSaveEdit} disabled={updateThreshold.isPending}>
-                {updateThreshold.isPending ? 'Kaydediliyor...' : 'Kaydet'}
+                {updateThreshold.isPending ? t.common.loading : t.common.save}
               </Button>
             </DialogFooter>
           </DialogContent>
