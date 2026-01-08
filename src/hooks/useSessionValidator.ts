@@ -1,16 +1,27 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 /**
- * Validates the current session and redirects to login if expired.
+ * Validates the current session and shows a modal if expired.
  * This hook should be used in protected layouts to handle mid-session JWT expiry.
  */
 export const useSessionValidator = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [showExpiredModal, setShowExpiredModal] = useState(false);
+
+  const handleSessionExpired = useCallback(async () => {
+    setShowExpiredModal(true);
+  }, []);
+
+  const handleExpiredConfirm = useCallback(async () => {
+    setShowExpiredModal(false);
+    await signOut();
+    navigate('/auth', { replace: true });
+  }, [signOut, navigate]);
 
   const validateSession = useCallback(async () => {
     if (!user) return;
@@ -19,10 +30,8 @@ export const useSessionValidator = () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error || !session) {
-        console.warn('Session expired or invalid, redirecting to login');
-        toast.error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
-        await signOut();
-        navigate('/auth', { replace: true });
+        console.warn('Session expired or invalid');
+        await handleSessionExpired();
         return false;
       }
 
@@ -34,13 +43,8 @@ export const useSessionValidator = () => {
         
         // Token already expired
         if (timeToExpiry < 0) {
-          console.warn('Token has expired, redirecting to login');
-          toast.error('Oturum süreniz doldu. Lütfen tekrar giriş yapın.', {
-            duration: 5000,
-            description: 'Güvenliğiniz için yeniden giriş yapmanız gerekmektedir.'
-          });
-          await signOut();
-          navigate('/auth', { replace: true });
+          console.warn('Token has expired');
+          await handleSessionExpired();
           return false;
         }
         
@@ -65,7 +69,7 @@ export const useSessionValidator = () => {
       console.error('Session validation error:', err);
       return false;
     }
-  }, [user, signOut, navigate]);
+  }, [user, handleSessionExpired]);
 
   useEffect(() => {
     // Validate session on mount
@@ -78,9 +82,8 @@ export const useSessionValidator = () => {
           console.log('Token refreshed successfully');
         } else if (event === 'SIGNED_OUT' || !session) {
           // User was signed out (possibly due to expired token)
-          if (user) {
-            toast.error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
-            navigate('/auth', { replace: true });
+          if (user && !showExpiredModal) {
+            await handleSessionExpired();
           }
         }
       }
@@ -93,7 +96,7 @@ export const useSessionValidator = () => {
       subscription.unsubscribe();
       clearInterval(intervalId);
     };
-  }, [user, validateSession, navigate]);
+  }, [user, validateSession, handleSessionExpired, showExpiredModal]);
 
-  return { validateSession };
+  return { validateSession, showExpiredModal, handleExpiredConfirm };
 };
