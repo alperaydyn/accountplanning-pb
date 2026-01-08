@@ -75,10 +75,31 @@ serve(async (req) => {
     console.log("Authenticated user:", userId);
     // === End Authentication Check ===
 
+    // Parse request body for optional status parameter
+    let requestedStatus: string | null = null;
+    try {
+      const body = await req.json();
+      if (body?.status && STATUSES.includes(body.status)) {
+        requestedStatus = body.status;
+      }
+    } catch {
+      // No body or invalid JSON, use random status
+    }
+
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
       throw new Error("OPENAI_API_KEY is not configured");
     }
+
+    // Build status instruction based on whether a specific status was requested
+    const statusInstruction = requestedStatus 
+      ? `IMPORTANT: The customer MUST have status "${requestedStatus}". Do not use any other status.`
+      : `Status probability distribution:
+- Yeni Müşteri: 50% (most common)
+- Aktif: 20%
+- Target: 15%
+- Strong Target: 10%
+- Ana Banka: 5% (rarest)`;
 
     const systemPrompt = `You are a Turkish banking customer data generator. Generate realistic Turkish company names and data for a commercial banking CRM system.
 
@@ -86,14 +107,7 @@ Available sectors: ${SECTORS.join(", ")}
 Available segments: ${SEGMENTS.join(", ")} (TİCARİ = largest, MİKRO = smallest)
 Available statuses: ${STATUSES.join(", ")}
 
-CRITICAL - Status probability distribution (YOU MUST FOLLOW THIS EXACTLY):
-- Ana Banka: 5% (1 in 20 customers - the rarest, primary banking relationship)
-- Strong Target: 10% (1 in 10 customers - high potential prospects)
-- Target: 15% (about 1 in 7 customers - medium potential prospects)
-- Aktif: 20% (1 in 5 customers - regular active customers)
-- Yeni Müşteri: 50% (half of all customers - newly acquired, most common)
-
-ROLL A MENTAL DICE: Generate Yeni Müşteri most often, then Aktif, then Target, rarely Strong Target, very rarely Ana Banka.
+${statusInstruction}
 
 Product count rules by status:
 - Yeni Müşteri: 1 product (TL Vadesiz Mevduat mandatory)
@@ -121,6 +135,7 @@ IMPORTANT:
 - You MUST respond by calling the create_customer tool.
 - Do NOT write any normal text.
 - Keep values realistic and follow the rules exactly.
+${requestedStatus ? `- The customer status MUST be exactly "${requestedStatus}".` : ''}
 
 Rules recap:
 - TL Vadesiz Mevduat (${MANDATORY_PRODUCT_ID}) is MANDATORY for all customers
