@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,6 +52,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const [isSaving, setIsSaving] = useState(false);
   const [generatedCustomer, setGeneratedCustomer] = useState<GeneratedCustomer | null>(null);
   const [batchCount, setBatchCount] = useState<number>(1);
+  const [selectedStatus, setSelectedStatus] = useState<CustomerStatus | 'random'>('random');
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0, names: [] as string[], currentStep: '' });
   const cancelledRef = useRef(false);
@@ -62,6 +64,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     setIsGenerating(false);
     setIsSaving(false);
     setGeneratedCustomer(null);
+    setSelectedStatus('random');
     setIsBatchMode(false);
     setBatchProgress({ current: 0, total: 0, names: [], currentStep: '' });
     cancelledRef.current = false;
@@ -84,7 +87,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     return product?.name || productId;
   };
 
-  const invokeGenerateCustomer = async (): Promise<GeneratedCustomer> => {
+  const invokeGenerateCustomer = async (status?: CustomerStatus): Promise<GeneratedCustomer> => {
     const {
       data: { session },
       error: sessionError,
@@ -94,7 +97,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     if (!session?.access_token) throw new Error("Unauthorized");
 
     const { data, error } = await supabase.functions.invoke("generate-customer", {
-      body: {},
+      body: { status },
       headers: {
         Authorization: `Bearer ${session.access_token}`,
       },
@@ -189,8 +192,9 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
         // Step 2: Waiting for AI response
         setBatchProgress(prev => ({ ...prev, currentStep: `[${i + 1}/${batchCount}] Waiting for AI response...` }));
         
+        const statusToSend = selectedStatus === 'random' ? undefined : selectedStatus;
         const { data, error } = await supabase.functions.invoke("generate-customer", {
-          body: {},
+          body: { status: statusToSend },
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
 
@@ -420,23 +424,40 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
               <div className="p-4 rounded-lg border bg-muted/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  <Label htmlFor="batch-count" className="text-sm font-medium">Batch Generation</Label>
+                  <Label className="text-sm font-medium">Batch Generation</Label>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Input
-                    id="batch-count"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={batchCount}
-                    onChange={(e) => setBatchCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
-                    className="w-24"
-                  />
-                  <span className="text-sm text-muted-foreground">customers (max 50)</span>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="batch-count" className="text-xs text-muted-foreground">Count</Label>
+                    <Input
+                      id="batch-count"
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={batchCount}
+                      onChange={(e) => setBatchCount(Math.min(50, Math.max(1, parseInt(e.target.value) || 1)))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="batch-status" className="text-xs text-muted-foreground">Status</Label>
+                    <Select value={selectedStatus} onValueChange={(v) => setSelectedStatus(v as CustomerStatus | 'random')}>
+                      <SelectTrigger id="batch-status">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="random">Random</SelectItem>
+                        <SelectItem value="Yeni Müşteri">Yeni Müşteri</SelectItem>
+                        <SelectItem value="Aktif">Aktif</SelectItem>
+                        <SelectItem value="Target">Target</SelectItem>
+                        <SelectItem value="Strong Target">Strong Target</SelectItem>
+                        <SelectItem value="Ana Banka">Ana Banka</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
                 <Button onClick={handleBatchGenerate} className="w-full" variant="default">
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Generate & Save {batchCount} Customers
+                  Generate & Save {batchCount} {selectedStatus !== 'random' ? selectedStatus : ''} Customers
                 </Button>
               </div>
 
