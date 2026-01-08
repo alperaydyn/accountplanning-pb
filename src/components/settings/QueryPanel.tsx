@@ -251,12 +251,12 @@ export function QueryPanel() {
               </span>
             </div>
             {result.data.length > 0 ? (
-              <ScrollArea className="rounded-md border max-h-[400px]">
+              <div className="rounded-md border max-h-[400px] overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       {Object.keys(result.data[0]).map((col) => (
-                        <TableHead key={col} className="whitespace-nowrap font-mono text-xs">
+                        <TableHead key={col} className="whitespace-nowrap font-mono text-xs sticky top-0 bg-background">
                           {col}
                         </TableHead>
                       ))}
@@ -280,8 +280,7 @@ export function QueryPanel() {
                     ))}
                   </TableBody>
                 </Table>
-                <ScrollBar orientation="horizontal" />
-              </ScrollArea>
+              </div>
             ) : (
               <div className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
                 No results
