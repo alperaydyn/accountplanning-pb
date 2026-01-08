@@ -3,6 +3,7 @@ import { useMemo, type ReactNode } from "react";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
+import { useSessionValidator } from "@/hooks/useSessionValidator";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 
@@ -11,6 +12,9 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  // Validate session and redirect to login if expired
+  useSessionValidator();
+
   // Memoize once per mount so page navigation doesn't reset the sidebar.
   const defaultOpen = useMemo(() => {
     if (typeof document === "undefined") return false;
