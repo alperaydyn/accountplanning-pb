@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Package, CreditCard, Wallet, PiggyBank, Users, Factory, Landmark, ArrowLeft, Percent } from "lucide-react";
+import { Package, CreditCard, Wallet, PiggyBank, Users, Factory, ArrowLeft, Percent, Banknote, Receipt, FileCheck, Shield } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +7,9 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCustomers, SEGMENTS, SECTORS } from "@/hooks/useCustomers";
+import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
+import { useProducts } from "@/hooks/useProducts";
+import { useProductThresholds } from "@/hooks/useProductThresholds";
 import {
   Select,
   SelectContent,
@@ -20,13 +23,11 @@ interface ScoreAxis {
   icon: React.ReactNode;
   score: number;
   description: string;
-  volume: number;
 }
 
-const generateScoreBreakdown = (avgScore: number, customerCount: number): ScoreAxis[] => {
+const generateScoreBreakdown = (avgScore: number): ScoreAxis[] => {
   const baseScore = avgScore;
   const variance = 15;
-  const baseVolume = customerCount * 500000;
   
   const productsScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
   const transactionalScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
@@ -39,28 +40,24 @@ const generateScoreBreakdown = (avgScore: number, customerCount: number): ScoreA
       icon: <Package className="h-5 w-5" />,
       score: productsScore,
       description: "Share of loans, guarantees, insurance",
-      volume: Math.floor(baseVolume * 0.35),
     },
     {
       name: "Transactional Services",
       icon: <CreditCard className="h-5 w-5" />,
       score: transactionalScore,
       description: "Share of monthly payment volume",
-      volume: Math.floor(baseVolume * 0.45),
     },
     {
       name: "Liabilities",
       icon: <PiggyBank className="h-5 w-5" />,
       score: liabilitiesScore,
       description: "Share of deposits and other liabilities",
-      volume: Math.floor(baseVolume * 0.25),
     },
     {
       name: "Assets / Share of Wallet",
       icon: <Wallet className="h-5 w-5" />,
       score: assetsScore,
       description: "Share of drawn short and long term debt",
-      volume: Math.floor(baseVolume * 0.30),
     },
   ];
 };
@@ -84,6 +81,11 @@ const PrimaryBank = () => {
     sector: selectedSector === "all" ? undefined : selectedSector as any,
   });
 
+  // Fetch products, thresholds, and customer products for product metrics
+  const { data: products = [] } = useProducts();
+  const { data: thresholds = [] } = useProductThresholds({});
+  const { data: allCustomerProducts = [] } = useAllCustomerProducts();
+
   // Calculate metrics
   const metrics = useMemo(() => {
     const totalCustomers = customers.length;
@@ -103,9 +105,44 @@ const PrimaryBank = () => {
     };
   }, [customers]);
 
+  // Calculate product metrics (over threshold ratios)
+  const productMetrics = useMemo(() => {
+    const customerIds = new Set(customers.map(c => c.id));
+    const filteredCustomerProducts = allCustomerProducts.filter(cp => customerIds.has(cp.customer_id));
+    
+    // Helper to calculate ratio over threshold for a category
+    const calculateCategoryRatio = (category: string) => {
+      const categoryProducts = products.filter(p => p.category === category);
+      const productIds = new Set(categoryProducts.map(p => p.id));
+      
+      let totalOverThreshold = 0;
+      let totalCount = 0;
+      
+      filteredCustomerProducts.forEach(cp => {
+        if (!productIds.has(cp.product_id)) return;
+        
+        // Find threshold for this product (use first matching threshold or 0)
+        const threshold = thresholds.find(t => t.product_id === cp.product_id)?.threshold_value || 0;
+        totalCount++;
+        if (cp.current_value >= Number(threshold)) {
+          totalOverThreshold++;
+        }
+      });
+      
+      return totalCount > 0 ? Math.round((totalOverThreshold / totalCount) * 100) : 0;
+    };
+
+    return {
+      loans: calculateCategoryRatio("Kredi"),
+      posGiro: calculateCategoryRatio("Ödeme"),
+      cheque: calculateCategoryRatio("Tahsilat"),
+      collaterals: calculateCategoryRatio("Sigorta"),
+    };
+  }, [customers, products, thresholds, allCustomerProducts]);
+
   const axes = useMemo(() => 
-    generateScoreBreakdown(metrics.avgPrincipalityScore, metrics.totalCustomers),
-    [metrics.avgPrincipalityScore, metrics.totalCustomers]
+    generateScoreBreakdown(metrics.avgPrincipalityScore),
+    [metrics.avgPrincipalityScore]
   );
 
   const segmentLabel = selectedSegment === "all" ? "All Segments" : selectedSegment;
@@ -208,6 +245,82 @@ const PrimaryBank = () => {
           </CardContent>
         </Card>
 
+        {/* Product Metrics Panel */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Banknote className="h-5 w-5" />
+                <CardTitle className="text-sm font-medium">Kredi</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.loans}%`}</p>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.loans)}`}
+                  style={{ width: `${productMetrics.loans}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground leading-tight">Loans over threshold</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Receipt className="h-5 w-5" />
+                <CardTitle className="text-sm font-medium">Üye İşyeri</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.posGiro}%`}</p>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.posGiro)}`}
+                  style={{ width: `${productMetrics.posGiro}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground leading-tight">POS volume over threshold</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <FileCheck className="h-5 w-5" />
+                <CardTitle className="text-sm font-medium">Ödeme Çeki</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.cheque}%`}</p>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.cheque)}`}
+                  style={{ width: `${productMetrics.cheque}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground leading-tight">Cheque volume over threshold</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Shield className="h-5 w-5" />
+                <CardTitle className="text-sm font-medium">Teminat</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.collaterals}%`}</p>
+              <div className="h-2 rounded-full bg-muted overflow-hidden">
+                <div 
+                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.collaterals)}`}
+                  style={{ width: `${productMetrics.collaterals}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground leading-tight">Insurance products over threshold</p>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Four Axes Breakdown */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {axes.map((axis) => (
@@ -227,7 +340,6 @@ const PrimaryBank = () => {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground leading-tight">{axis.description}</p>
-                <p className="text-lg font-semibold">₺{axis.volume.toLocaleString()}</p>
               </CardContent>
             </Card>
           ))}
