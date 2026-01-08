@@ -22,18 +22,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        // Handle expired/signed out events
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED') {
+          setSession(session);
+          setUser(session?.user ?? null);
+        } else {
+          setSession(session);
+          setUser(session?.user ?? null);
+        }
         setLoading(false);
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    // THEN check for existing session and validate it
+    const initializeAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          // No valid session exists
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        // Check if token is expired
+        const expiresAt = session.expires_at;
+        if (expiresAt) {
+          const now = Math.floor(Date.now() / 1000);
+          if (expiresAt < now) {
+            // Token is expired, clear session
+            console.warn('JWT expired on initialization, clearing session');
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+            // Try to sign out to clean up
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+            return;
+          }
+        }
+
+        // Valid session
+        setSession(session);
+        setUser(session.user);
+        setLoading(false);
+      } catch (err) {
+        console.error('Auth initialization error:', err);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      }
+    };
+
+    initializeAuth();
 
     return () => subscription.unsubscribe();
   }, []);
