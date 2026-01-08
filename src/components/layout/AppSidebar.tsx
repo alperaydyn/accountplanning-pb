@@ -78,11 +78,14 @@ export function AppSidebar() {
 
     setIsSigningOut(true);
     try {
+      // Mark that logout is in progress to prevent Auth page redirect flicker
+      sessionStorage.setItem('logout_in_progress', 'true');
       await signOut();
       // Force a clean app reload to avoid any stale in-memory auth state.
       window.location.replace("/auth");
     } catch (e) {
       console.error("Logout error:", e);
+      sessionStorage.removeItem('logout_in_progress');
       toast.error("Logout failed. Please try again.");
     } finally {
       setIsSigningOut(false);

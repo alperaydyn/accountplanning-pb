@@ -27,8 +27,15 @@ const Auth = () => {
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (but not during logout transition)
   useEffect(() => {
+    // Skip redirect if we're on /auth intentionally (e.g., after logout)
+    const isLogoutRedirect = sessionStorage.getItem('logout_in_progress');
+    if (isLogoutRedirect) {
+      sessionStorage.removeItem('logout_in_progress');
+      return;
+    }
+    
     if (user && !authLoading) {
       navigate('/', { replace: true });
     }
