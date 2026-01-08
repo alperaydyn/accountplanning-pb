@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   Calendar,
   LayoutDashboard,
@@ -40,7 +40,6 @@ type SidebarItem = {
 
 export function AppSidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
   const currentPath = location.pathname;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -80,7 +79,8 @@ export function AppSidebar() {
     setIsSigningOut(true);
     try {
       await signOut();
-      navigate("/auth", { replace: true });
+      // Force a clean app reload to avoid any stale in-memory auth state.
+      window.location.replace("/auth");
     } catch (e) {
       console.error("Logout error:", e);
       toast.error("Logout failed. Please try again.");
