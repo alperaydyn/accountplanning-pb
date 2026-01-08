@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,10 +9,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 const Auth = () => {
   const navigate = useNavigate();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const [isLoading, setIsLoading] = useState(false);
   
   // Login form state
@@ -35,7 +38,7 @@ const Auth = () => {
     e.preventDefault();
     
     if (!loginEmail || !loginPassword) {
-      toast.error('Lütfen tüm alanları doldurun');
+      toast.error(t.fillAllFields);
       return;
     }
 
@@ -45,12 +48,12 @@ const Auth = () => {
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        toast.error('Geçersiz e-posta veya şifre');
+        toast.error(t.invalidCredentials);
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success('Giriş başarılı!');
+      toast.success(t.loginSuccess);
       navigate('/', { replace: true });
     }
   };
@@ -59,17 +62,17 @@ const Auth = () => {
     e.preventDefault();
     
     if (!signupEmail || !signupPassword || !signupConfirmPassword) {
-      toast.error('Lütfen tüm alanları doldurun');
+      toast.error(t.fillAllFields);
       return;
     }
 
     if (signupPassword !== signupConfirmPassword) {
-      toast.error('Şifreler eşleşmiyor');
+      toast.error(t.passwordsNotMatch);
       return;
     }
 
     if (signupPassword.length < 6) {
-      toast.error('Şifre en az 6 karakter olmalıdır');
+      toast.error(t.passwordMinLength);
       return;
     }
 
@@ -79,12 +82,12 @@ const Auth = () => {
 
     if (error) {
       if (error.message.includes('User already registered')) {
-        toast.error('Bu e-posta adresi zaten kayıtlı');
+        toast.error(t.emailAlreadyRegistered);
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success('Kayıt başarılı! Giriş yapılıyor...');
+      toast.success(t.signupSuccess);
       navigate('/', { replace: true });
     }
   };
@@ -99,25 +102,30 @@ const Auth = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      {/* Language selector in top right corner */}
+      <div className="absolute top-4 right-4">
+        <LanguageSelector variant="compact" />
+      </div>
+
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
             <img src="/favicon.png" alt="Logo" className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl">Account Planning</CardTitle>
-          <CardDescription>Hesap planlaması yönetim sistemi</CardDescription>
+          <CardTitle className="text-2xl">{t.accountPlanning}</CardTitle>
+          <CardDescription>{t.accountPlanningDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Giriş Yap</TabsTrigger>
-              <TabsTrigger value="signup">Kayıt Ol</TabsTrigger>
+              <TabsTrigger value="login">{t.login}</TabsTrigger>
+              <TabsTrigger value="signup">{t.signup}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">E-posta</Label>
+                  <Label htmlFor="login-email">{t.email}</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -128,7 +136,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Şifre</Label>
+                  <Label htmlFor="login-password">{t.password}</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -142,10 +150,10 @@ const Auth = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Giriş yapılıyor...
+                      {t.loggingIn}
                     </>
                   ) : (
-                    'Giriş Yap'
+                    t.login
                   )}
                 </Button>
               </form>
@@ -154,7 +162,7 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">Ad Soyad</Label>
+                  <Label htmlFor="signup-name">{t.fullName}</Label>
                   <Input
                     id="signup-name"
                     type="text"
@@ -165,7 +173,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">E-posta</Label>
+                  <Label htmlFor="signup-email">{t.email}</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -176,7 +184,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">Şifre</Label>
+                  <Label htmlFor="signup-password">{t.password}</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -187,7 +195,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">Şifre Tekrar</Label>
+                  <Label htmlFor="signup-confirm-password">{t.confirmPassword}</Label>
                   <Input
                     id="signup-confirm-password"
                     type="password"
@@ -201,10 +209,10 @@ const Auth = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Kayıt yapılıyor...
+                      {t.signingUp}
                     </>
                   ) : (
-                    'Kayıt Ol'
+                    t.signup
                   )}
                 </Button>
               </form>
@@ -212,7 +220,7 @@ const Auth = () => {
           </Tabs>
         </CardContent>
         <CardFooter className="text-center text-sm text-muted-foreground">
-          <p className="w-full">Devam ederek kullanım şartlarını kabul etmiş olursunuz.</p>
+          <p className="w-full">{t.termsAgreement}</p>
         </CardFooter>
       </Card>
     </div>
