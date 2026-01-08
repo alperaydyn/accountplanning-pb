@@ -14,10 +14,10 @@ const Settings = () => {
     <AppLayout>
       <div className="space-y-6">
         <div>
-          <PageBreadcrumb items={[{ label: t.settings }]} />
-          <h1 className="text-2xl font-bold text-foreground">{t.settings}</h1>
+          <PageBreadcrumb items={[{ label: t.nav.settings }]} />
+          <h1 className="text-2xl font-bold text-foreground">{t.settings.title}</h1>
           <p className="text-muted-foreground mt-1">
-            {t.settingsDescription}
+            {t.settings.description}
           </p>
         </div>
 
@@ -27,13 +27,13 @@ const Settings = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Globe className="h-5 w-5" />
-                {t.language}
+                {t.settings.language}
               </CardTitle>
-              <CardDescription>{t.languageDescription}</CardDescription>
+              <CardDescription>{t.settings.languageDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="max-w-xs">
-                <Label htmlFor="language-select" className="sr-only">{t.language}</Label>
+                <Label htmlFor="language-select" className="sr-only">{t.settings.language}</Label>
                 <LanguageSelector />
               </div>
             </CardContent>
@@ -44,14 +44,14 @@ const Settings = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <FileText className="h-5 w-5" />
-                {t.documentation}
+                {t.settings.documentation}
               </CardTitle>
-              <CardDescription>{t.documentationDescription}</CardDescription>
+              <CardDescription>{t.settings.documentationDescription}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button asChild>
                 <Link to="/documentation">
-                  {t.viewDocumentation}
+                  {t.settings.viewDocumentation}
                   <ExternalLink className="ml-2 h-4 w-4" />
                 </Link>
               </Button>

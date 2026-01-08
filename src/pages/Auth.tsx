@@ -38,7 +38,7 @@ const Auth = () => {
     e.preventDefault();
     
     if (!loginEmail || !loginPassword) {
-      toast.error(t.fillAllFields);
+      toast.error(t.auth.fillAllFields);
       return;
     }
 
@@ -48,12 +48,12 @@ const Auth = () => {
 
     if (error) {
       if (error.message.includes('Invalid login credentials')) {
-        toast.error(t.invalidCredentials);
+        toast.error(t.auth.invalidCredentials);
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success(t.loginSuccess);
+      toast.success(t.auth.loginSuccess);
       navigate('/', { replace: true });
     }
   };
@@ -62,17 +62,17 @@ const Auth = () => {
     e.preventDefault();
     
     if (!signupEmail || !signupPassword || !signupConfirmPassword) {
-      toast.error(t.fillAllFields);
+      toast.error(t.auth.fillAllFields);
       return;
     }
 
     if (signupPassword !== signupConfirmPassword) {
-      toast.error(t.passwordsNotMatch);
+      toast.error(t.auth.passwordsNotMatch);
       return;
     }
 
     if (signupPassword.length < 6) {
-      toast.error(t.passwordMinLength);
+      toast.error(t.auth.passwordMinLength);
       return;
     }
 
@@ -82,12 +82,12 @@ const Auth = () => {
 
     if (error) {
       if (error.message.includes('User already registered')) {
-        toast.error(t.emailAlreadyRegistered);
+        toast.error(t.auth.emailAlreadyRegistered);
       } else {
         toast.error(error.message);
       }
     } else {
-      toast.success(t.signupSuccess);
+      toast.success(t.auth.signupSuccess);
       navigate('/', { replace: true });
     }
   };
@@ -112,20 +112,20 @@ const Auth = () => {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
             <img src="/favicon.png" alt="Logo" className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl">{t.accountPlanning}</CardTitle>
-          <CardDescription>{t.accountPlanningDescription}</CardDescription>
+          <CardTitle className="text-2xl">{t.auth.accountPlanning}</CardTitle>
+          <CardDescription>{t.auth.accountPlanningDescription}</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">{t.login}</TabsTrigger>
-              <TabsTrigger value="signup">{t.signup}</TabsTrigger>
+              <TabsTrigger value="login">{t.auth.login}</TabsTrigger>
+              <TabsTrigger value="signup">{t.auth.signup}</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email">{t.email}</Label>
+                  <Label htmlFor="login-email">{t.auth.email}</Label>
                   <Input
                     id="login-email"
                     type="email"
@@ -136,7 +136,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">{t.password}</Label>
+                  <Label htmlFor="login-password">{t.auth.password}</Label>
                   <Input
                     id="login-password"
                     type="password"
@@ -150,10 +150,10 @@ const Auth = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t.loggingIn}
+                      {t.auth.loggingIn}
                     </>
                   ) : (
-                    t.login
+                    t.auth.login
                   )}
                 </Button>
               </form>
@@ -162,7 +162,7 @@ const Auth = () => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-name">{t.fullName}</Label>
+                  <Label htmlFor="signup-name">{t.auth.fullName}</Label>
                   <Input
                     id="signup-name"
                     type="text"
@@ -173,7 +173,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email">{t.email}</Label>
+                  <Label htmlFor="signup-email">{t.auth.email}</Label>
                   <Input
                     id="signup-email"
                     type="email"
@@ -184,7 +184,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password">{t.password}</Label>
+                  <Label htmlFor="signup-password">{t.auth.password}</Label>
                   <Input
                     id="signup-password"
                     type="password"
@@ -195,7 +195,7 @@ const Auth = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-confirm-password">{t.confirmPassword}</Label>
+                  <Label htmlFor="signup-confirm-password">{t.auth.confirmPassword}</Label>
                   <Input
                     id="signup-confirm-password"
                     type="password"
@@ -209,10 +209,10 @@ const Auth = () => {
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      {t.signingUp}
+                      {t.auth.signingUp}
                     </>
                   ) : (
-                    t.signup
+                    t.auth.signup
                   )}
                 </Button>
               </form>
@@ -220,7 +220,7 @@ const Auth = () => {
           </Tabs>
         </CardContent>
         <CardFooter className="text-center text-sm text-muted-foreground">
-          <p className="w-full">{t.termsAgreement}</p>
+          <p className="w-full">{t.auth.termsAgreement}</p>
         </CardFooter>
       </Card>
     </div>

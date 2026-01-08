@@ -80,13 +80,13 @@ const Documentation = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <PageBreadcrumb items={[{ label: t.settings, href: "/settings" }, { label: t.documentation }]} />
-            <h1 className="text-2xl font-bold text-foreground">{t.projectDocumentation}</h1>
+            <PageBreadcrumb items={[{ label: t.nav.settings, href: "/settings" }, { label: t.settings.documentation }]} />
+            <h1 className="text-2xl font-bold text-foreground">{t.settings.projectDocumentation}</h1>
           </div>
           <Button variant="outline" asChild>
             <Link to="/settings">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              {t.backToSettings}
+              {t.settings.backToSettings}
             </Link>
           </Button>
         </div>

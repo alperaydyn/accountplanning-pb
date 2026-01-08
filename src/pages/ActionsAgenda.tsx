@@ -10,19 +10,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActions, Action } from "@/hooks/useActions";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Database } from "@/integrations/supabase/types";
 
 type ViewMode = "daily" | "weekly" | "monthly";
 type ActionStatus = Database['public']['Enums']['action_status'];
-
-const statusConfig: Record<ActionStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
-  'Beklemede': { label: "Pending", variant: "secondary", icon: Clock },
-  'Planlandı': { label: "Planned", variant: "default", icon: CalendarIcon },
-  'Tamamlandı': { label: "Completed", variant: "outline", icon: CheckCircle2 },
-  'Ertelendi': { label: "Postponed", variant: "secondary", icon: AlertCircle },
-  'İlgilenmiyor': { label: "Not Interested", variant: "destructive", icon: XCircle },
-  'Uygun Değil': { label: "Not Possible", variant: "destructive", icon: XCircle },
-};
 
 const priorityColors = {
   high: "bg-destructive/10 text-destructive border-destructive/20",
@@ -33,10 +25,20 @@ const priorityColors = {
 export default function ActionsAgenda() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const filterStatus = searchParams.get("status");
   
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [currentDate, setCurrentDate] = useState(new Date());
+
+  const statusConfig: Record<ActionStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
+    'Beklemede': { label: t.statusLabels['Beklemede'], variant: "secondary", icon: Clock },
+    'Planlandı': { label: t.statusLabels['Planlandı'], variant: "default", icon: CalendarIcon },
+    'Tamamlandı': { label: t.statusLabels['Tamamlandı'], variant: "outline", icon: CheckCircle2 },
+    'Ertelendi': { label: t.statusLabels['Ertelendi'], variant: "secondary", icon: AlertCircle },
+    'İlgilenmiyor': { label: t.statusLabels['İlgilenmiyor'], variant: "destructive", icon: XCircle },
+    'Uygun Değil': { label: t.statusLabels['Uygun Değil'], variant: "destructive", icon: XCircle },
+  };
 
   const handleAIPlanMyDay = () => {
     navigate("/ai-assistant?prompt=plan-my-day");
@@ -103,10 +105,10 @@ export default function ActionsAgenda() {
   };
 
   const getCustomerName = (customerId: string) => 
-    customers.find(c => c.id === customerId)?.name || "Unknown";
+    customers.find(c => c.id === customerId)?.name || t.common.unknown;
 
   const getProductName = (productId: string) => 
-    products.find(p => p.id === productId)?.name || "Unknown";
+    products.find(p => p.id === productId)?.name || t.common.unknown;
 
   const headerText = useMemo(() => {
     if (viewMode === "daily") {
@@ -122,25 +124,37 @@ export default function ActionsAgenda() {
     return days.reduce((sum, day) => sum + getActionsForDay(day).length, 0);
   }, [days, filteredActions]);
 
+  const getFilterDescription = () => {
+    if (filterStatus === "Planlandı") return t.actions.plannedActions;
+    if (filterStatus === "Beklemede") return t.actions.pendingActions;
+    return t.actions.allPlannedPending;
+  };
+
+  const getNoActionsMessage = () => {
+    if (viewMode === "daily") return t.actions.noActionsDay;
+    if (viewMode === "weekly") return t.actions.noActionsWeek;
+    return t.actions.noActionsMonth;
+  };
+
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <PageBreadcrumb items={[{ label: "Actions Agenda" }]} />
-            <h1 className="text-2xl font-bold text-foreground">Actions Agenda</h1>
+            <PageBreadcrumb items={[{ label: t.actions.title }]} />
+            <h1 className="text-2xl font-bold text-foreground">{t.actions.title}</h1>
             <p className="text-muted-foreground">
-              {filterStatus === "Planlandı" ? "Planned actions" : filterStatus === "Beklemede" ? "Pending actions" : "All planned & pending actions"} 
-              {" "}• {totalActionsInView} actions in view
+              {getFilterDescription()} 
+              {" "}• {totalActionsInView} {t.actions.actionsInView}
             </p>
           </div>
 
           <div className="flex items-center gap-2">
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
               <TabsList>
-                <TabsTrigger value="daily">Daily</TabsTrigger>
-                <TabsTrigger value="weekly">Weekly</TabsTrigger>
-                <TabsTrigger value="monthly">Monthly</TabsTrigger>
+                <TabsTrigger value="daily">{t.actions.daily}</TabsTrigger>
+                <TabsTrigger value="weekly">{t.actions.weekly}</TabsTrigger>
+                <TabsTrigger value="monthly">{t.actions.monthly}</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -157,14 +171,14 @@ export default function ActionsAgenda() {
                   <ChevronRight className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={goToToday}>
-                  Today
+                  {t.common.today}
                 </Button>
               </div>
               <CardTitle className="text-lg">{headerText}</CardTitle>
               <div className="flex gap-2">
                 {filterStatus && (
                   <Badge variant="secondary">
-                    Filtered: {filterStatus === "Planlandı" ? "Planned" : "Pending"}
+                    {filterStatus === "Planlandı" ? t.actions.planned : t.actions.pending}
                   </Badge>
                 )}
               </div>
@@ -179,20 +193,16 @@ export default function ActionsAgenda() {
               <div className="p-4 rounded-full bg-violet-500/10 mb-4">
                 <Sparkles className="h-8 w-8 text-violet-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">No actions planned</h3>
+              <h3 className="text-lg font-semibold mb-2">{t.actions.noActionsPlanned}</h3>
               <p className="text-muted-foreground text-center max-w-md mb-6">
-                {viewMode === "daily" 
-                  ? "You don't have any actions planned for this day." 
-                  : viewMode === "weekly"
-                  ? "You don't have any actions planned for this week."
-                  : "You don't have any actions planned for this month."}
+                {getNoActionsMessage()}
               </p>
               <Button 
                 onClick={handleAIPlanMyDay}
                 className="bg-violet-500 hover:bg-violet-600 text-white"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Let AI find the best customers for you
+                {t.actions.letAIFind}
               </Button>
             </CardContent>
           </Card>
@@ -200,7 +210,7 @@ export default function ActionsAgenda() {
 
         {totalActionsInView > 0 && viewMode === "monthly" ? (
           <div className="grid grid-cols-7 gap-2">
-            {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => (
+            {[t.calendar.mon, t.calendar.tue, t.calendar.wed, t.calendar.thu, t.calendar.fri, t.calendar.sat, t.calendar.sun].map(day => (
               <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
                 {day}
               </div>
@@ -228,7 +238,7 @@ export default function ActionsAgenda() {
                       ))}
                       {dayActions.length > 3 && (
                         <div className="text-xs text-muted-foreground">
-                          +{dayActions.length - 3} more
+                          +{dayActions.length - 3} {t.common.more}
                         </div>
                       )}
                     </div>
@@ -257,7 +267,7 @@ export default function ActionsAgenda() {
                     </div>
                     <div className="flex-1 p-2 min-h-[60px]">
                       {dayActions.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic py-2">No actions</p>
+                        <p className="text-xs text-muted-foreground italic py-2">{t.common.noData}</p>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
                           {dayActions.map(action => (
@@ -304,7 +314,7 @@ export default function ActionsAgenda() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {dayActions.length === 0 ? (
-                      <p className="text-sm text-muted-foreground italic">No actions</p>
+                      <p className="text-sm text-muted-foreground italic">{t.common.noData}</p>
                     ) : (
                       dayActions.map(action => {
                         const StatusIcon = statusConfig[action.current_status].icon;
