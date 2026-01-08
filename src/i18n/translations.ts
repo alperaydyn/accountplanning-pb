@@ -73,6 +73,7 @@ export interface Translations {
     portfolioOverview: string;
     selectDate: string;
     totalCustomers: string;
+    scaleUpEnterprise: string;
     activeCustomers: string;
     totalVolume: string;
     pendingActions: string;
@@ -395,6 +396,7 @@ export const translations: Record<Language, Translations> = {
       portfolioOverview: "Portföy genel bakışınız.",
       selectDate: "Tarih seçin",
       totalCustomers: "Toplam Müşteri",
+      scaleUpEnterprise: "Scale Up Enterprise",
       activeCustomers: "Aktif Müşteri",
       totalVolume: "Toplam Hacim",
       pendingActions: "Bekleyen Aksiyonlar",
@@ -688,6 +690,7 @@ export const translations: Record<Language, Translations> = {
       portfolioOverview: "Your portfolio overview.",
       selectDate: "Select date",
       totalCustomers: "Total Customers",
+      scaleUpEnterprise: "Scale Up Enterprise",
       activeCustomers: "Active Customers",
       totalVolume: "Total Volume",
       pendingActions: "Pending Actions",
@@ -981,6 +984,7 @@ export const translations: Record<Language, Translations> = {
       portfolioOverview: "Resumen de su cartera.",
       selectDate: "Seleccionar fecha",
       totalCustomers: "Total de Clientes",
+      scaleUpEnterprise: "Scale Up Enterprise",
       activeCustomers: "Clientes Activos",
       totalVolume: "Volumen Total",
       pendingActions: "Acciones Pendientes",
