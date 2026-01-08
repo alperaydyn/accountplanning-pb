@@ -236,8 +236,11 @@ export function QueryPanel() {
 
         {/* Error Display */}
         {error && (
-          <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm font-mono">
-            {error}
+          <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 space-y-1">
+            <div className="text-sm font-medium text-destructive">Query Error</div>
+            <div className="text-sm font-mono text-destructive/90 whitespace-pre-wrap">
+              {error}
+            </div>
           </div>
         )}
 
