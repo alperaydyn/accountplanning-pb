@@ -62,34 +62,29 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
     return product?.name || productId;
   };
 
+  const invokeGenerateCustomer = async (): Promise<GeneratedCustomer> => {
+    const { data, error } = await supabase.functions.invoke("generate-customer", {
+      body: {},
+    });
+
+    if (error) {
+      const status = (error as any)?.context?.status as number | undefined;
+
+      if (status === 429) throw new Error("Rate limit exceeded");
+      if (status === 402) throw new Error("AI credits exhausted");
+      if (status === 401 || status === 403) throw new Error("Unauthorized");
+
+      throw error;
+    }
+
+    if (!data) throw new Error("No data returned");
+    return data as GeneratedCustomer;
+  };
+
   const generateAndSaveCustomer = async (): Promise<string | null> => {
     if (!portfolioManager) return null;
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
-      throw new Error("Not authenticated");
-    }
-
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-customer`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      if (response.status === 429) {
-        throw new Error("Rate limit exceeded");
-      }
-      if (response.status === 402) {
-        throw new Error("AI credits exhausted");
-      }
-      throw new Error(error.error || "Failed to generate customer");
-    }
-
-    const customerData: GeneratedCustomer = await response.json();
+    const customerData = await invokeGenerateCustomer();
 
     // Save customer
     const { data: customer, error: customerError } = await supabase
@@ -110,7 +105,7 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
 
     // Save products
     if (customerData.products.length > 0) {
-      const customerProducts = customerData.products.map(p => ({
+      const customerProducts = customerData.products.map((p) => ({
         customer_id: customer.id,
         product_id: p.product_id,
         current_value: p.current_value,
@@ -145,9 +140,21 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
         }
       } catch (error) {
         console.error(`Error generating customer ${i + 1}:`, error);
-        if (error instanceof Error && (error.message.includes("Rate limit") || error.message.includes("credits"))) {
+
+        if (error instanceof Error) {
+          if (error.message.includes("Rate limit") || error.message.includes("credits")) {
+            toast.error(error.message);
+            break;
+          }
+
+          if (error.message.includes("Unauthorized")) {
+            toast.error("Your session expired. Please sign in again.");
+            break;
+          }
+
           toast.error(error.message);
-          break;
+        } else {
+          toast.error("Failed to create customer");
         }
       }
     }
@@ -165,39 +172,28 @@ export const CreateCustomerModal = ({ open, onOpenChange }: CreateCustomerModalP
   const handleGenerate = async () => {
     setIsGenerating(true);
     setGeneratedCustomer(null);
-    
+
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-customer`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        if (response.status === 429) {
-          toast.error("Rate limit exceeded. Please try again later.");
-          return;
-        }
-        if (response.status === 402) {
-          toast.error("AI usage credits exhausted.");
-          return;
-        }
-        throw new Error(error.error || "Failed to generate customer");
-      }
-
-      const data = await response.json();
+      const data = await invokeGenerateCustomer();
       setGeneratedCustomer(data);
     } catch (error) {
       console.error("Error generating customer:", error);
+
+      if (error instanceof Error) {
+        if (error.message.includes("Rate limit")) {
+          toast.error("Rate limit exceeded. Please try again later.");
+          return;
+        }
+        if (error.message.includes("credits")) {
+          toast.error("AI usage credits exhausted.");
+          return;
+        }
+        if (error.message.includes("Unauthorized")) {
+          toast.error("Your session expired. Please sign in again.");
+          return;
+        }
+      }
+
       toast.error("Failed to generate customer data");
     } finally {
       setIsGenerating(false);
