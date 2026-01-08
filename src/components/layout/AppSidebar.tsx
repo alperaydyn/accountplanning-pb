@@ -80,10 +80,13 @@ export function AppSidebar() {
     setIsSigningOut(true);
     try {
       await signOut();
-      navigate("/auth", { replace: true });
+      toast.success("Logged out successfully");
+      // Navigation will happen automatically via AuthContext state change
+      // but we force it here for immediate feedback
+      window.location.href = "/auth";
     } catch (e) {
+      console.error("Logout error:", e);
       toast.error("Logout failed. Please try again.");
-    } finally {
       setIsSigningOut(false);
     }
   };
