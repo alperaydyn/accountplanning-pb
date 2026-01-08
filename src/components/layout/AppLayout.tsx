@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -6,22 +6,20 @@ import { AppHeader } from "./AppHeader";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 
-function getSidebarDefaultOpen(): boolean {
-  if (typeof document === "undefined") return false;
-  const value = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${SIDEBAR_COOKIE_NAME}=`))
-    ?.split("=")[1];
-  return value === "true";
-}
-
 interface AppLayoutProps {
   children: ReactNode;
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  // Memoize once per mount so page navigation doesn't reset the sidebar.
+  const defaultOpen = useMemo(() => {
+    if (typeof document === "undefined") return false;
+    const match = document.cookie.match(new RegExp(`(^| )${SIDEBAR_COOKIE_NAME}=([^;]+)`));
+    return match?.[2] === "true";
+  }, []);
+
   return (
-    <SidebarProvider defaultOpen={getSidebarDefaultOpen()}>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full bg-background">
         <AppSidebar />
         <div className="flex-1 flex flex-col">
