@@ -63,18 +63,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    // Always clear the local session, even if server-side revocation fails (e.g. expired token).
-    const { error } = await supabase.auth.signOut({ scope: "local" });
-
-    // Ensure UI state updates immediately.
+    // Update UI immediately (don't block logout UX on network / revocation issues).
     setSession(null);
     setUser(null);
     setLoading(false);
 
-    // Don't block logout UX on revocation errors.
-    if (error) {
-      console.warn("signOut error:", error);
+    // Defensive: also clear the persisted token directly.
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+      if (projectId) {
+        localStorage.removeItem(`sb-${projectId}-auth-token`);
+      }
+    } catch (e) {
+      console.warn("Failed to clear local auth token:", e);
     }
+
+    // Best-effort revoke/cleanup in the SDK (fire-and-forget to avoid hanging spinners).
+    void supabase.auth
+      .signOut({ scope: "local" })
+      .then(({ error }) => {
+        if (error) console.warn("signOut error:", error);
+      })
+      .catch((e) => console.warn("signOut error:", e));
   };
 
   return (
