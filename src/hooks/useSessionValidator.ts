@@ -15,14 +15,7 @@ export const useSessionValidator = () => {
   // Track if user was ever authenticated in this session
   const wasAuthenticated = useRef(false);
 
-  // Track when user becomes authenticated
-  useEffect(() => {
-    if (user && !loading) {
-      wasAuthenticated.current = true;
-    }
-  }, [user, loading]);
-
-  const handleSessionExpired = useCallback(async () => {
+  const handleSessionExpired = useCallback(() => {
     // Only show modal if user was previously authenticated
     if (wasAuthenticated.current) {
       setShowExpiredModal(true);
@@ -37,14 +30,14 @@ export const useSessionValidator = () => {
 
   const validateSession = useCallback(async () => {
     // Don't validate if auth is still loading or user was never authenticated
-    if (loading || !wasAuthenticated.current) return;
+    if (loading || !wasAuthenticated.current) return true;
 
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error || !session) {
         console.warn('Session expired or invalid');
-        await handleSessionExpired();
+        handleSessionExpired();
         return false;
       }
 
@@ -57,7 +50,7 @@ export const useSessionValidator = () => {
         // Token already expired
         if (timeToExpiry < 0) {
           console.warn('Token has expired');
-          await handleSessionExpired();
+          handleSessionExpired();
           return false;
         }
         
@@ -85,24 +78,26 @@ export const useSessionValidator = () => {
   }, [loading, handleSessionExpired]);
 
   useEffect(() => {
+    // Track when user becomes authenticated
+    if (user && !loading) {
+      wasAuthenticated.current = true;
+    }
+
     // Only start validation after auth is loaded and user is authenticated
     if (loading || !user) return;
-
-    // Mark as authenticated
-    wasAuthenticated.current = true;
 
     // Validate session after a small delay to ensure auth is stable
     const initialTimeout = setTimeout(validateSession, 1000);
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed successfully');
         } else if (event === 'SIGNED_OUT' || (!session && wasAuthenticated.current)) {
           // User was signed out (possibly due to expired token)
           if (!showExpiredModal) {
-            await handleSessionExpired();
+            handleSessionExpired();
           }
         }
       }
