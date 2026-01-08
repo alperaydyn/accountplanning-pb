@@ -121,8 +121,8 @@ export function AppSidebar() {
           />
           {!isCollapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="font-semibold text-sidebar-foreground text-sm">{t.dashboard.portfolioDashboard}</span>
-              <span className="text-xs text-sidebar-foreground/70">Banking Suite</span>
+              <span className="font-semibold text-sidebar-foreground text-sm">Account Planning</span>
+              <span className="text-xs text-sidebar-foreground/70">Portfolio Management</span>
             </div>
           )}
         </div>
