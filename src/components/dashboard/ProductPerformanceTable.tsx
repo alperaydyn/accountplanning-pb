@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { usePortfolioTargets, useRecordDates, useCreatePortfolioTargets } from "@/hooks/usePortfolioTargets";
+import { usePortfolioTargets, useCreatePortfolioTargets } from "@/hooks/usePortfolioTargets";
 import { useActions } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -52,12 +52,8 @@ const statusLabels: Record<ProductStatus, string> = {
 
 export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductPerformanceTableProps) {
   const navigate = useNavigate();
-  const { data: recordDates = [], isLoading: datesLoading } = useRecordDates();
   
-  // Set default to first available date
-  const effectiveDate = selectedDate || recordDates[0];
-  
-  const { data: targets = [], isLoading: targetsLoading } = usePortfolioTargets(effectiveDate);
+  const { data: targets = [], isLoading: targetsLoading } = usePortfolioTargets(selectedDate);
   const { data: actions = [] } = useActions();
   const createTargets = useCreatePortfolioTargets();
 
@@ -128,20 +124,14 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
   };
 
   const handleCreateRecords = async () => {
-    const currentDate = new Date();
-    const recordDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    if (!selectedDate) return;
     
     try {
-      await createTargets.mutateAsync(recordDate);
-      toast.success(`Records created for ${recordDate}`);
-      onDateChange?.(recordDate);
+      await createTargets.mutateAsync(selectedDate);
+      toast.success(`Records created for ${selectedDate}`);
     } catch (error) {
       toast.error("Failed to create records");
     }
-  };
-
-  const handleDateChange = (date: string) => {
-    onDateChange?.(date);
   };
 
   const noData = !targetsLoading && targets.length === 0;
@@ -152,17 +142,15 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
         <CardTitle className="text-lg font-semibold text-card-foreground">
           Product Performance
         </CardTitle>
-        {noData && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCreateRecords}
-            disabled={createTargets.isPending}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Create Records
-          </Button>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCreateRecords}
+          disabled={createTargets.isPending || !selectedDate}
+        >
+          <Plus className="h-4 w-4 mr-1" />
+          {noData ? "Create Records" : "Regenerate"}
+        </Button>
       </CardHeader>
       <CardContent>
         {targetsLoading ? (
