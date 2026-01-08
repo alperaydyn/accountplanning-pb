@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Globe, FileText, ExternalLink } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { QueryPanel } from "@/components/settings/QueryPanel";
 
 const Settings = () => {
   const { t } = useLanguage();
@@ -57,6 +58,9 @@ const Settings = () => {
               </Button>
             </CardContent>
           </Card>
+
+          {/* SQL Query Runner */}
+          <QueryPanel />
         </div>
       </div>
     </AppLayout>
