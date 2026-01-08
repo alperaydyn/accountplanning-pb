@@ -86,12 +86,14 @@ Available sectors: ${SECTORS.join(", ")}
 Available segments: ${SEGMENTS.join(", ")} (TİCARİ = largest, MİKRO = smallest)
 Available statuses: ${STATUSES.join(", ")}
 
-IMPORTANT - Status probability distribution (follow this strictly):
-- Yeni Müşteri: 25% chance
-- Aktif: 50% chance
-- Target: 15% chance (rare)
-- Strong Target: 10% chance
-- Ana Banka: 5% chance (very rare)
+CRITICAL - Status probability distribution (YOU MUST FOLLOW THIS EXACTLY):
+- Ana Banka: 5% (1 in 20 customers - the rarest, primary banking relationship)
+- Strong Target: 10% (1 in 10 customers - high potential prospects)
+- Target: 15% (about 1 in 7 customers - medium potential prospects)
+- Aktif: 20% (1 in 5 customers - regular active customers)
+- Yeni Müşteri: 50% (half of all customers - newly acquired, most common)
+
+ROLL A MENTAL DICE: Generate Yeni Müşteri most often, then Aktif, then Target, rarely Strong Target, very rarely Ana Banka.
 
 Product count rules by status:
 - Yeni Müşteri: 1 product (TL Vadesiz Mevduat mandatory)
