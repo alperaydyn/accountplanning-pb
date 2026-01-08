@@ -97,11 +97,11 @@ export function AppSidebar() {
         <SidebarMenuButton
           asChild
           isActive={active}
-          tooltip={item.title}
+          tooltip={isCollapsed ? item.title : undefined}
           className={cn(isCollapsed && "justify-center")}
         >
-          <NavLink to={item.url} end={item.url === "/"} className="w-full">
-            <item.icon />
+          <NavLink to={item.url} end={item.url === "/"} className="flex items-center gap-2 w-full">
+            <item.icon className="h-4 w-4 shrink-0" />
             {!isCollapsed && <span>{item.title}</span>}
           </NavLink>
         </SidebarMenuButton>
