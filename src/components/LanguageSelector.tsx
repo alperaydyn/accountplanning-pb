@@ -16,9 +16,9 @@ export function LanguageSelector({ variant = 'default' }: LanguageSelectorProps)
   const { language, setLanguage, t } = useLanguage();
 
   const languages: { value: Language; label: string; flag: string }[] = [
-    { value: 'tr', label: t.turkish, flag: '🇹🇷' },
-    { value: 'en', label: t.english, flag: '🇬🇧' },
-    { value: 'es', label: t.spanish, flag: '🇪🇸' },
+    { value: 'tr', label: t.languages.turkish, flag: '🇹🇷' },
+    { value: 'en', label: t.languages.english, flag: '🇬🇧' },
+    { value: 'es', label: t.languages.spanish, flag: '🇪🇸' },
   ];
 
   if (variant === 'compact') {
