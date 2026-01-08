@@ -55,6 +55,7 @@ export interface Translations {
   // Navigation & Layout
   nav: {
     dashboard: string;
+    primaryBank: string;
     customers: string;
     actionsAgenda: string;
     aiAssistant: string;
@@ -378,6 +379,7 @@ export const translations: Record<Language, Translations> = {
     },
     nav: {
       dashboard: "Dashboard",
+      primaryBank: "Ana Banka",
       customers: "Müşteriler",
       actionsAgenda: "Aksiyon Takvimi",
       aiAssistant: "AI Asistan",
@@ -670,6 +672,7 @@ export const translations: Record<Language, Translations> = {
     },
     nav: {
       dashboard: "Dashboard",
+      primaryBank: "Primary Bank",
       customers: "Customers",
       actionsAgenda: "Actions Agenda",
       aiAssistant: "AI Assistant",
@@ -962,6 +965,7 @@ export const translations: Record<Language, Translations> = {
     },
     nav: {
       dashboard: "Panel",
+      primaryBank: "Banco Principal",
       customers: "Clientes",
       actionsAgenda: "Agenda de Acciones",
       aiAssistant: "Asistente AI",

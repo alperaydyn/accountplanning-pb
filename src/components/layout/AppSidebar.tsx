@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  Building,
   Calendar,
   LayoutDashboard,
   Loader2,
@@ -52,6 +53,7 @@ export function AppSidebar() {
 
   const mainNavItems: SidebarItem[] = [
     { title: t.nav.dashboard, url: "/", icon: LayoutDashboard },
+    { title: t.nav.primaryBank, url: "/primary-bank", icon: Building },
     { title: t.nav.customers, url: "/customers", icon: Users },
     { title: t.nav.actionsAgenda, url: "/agenda", icon: Calendar },
     { title: t.nav.aiAssistant, url: "/ai-assistant", icon: Sparkles },

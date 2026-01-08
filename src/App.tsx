@@ -14,6 +14,7 @@ import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
 import Documentation from "./pages/Documentation";
 import Thresholds from "./pages/Thresholds";
+import PrimaryBank from "./pages/PrimaryBank";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
@@ -30,6 +31,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/primary-bank" element={<ProtectedRoute><PrimaryBank /></ProtectedRoute>} />
               <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
               <Route path="/customers/:customerId" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute><ActionsAgenda /></ProtectedRoute>} />
