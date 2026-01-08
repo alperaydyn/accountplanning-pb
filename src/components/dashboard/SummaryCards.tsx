@@ -43,8 +43,13 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
 
   // Calculate customer breakdown by status from database
   const primaryCount = customers.filter(c => c.status === 'Ana Banka').length;
-  const targetCount = customers.filter(c => c.status === 'Target' || c.status === 'Strong Target').length;
-  const restCount = customers.length - primaryCount - targetCount;
+  const strongTargetCount = customers.filter(c => c.status === 'Strong Target').length;
+  const targetCount = customers.filter(c => c.status === 'Target').length;
+  const activeCount = customers.filter(c => c.status === 'Aktif').length;
+  const totalCustomerCount = customers.length;
+
+  // Calculate Primary Bank Score as percentage of Primary Bank customers over total
+  const primaryBankScorePercent = totalCustomerCount > 0 ? Math.round((primaryCount / totalCustomerCount) * 100) : 0;
 
   // Calculate benchmark score from portfolio_targets HGO% >= 75%
   const benchmarkData = useMemo(() => {
@@ -224,14 +229,37 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
   const cards = [
     {
       title: "Primary Bank Score",
-      value: isLoading ? "..." : `${summary?.primaryBankScore ?? 0}%`,
+      value: isLoading ? "..." : `${primaryBankScorePercent}%`,
+      subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
       icon: Building,
       onClick: () => navigate("/primary-bank"),
     },
     {
-      title: "Total Customers",
+      title: "Scale Up Enterprise",
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
-      subtitle: `${primaryCount} Primary | ${targetCount} Target | ${restCount} Rest`,
+      customSubtitle: (
+        <div className="flex items-center gap-2 mt-1">
+          <div className="text-center">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Aktif</span>
+            <span className="text-sm font-medium">{activeCount}</span>
+          </div>
+          <span className="text-muted-foreground">›</span>
+          <div className="text-center">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Target</span>
+            <span className="text-sm font-medium">{targetCount}</span>
+          </div>
+          <span className="text-muted-foreground">›</span>
+          <div className="text-center">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Strong</span>
+            <span className="text-sm font-medium">{strongTargetCount}</span>
+          </div>
+          <span className="text-muted-foreground">›</span>
+          <div className="text-center">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Ana Banka</span>
+            <span className="text-sm font-medium">{primaryCount}</span>
+          </div>
+        </div>
+      ),
       icon: Users,
       onClick: () => navigate("/customers"),
     },
@@ -286,6 +314,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
               {card.subtitle && (
                 <p className="text-sm text-muted-foreground mt-1">{card.subtitle}</p>
               )}
+              {card.customSubtitle && card.customSubtitle}
             </CardContent>
           </Card>
         ))}
