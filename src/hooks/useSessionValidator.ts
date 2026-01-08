@@ -1,43 +1,28 @@
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 /**
- * Validates the current session and shows a modal if expired.
+ * Validates the current session and redirects to login if expired.
  * This hook should be used in protected layouts to handle mid-session JWT expiry.
  */
 export const useSessionValidator = () => {
-  const { user, loading, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [showExpiredModal, setShowExpiredModal] = useState(false);
-  // Track if user was ever authenticated in this session
-  const wasAuthenticated = useRef(false);
-
-  const handleSessionExpired = useCallback(() => {
-    // Only show modal if user was previously authenticated
-    if (wasAuthenticated.current) {
-      setShowExpiredModal(true);
-    }
-  }, []);
-
-  const handleExpiredConfirm = useCallback(async () => {
-    setShowExpiredModal(false);
-    await signOut();
-    navigate('/auth', { replace: true });
-  }, [signOut, navigate]);
 
   const validateSession = useCallback(async () => {
-    // Don't validate if auth is still loading or user was never authenticated
-    if (loading || !wasAuthenticated.current) return true;
+    if (!user) return;
 
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error || !session) {
-        console.warn('Session expired or invalid');
-        handleSessionExpired();
+        console.warn('Session expired or invalid, redirecting to login');
+        toast.error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+        await signOut();
+        navigate('/auth', { replace: true });
         return false;
       }
 
@@ -49,8 +34,13 @@ export const useSessionValidator = () => {
         
         // Token already expired
         if (timeToExpiry < 0) {
-          console.warn('Token has expired');
-          handleSessionExpired();
+          console.warn('Token has expired, redirecting to login');
+          toast.error('Oturum süreniz doldu. Lütfen tekrar giriş yapın.', {
+            duration: 5000,
+            description: 'Güvenliğiniz için yeniden giriş yapmanız gerekmektedir.'
+          });
+          await signOut();
+          navigate('/auth', { replace: true });
           return false;
         }
         
@@ -75,29 +65,22 @@ export const useSessionValidator = () => {
       console.error('Session validation error:', err);
       return false;
     }
-  }, [loading, handleSessionExpired]);
+  }, [user, signOut, navigate]);
 
   useEffect(() => {
-    // Track when user becomes authenticated
-    if (user && !loading) {
-      wasAuthenticated.current = true;
-    }
-
-    // Only start validation after auth is loaded and user is authenticated
-    if (loading || !user) return;
-
-    // Validate session after a small delay to ensure auth is stable
-    const initialTimeout = setTimeout(validateSession, 1000);
+    // Validate session on mount
+    validateSession();
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed successfully');
-        } else if (event === 'SIGNED_OUT' || (!session && wasAuthenticated.current)) {
+        } else if (event === 'SIGNED_OUT' || !session) {
           // User was signed out (possibly due to expired token)
-          if (!showExpiredModal) {
-            handleSessionExpired();
+          if (user) {
+            toast.error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
+            navigate('/auth', { replace: true });
           }
         }
       }
@@ -107,11 +90,10 @@ export const useSessionValidator = () => {
     const intervalId = setInterval(validateSession, 30000);
 
     return () => {
-      clearTimeout(initialTimeout);
       subscription.unsubscribe();
       clearInterval(intervalId);
     };
-  }, [user, loading, validateSession, handleSessionExpired, showExpiredModal]);
+  }, [user, validateSession, navigate]);
 
-  return { validateSession, showExpiredModal, handleExpiredConfirm };
+  return { validateSession };
 };

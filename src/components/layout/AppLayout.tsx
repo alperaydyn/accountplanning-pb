@@ -4,7 +4,6 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
-import SessionExpiredModal from "@/components/SessionExpiredModal";
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 
@@ -14,7 +13,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   // Validate session and redirect to login if expired
-  const { showExpiredModal, handleExpiredConfirm } = useSessionValidator();
+  useSessionValidator();
 
   // Memoize once per mount so page navigation doesn't reset the sidebar.
   const defaultOpen = useMemo(() => {
@@ -32,7 +31,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           <main className="flex-1 p-6 overflow-auto">{children}</main>
         </div>
       </div>
-      <SessionExpiredModal open={showExpiredModal} onConfirm={handleExpiredConfirm} />
     </SidebarProvider>
   );
 }

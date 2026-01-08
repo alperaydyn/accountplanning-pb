@@ -11,6 +11,3 @@ verify_jwt = false
 
 [functions.ai-action-assistant]
 verify_jwt = false
-
-[functions.run-query]
-verify_jwt = false

@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
-  Building,
   Calendar,
   LayoutDashboard,
   Loader2,
@@ -41,7 +40,6 @@ type SidebarItem = {
 
 export function AppSidebar() {
   const location = useLocation();
-  const navigate = useNavigate();
   const currentPath = location.pathname;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -53,7 +51,6 @@ export function AppSidebar() {
 
   const mainNavItems: SidebarItem[] = [
     { title: t.nav.dashboard, url: "/", icon: LayoutDashboard },
-    { title: t.nav.primaryBank, url: "/primary-bank", icon: Building },
     { title: t.nav.customers, url: "/customers", icon: Users },
     { title: t.nav.actionsAgenda, url: "/agenda", icon: Calendar },
     { title: t.nav.aiAssistant, url: "/ai-assistant", icon: Sparkles },
@@ -81,14 +78,11 @@ export function AppSidebar() {
 
     setIsSigningOut(true);
     try {
-      // Mark that logout is in progress to prevent Auth page redirect flicker
-      sessionStorage.setItem('logout_in_progress', 'true');
       await signOut();
-      // Navigate within the SPA (avoids hard-reload flicker)
-      navigate("/auth", { replace: true });
+      // Force a clean app reload to avoid any stale in-memory auth state.
+      window.location.replace("/auth");
     } catch (e) {
       console.error("Logout error:", e);
-      sessionStorage.removeItem('logout_in_progress');
       toast.error("Logout failed. Please try again.");
     } finally {
       setIsSigningOut(false);

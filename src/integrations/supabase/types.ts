@@ -772,7 +772,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      execute_readonly_query: { Args: { query_text: string }; Returns: Json }
       get_portfolio_manager_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
