@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export function AppHeader() {
+  const { t } = useLanguage();
+
   return (
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4">
       <div className="flex items-center gap-4">
@@ -12,7 +15,7 @@ export function AppHeader() {
         <div className="relative hidden md:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search customers, actions..."
+            placeholder={t.nav.searchPlaceholder}
             className="w-80 pl-10 bg-background"
           />
         </div>

@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, Calendar, Settings, LogOut, Target, Sparkles } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Tooltip,
   TooltipContent,
@@ -22,24 +23,25 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 
-const mainNavItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Customers", url: "/customers", icon: Users },
-  { title: "Actions Agenda", url: "/agenda", icon: Calendar },
-  { title: "AI Assistant", url: "/ai-assistant", icon: Sparkles },
-  { title: "Thresholds", url: "/thresholds", icon: Target },
-];
-
-const settingsNavItems = [
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
 export function AppSidebar() {
   const location = useLocation();
   const currentPath = location.pathname;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const { user, signOut } = useAuth();
+  const { t } = useLanguage();
+
+  const mainNavItems = [
+    { title: t.nav.dashboard, url: "/", icon: LayoutDashboard },
+    { title: t.nav.customers, url: "/customers", icon: Users },
+    { title: t.nav.actionsAgenda, url: "/agenda", icon: Calendar },
+    { title: t.nav.aiAssistant, url: "/ai-assistant", icon: Sparkles },
+    { title: t.nav.thresholds, url: "/thresholds", icon: Target },
+  ];
+
+  const settingsNavItems = [
+    { title: t.nav.settings, url: "/settings", icon: Settings },
+  ];
 
   const userName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
@@ -99,7 +101,7 @@ export function AppSidebar() {
           />
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-semibold text-sidebar-foreground text-sm">Portfolio Dashboard</span>
+              <span className="font-semibold text-sidebar-foreground text-sm">{t.dashboard.portfolioDashboard}</span>
               <span className="text-xs text-sidebar-foreground/70">Banking Suite</span>
             </div>
           )}
@@ -111,14 +113,14 @@ export function AppSidebar() {
           {!isCollapsed && (
             <div className="px-3 mb-2">
               <span className="text-sidebar-foreground/50 text-xs uppercase tracking-wider font-medium">
-                Main Menu
+                {t.nav.mainMenu}
               </span>
             </div>
           )}
           <SidebarGroupContent>
             <SidebarMenu className={isCollapsed ? "gap-1" : "gap-0.5"}>
               {mainNavItems.map((item) => (
-                <SidebarMenuItem key={item.title} className={isCollapsed ? "flex justify-center" : ""}>
+                <SidebarMenuItem key={item.url} className={isCollapsed ? "flex justify-center" : ""}>
                   <NavItem item={item} />
                 </SidebarMenuItem>
               ))}
@@ -130,14 +132,14 @@ export function AppSidebar() {
           {!isCollapsed && (
             <div className="px-3 mb-2">
               <span className="text-sidebar-foreground/50 text-xs uppercase tracking-wider font-medium">
-                System
+                {t.nav.system}
               </span>
             </div>
           )}
           <SidebarGroupContent>
             <SidebarMenu className={isCollapsed ? "gap-1" : "gap-0.5"}>
               {settingsNavItems.map((item) => (
-                <SidebarMenuItem key={item.title} className={isCollapsed ? "flex justify-center" : ""}>
+                <SidebarMenuItem key={item.url} className={isCollapsed ? "flex justify-center" : ""}>
                   <NavItem item={item} />
                 </SidebarMenuItem>
               ))}
@@ -173,7 +175,7 @@ export function AppSidebar() {
                   <LogOut className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right">Çıkış Yap</TooltipContent>
+              <TooltipContent side="right">{t.auth.logout}</TooltipContent>
             </Tooltip>
           ) : (
             <Button
