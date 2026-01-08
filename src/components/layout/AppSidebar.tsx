@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Calendar,
+  Landmark,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -51,6 +52,7 @@ export function AppSidebar() {
 
   const mainNavItems: SidebarItem[] = [
     { title: t.nav.dashboard, url: "/", icon: LayoutDashboard },
+    { title: t.nav.primaryBank, url: "/primary-bank", icon: Landmark },
     { title: t.nav.customers, url: "/customers", icon: Users },
     { title: t.nav.actionsAgenda, url: "/agenda", icon: Calendar },
     { title: t.nav.aiAssistant, url: "/ai-assistant", icon: Sparkles },
