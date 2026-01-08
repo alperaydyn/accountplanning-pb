@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Calendar,
   LayoutDashboard,
@@ -40,6 +40,7 @@ type SidebarItem = {
 
 export function AppSidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const currentPath = location.pathname;
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
@@ -81,8 +82,8 @@ export function AppSidebar() {
       // Mark that logout is in progress to prevent Auth page redirect flicker
       sessionStorage.setItem('logout_in_progress', 'true');
       await signOut();
-      // Force a clean app reload to avoid any stale in-memory auth state.
-      window.location.replace("/auth");
+      // Navigate within the SPA (avoids hard-reload flicker)
+      navigate("/auth", { replace: true });
     } catch (e) {
       console.error("Logout error:", e);
       sessionStorage.removeItem('logout_in_progress');
