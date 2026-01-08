@@ -226,7 +226,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       title: "Primary Bank Score",
       value: isLoading ? "..." : `${summary?.primaryBankScore ?? 0}%`,
       icon: Building,
-      onClick: () => setShowScoreModal(true),
+      onClick: () => navigate("/primary-bank"),
     },
     {
       title: "Total Customers",
