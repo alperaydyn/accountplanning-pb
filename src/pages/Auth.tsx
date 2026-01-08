@@ -104,7 +104,7 @@ const Auth = () => {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary">
             <img src="/favicon.png" alt="Logo" className="h-8 w-8" />
           </div>
-          <CardTitle className="text-2xl">Portfolio Dashboard</CardTitle>
+          <CardTitle className="text-2xl">Account Planning</CardTitle>
           <CardDescription>Hesap planlaması yönetim sistemi</CardDescription>
         </CardHeader>
         <CardContent>
