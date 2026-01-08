@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,12 +9,24 @@ import { toast } from 'sonner';
  * This hook should be used in protected layouts to handle mid-session JWT expiry.
  */
 export const useSessionValidator = () => {
-  const { user, signOut } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   const [showExpiredModal, setShowExpiredModal] = useState(false);
+  // Track if user was ever authenticated in this session
+  const wasAuthenticated = useRef(false);
+
+  // Track when user becomes authenticated
+  useEffect(() => {
+    if (user && !loading) {
+      wasAuthenticated.current = true;
+    }
+  }, [user, loading]);
 
   const handleSessionExpired = useCallback(async () => {
-    setShowExpiredModal(true);
+    // Only show modal if user was previously authenticated
+    if (wasAuthenticated.current) {
+      setShowExpiredModal(true);
+    }
   }, []);
 
   const handleExpiredConfirm = useCallback(async () => {
@@ -24,7 +36,8 @@ export const useSessionValidator = () => {
   }, [signOut, navigate]);
 
   const validateSession = useCallback(async () => {
-    if (!user) return;
+    // Don't validate if auth is still loading or user was never authenticated
+    if (loading || !wasAuthenticated.current) return;
 
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -69,20 +82,26 @@ export const useSessionValidator = () => {
       console.error('Session validation error:', err);
       return false;
     }
-  }, [user, handleSessionExpired]);
+  }, [loading, handleSessionExpired]);
 
   useEffect(() => {
-    // Validate session on mount
-    validateSession();
+    // Only start validation after auth is loaded and user is authenticated
+    if (loading || !user) return;
+
+    // Mark as authenticated
+    wasAuthenticated.current = true;
+
+    // Validate session after a small delay to ensure auth is stable
+    const initialTimeout = setTimeout(validateSession, 1000);
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'TOKEN_REFRESHED') {
           console.log('Token refreshed successfully');
-        } else if (event === 'SIGNED_OUT' || !session) {
+        } else if (event === 'SIGNED_OUT' || (!session && wasAuthenticated.current)) {
           // User was signed out (possibly due to expired token)
-          if (user && !showExpiredModal) {
+          if (!showExpiredModal) {
             await handleSessionExpired();
           }
         }
@@ -93,10 +112,11 @@ export const useSessionValidator = () => {
     const intervalId = setInterval(validateSession, 30000);
 
     return () => {
+      clearTimeout(initialTimeout);
       subscription.unsubscribe();
       clearInterval(intervalId);
     };
-  }, [user, validateSession, handleSessionExpired, showExpiredModal]);
+  }, [user, loading, validateSession, handleSessionExpired, showExpiredModal]);
 
   return { validateSession, showExpiredModal, handleExpiredConfirm };
 };
