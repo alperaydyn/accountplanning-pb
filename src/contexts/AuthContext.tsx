@@ -63,8 +63,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    // Always clear the local session, even if server-side revocation fails (e.g. expired token).
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+
+    // Ensure UI state updates immediately.
+    setSession(null);
+    setUser(null);
+    setLoading(false);
+
+    // Don't block logout UX on revocation errors.
+    if (error) {
+      console.warn("signOut error:", error);
+    }
   };
 
   return (
