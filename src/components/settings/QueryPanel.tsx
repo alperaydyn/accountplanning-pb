@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { Database, Play, Save, Loader2, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -239,7 +241,7 @@ export function QueryPanel() {
           </div>
         )}
 
-        {/* Results */}
+        {/* Results Table */}
         {result && (
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -248,11 +250,43 @@ export function QueryPanel() {
                 {result.data.length} rows in {result.executionTime}ms
               </span>
             </div>
-            <div className="rounded-md border bg-muted/50 p-3 overflow-auto max-h-[400px]">
-              <pre className="text-xs font-mono whitespace-pre-wrap">
-                {JSON.stringify(result.data, null, 2)}
-              </pre>
-            </div>
+            {result.data.length > 0 ? (
+              <ScrollArea className="rounded-md border max-h-[400px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {Object.keys(result.data[0]).map((col) => (
+                        <TableHead key={col} className="whitespace-nowrap font-mono text-xs">
+                          {col}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {result.data.map((row, i) => (
+                      <TableRow key={i}>
+                        {Object.values(row).map((val, j) => (
+                          <TableCell key={j} className="font-mono text-xs whitespace-nowrap">
+                            {val === null ? (
+                              <span className="text-muted-foreground italic">null</span>
+                            ) : typeof val === "object" ? (
+                              JSON.stringify(val)
+                            ) : (
+                              String(val)
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <ScrollBar orientation="horizontal" />
+              </ScrollArea>
+            ) : (
+              <div className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
+                No results
+              </div>
+            )}
           </div>
         )}
       </CardContent>
