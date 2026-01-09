@@ -34,33 +34,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session and validate it by attempting refresh
+    // THEN check for existing session and validate it
     const initializeAuth = async () => {
       try {
-        // First, try to refresh the session - this validates the token with the server
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (refreshError || !refreshData.session) {
-          // Refresh failed - token is expired or invalid
-          console.warn('Session refresh failed, clearing session:', refreshError?.message);
+        if (error || !session) {
+          // No valid session exists
           setSession(null);
           setUser(null);
           setLoading(false);
-          // Clean up any stale local storage
-          try {
-            const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
-            if (projectId) {
-              localStorage.removeItem(`sb-${projectId}-auth-token`);
-            }
-          } catch (e) {
-            console.warn("Failed to clear local auth token:", e);
-          }
           return;
         }
 
-        // Valid session after refresh
-        setSession(refreshData.session);
-        setUser(refreshData.session.user);
+        // Check if token is expired
+        const expiresAt = session.expires_at;
+        if (expiresAt) {
+          const now = Math.floor(Date.now() / 1000);
+          if (expiresAt < now) {
+            // Token is expired, clear session
+            console.warn('JWT expired on initialization, clearing session');
+            setSession(null);
+            setUser(null);
+            setLoading(false);
+            // Try to sign out to clean up
+            await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+            return;
+          }
+        }
+
+        // Valid session
+        setSession(session);
+        setUser(session.user);
         setLoading(false);
       } catch (err) {
         console.error('Auth initialization error:', err);
