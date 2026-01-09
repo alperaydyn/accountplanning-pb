@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Calendar } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
-import { SummaryCards, ProductPerformanceTable, InsightsPanel, RepresentativeBadges } from "@/components/dashboard";
+import { SummaryCards, ProductPerformanceTable, InsightsPanel } from "@/components/dashboard";
 import { usePortfolioManager } from "@/hooks/usePortfolioManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -73,24 +73,21 @@ const Dashboard = () => {
               {t.dashboard.welcomeBack}, {userName}. {t.dashboard.portfolioOverview}
             </p>
           </div>
-          <div className="flex items-center gap-4">
-            {/* Date Selector */}
-            <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              <Select value={effectiveDate} onValueChange={setSelectedDate}>
-                <SelectTrigger className="w-[160px] border-0 bg-transparent h-auto p-0 focus:ring-0">
-                  <SelectValue placeholder={t.dashboard.selectDate} />
-                </SelectTrigger>
-                <SelectContent>
-                  {dateOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <RepresentativeBadges manager={portfolioManager} />
+          {/* Date Selector */}
+          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select value={effectiveDate} onValueChange={setSelectedDate}>
+              <SelectTrigger className="w-[160px] border-0 bg-transparent h-auto p-0 focus:ring-0">
+                <SelectValue placeholder={t.dashboard.selectDate} />
+              </SelectTrigger>
+              <SelectContent>
+                {dateOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

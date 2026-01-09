@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -30,6 +31,7 @@ const getProgressColor = (score: number) => {
 
 export function SummaryCards({ recordDate }: SummaryCardsProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { data: summary, isLoading } = usePortfolioSummary();
   const { data: customers = [] } = useCustomers();
   const { data: customerProducts = [] } = useAllCustomerProducts();
@@ -228,24 +230,30 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
 
   const cards = [
     {
-      title: "Primary Bank Score",
+      title: t.dashboard.benchmarkScore,
+      value: `${benchmarkData.score}/${benchmarkData.total}`,
+      subtitle: `${benchmarkData.total > 0 ? Math.round((benchmarkData.score / benchmarkData.total) * 100) : 0}% HGO ≥ 75%`,
+      icon: Target,
+    },
+    {
+      title: t.dashboard.primaryBankScore,
       value: isLoading ? "..." : `${primaryBankScorePercent}%`,
       subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
       icon: Building,
       onClick: () => navigate("/primary-bank"),
     },
     {
-      title: "Scale Up Enterprise",
+      title: t.dashboard.scaleUpEnterprise,
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
       customSubtitle: (
         <div className="flex items-center gap-2 mt-1">
           <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Aktif</span>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels.Aktif}</span>
             <span className="text-sm font-medium">{activeCount}</span>
           </div>
           <span className="text-muted-foreground">›</span>
           <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Target</span>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels.Target}</span>
             <span className="text-sm font-medium">{targetCount}</span>
           </div>
           <span className="text-muted-foreground">›</span>
@@ -255,7 +263,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
           </div>
           <span className="text-muted-foreground">›</span>
           <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Ana Banka</span>
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels["Ana Banka"]}</span>
             <span className="text-sm font-medium">{primaryCount}</span>
           </div>
         </div>
@@ -264,17 +272,11 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       onClick: () => navigate("/customers"),
     },
     {
-      title: "Benchmark Score",
-      value: `${benchmarkData.score}/${benchmarkData.total}`,
-      subtitle: `${benchmarkData.total > 0 ? Math.round((benchmarkData.score / benchmarkData.total) * 100) : 0}% HGO ≥ 75%`,
-      icon: Target,
-    },
-    {
-      title: "Actions",
+      title: t.common.actions,
       value: isLoading ? "..." : (summary?.totalActionsPlanned ?? 0),
-      subtitle: `${summary?.totalActionsPlanned ?? 0} Planned | ${summary?.totalActionsPending ?? 0} Pending`,
+      subtitle: `${summary?.totalActionsPlanned ?? 0} ${t.dashboard.planned} | ${summary?.totalActionsPending ?? 0} ${t.dashboard.pending}`,
       change: summary?.totalActionsCompleted ?? 0,
-      changeLabel: "Completed",
+      changeLabel: t.dashboard.completed,
       icon: ClipboardCheck,
       positive: true,
       onClick: () => navigate("/agenda"),
