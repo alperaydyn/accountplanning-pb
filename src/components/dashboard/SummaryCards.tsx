@@ -236,13 +236,6 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       icon: Target,
     },
     {
-      title: t.dashboard.primaryBankScore,
-      value: isLoading ? "..." : `${primaryBankScorePercent}%`,
-      subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
-      icon: Building,
-      onClick: () => navigate("/primary-bank"),
-    },
-    {
       title: t.dashboard.scaleUpEnterprise,
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
       customSubtitle: (
@@ -270,6 +263,13 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       ),
       icon: Users,
       onClick: () => navigate("/customers"),
+    },
+    {
+      title: t.dashboard.primaryBankScore,
+      value: isLoading ? "..." : `${primaryBankScorePercent}%`,
+      subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
+      icon: Building,
+      onClick: () => navigate("/primary-bank"),
     },
     {
       title: t.common.actions,
