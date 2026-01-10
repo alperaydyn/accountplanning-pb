@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown, ClipboardList, Target, Users, CheckCircle } from "lucide-react";
+import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown, ClipboardList, Target, Users, CheckCircle, FileText } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -426,21 +426,19 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto p-0">
           {selectedInsight && (() => {
             const Icon = getIconForType(selectedInsight.type);
-            const gradientClass = selectedInsight.type === "critical" 
-              ? "from-destructive/20 via-destructive/10 to-transparent" 
-              : selectedInsight.type === "warning" 
-                ? "from-warning/20 via-warning/10 to-transparent" 
-                : "from-info/20 via-info/10 to-transparent";
             const borderClass = selectedInsight.type === "critical" 
               ? "border-l-destructive" 
               : selectedInsight.type === "warning" 
                 ? "border-l-warning" 
                 : "border-l-info";
             
+            // Support both new structured format and legacy detailedDescription
+            const hasNewFormat = selectedInsight.analysis && selectedInsight.recommendations?.length > 0;
+            
             return (
               <>
-                {/* Gradient Header */}
-                <div className={`bg-gradient-to-b ${gradientClass} px-6 pt-6 pb-4`}>
+                {/* Header */}
+                <div className="px-6 pt-6 pb-4 border-b">
                   <DialogHeader>
                     <div className="flex items-center gap-3">
                       <div className={`p-2.5 rounded-xl ${getBgColor(selectedInsight.type)} border`}>
@@ -461,15 +459,52 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
                   </DialogHeader>
                 </div>
 
-                {/* Description Card */}
-                <div className="px-6 py-4">
-                  <DialogDescription asChild>
-                    <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
-                      <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                        {selectedInsight.detailedDescription}
-                      </p>
-                    </div>
-                  </DialogDescription>
+                {/* Content */}
+                <div className="px-6 py-4 space-y-4">
+                  {hasNewFormat ? (
+                    <>
+                      {/* Analysis Section */}
+                      <div>
+                        <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          Durum Analizi
+                        </h4>
+                        <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
+                          <p className="text-sm leading-relaxed text-foreground/90">
+                            {selectedInsight.analysis}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Recommendations Section */}
+                      <div>
+                        <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                          Önerilen Aksiyonlar
+                        </h4>
+                        <ul className="space-y-2">
+                          {selectedInsight.recommendations.map((rec, i) => (
+                            <li 
+                              key={i} 
+                              className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border"
+                            >
+                              <CheckCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                              <span className="text-sm text-foreground/90">{rec}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  ) : (
+                    /* Legacy format fallback */
+                    <DialogDescription asChild>
+                      <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
+                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                          {selectedInsight.detailedDescription || selectedInsight.message}
+                        </p>
+                      </div>
+                    </DialogDescription>
+                  )}
                 </div>
 
                 {/* Products Section */}
@@ -555,11 +590,6 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
           {selectedActionInsight && (() => {
             const Icon = getIconForType(selectedActionInsight.type);
             const CategoryIcon = categoryIcons[selectedActionInsight.category] || Target;
-            const gradientClass = selectedActionInsight.type === "critical" 
-              ? "from-destructive/20 via-destructive/10 to-transparent" 
-              : selectedActionInsight.type === "warning" 
-                ? "from-warning/20 via-warning/10 to-transparent" 
-                : "from-info/20 via-info/10 to-transparent";
             const borderClass = selectedActionInsight.type === "critical" 
               ? "border-l-destructive" 
               : selectedActionInsight.type === "warning" 
@@ -572,10 +602,13 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
               quality: "Aksiyon planlamasının genel kalitesini değerlendirir.",
             };
             
+            // Support both new structured format and legacy detailedDescription
+            const hasNewFormat = selectedActionInsight.analysis && selectedActionInsight.recommendations?.length > 0;
+            
             return (
               <>
-                {/* Gradient Header */}
-                <div className={`bg-gradient-to-b ${gradientClass} px-6 pt-6 pb-4`}>
+                {/* Header */}
+                <div className="px-6 pt-6 pb-4 border-b">
                   <DialogHeader>
                     <div className="flex items-center gap-3">
                       <div className={`p-2.5 rounded-xl ${getBgColor(selectedActionInsight.type)} border`}>
@@ -619,15 +652,52 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
                   </div>
                 </div>
 
-                {/* Description Card */}
-                <div className="px-6 py-4">
-                  <DialogDescription asChild>
-                    <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
-                      <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
-                        {selectedActionInsight.detailedDescription}
-                      </p>
-                    </div>
-                  </DialogDescription>
+                {/* Content */}
+                <div className="px-6 py-4 space-y-4">
+                  {hasNewFormat ? (
+                    <>
+                      {/* Analysis Section */}
+                      <div>
+                        <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          Durum Analizi
+                        </h4>
+                        <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
+                          <p className="text-sm leading-relaxed text-foreground/90">
+                            {selectedActionInsight.analysis}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {/* Recommendations Section */}
+                      <div>
+                        <h4 className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                          <Lightbulb className="h-4 w-4 text-muted-foreground" />
+                          Önerilen Aksiyonlar
+                        </h4>
+                        <ul className="space-y-2">
+                          {selectedActionInsight.recommendations.map((rec, i) => (
+                            <li 
+                              key={i} 
+                              className="flex items-start gap-3 p-3 rounded-lg bg-muted/20 border"
+                            >
+                              <CheckCircle className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                              <span className="text-sm text-foreground/90">{rec}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  ) : (
+                    /* Legacy format fallback */
+                    <DialogDescription asChild>
+                      <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
+                        <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                          {selectedActionInsight.detailedDescription || selectedActionInsight.message}
+                        </p>
+                      </div>
+                    </DialogDescription>
+                  )}
                 </div>
 
                 {/* Action Button */}

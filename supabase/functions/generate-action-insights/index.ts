@@ -80,7 +80,12 @@ DEĞERLENDİRME KRİTERLERİ:
 3. Müşteri Dengesi: Ana banka olmayan müşterilere yeterince aksiyon planlanmış mı?
 4. Aksiyon Kalitesi: Bekleyen aksiyonlar çok mu fazla? Tamamlanan oran nasıl?
 
-KURALLAR:
+YAPILANDIRMA KURALLARI:
+- message: Kısa özet (maksimum 15 kelime)
+- analysis: Mevcut durumun kısa analizi (2-3 cümle, düz metin)
+- recommendations: 2-4 maddelik somut aksiyon önerileri listesi (her biri kısa ve net)
+
+DİL KURALLARI:
 - Teknik detaylar kullanma
 - Somut ve uygulanabilir öneriler ver
 - İş diline uygun yaz
@@ -140,15 +145,22 @@ generate_action_insights aracını çağır.`;
                       properties: {
                         type: { type: "string", enum: ["critical", "warning", "info"] },
                         title: { type: "string", description: "Kısa başlık Türkçe (max 5 kelime)" },
-                        message: { type: "string", description: "Kısa açıklama Türkçe" },
-                        detailedDescription: { type: "string", description: "Detaylı açıklama ve önerilen aksiyonlar Türkçe" },
+                        message: { type: "string", description: "Özet cümle Türkçe (max 15 kelime)" },
+                        analysis: { type: "string", description: "Mevcut durum analizi Türkçe (2-3 cümle)" },
+                        recommendations: { 
+                          type: "array", 
+                          items: { type: "string", description: "Somut aksiyon önerisi (kısa ve net)" },
+                          description: "Önerilen aksiyonlar listesi",
+                          minItems: 2,
+                          maxItems: 4
+                        },
                         category: { 
                           type: "string", 
                           enum: ["sufficiency", "alignment", "balance", "quality"],
                           description: "İçgörü kategorisi"
                         },
                       },
-                      required: ["type", "title", "message", "detailedDescription", "category"],
+                      required: ["type", "title", "message", "analysis", "recommendations", "category"],
                       additionalProperties: false,
                     },
                     minItems: 1,

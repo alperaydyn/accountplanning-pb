@@ -14,8 +14,11 @@ export interface Insight {
   type: "critical" | "warning" | "info";
   title: string;
   message: string;
-  detailedDescription: string;
+  analysis: string;
+  recommendations: string[];
   products: InsightProduct[];
+  // Legacy field for backward compatibility
+  detailedDescription?: string;
 }
 
 export interface StoredInsights {
@@ -174,8 +177,12 @@ export function useInsights(recordDate?: string) {
           type: "info" as const,
           title: "Portföy Sağlıklı",
           message: "Tüm ürünler hedeflerini karşılamakta, acil aksiyon gerekmiyor.",
-          detailedDescription:
-            "Tüm ürünler hedeflerini karşılamaktadır. Portföy sağlıklı bir durumda devam etmektedir. Mevcut stratejileri sürdürmeniz ve fırsatları değerlendirmeniz önerilir.",
+          analysis: "Tüm ürünler hedeflerini karşılamaktadır. Portföy sağlıklı bir durumda devam etmektedir.",
+          recommendations: [
+            "Mevcut stratejileri sürdürün",
+            "Pazar fırsatlarını değerlendirin",
+            "Müşteri ilişkilerini güçlendirin"
+          ],
           products: [],
         },
       ];
