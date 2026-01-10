@@ -107,6 +107,7 @@ export function PlanMyDayDisplay({
         creator_name: "AI Assistant",
         creation_reason: customer.reason,
         current_planned_date: dateToUse,
+        current_status: "Planlandı",
       });
 
       setNewlySavedActions(prev => new Set(prev).add(actionKey));
