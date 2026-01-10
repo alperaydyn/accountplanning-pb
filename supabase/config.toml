@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.test-ai-connection]
 verify_jwt = false
+
+[functions.generate-primary-bank-data]
+verify_jwt = false
+
+[functions.run-query]
+verify_jwt = false
