@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Language } from '@/i18n/translations';
 
 export type AgendaViewMode = "daily" | "weekly" | "monthly" | "list";
+export type AIProvider = "lovable" | "openai" | "openrouter" | "local";
 
 interface UserSettings {
   id: string;
@@ -12,6 +13,10 @@ interface UserSettings {
   theme: string;
   notifications_enabled: boolean;
   preferred_agenda_view: AgendaViewMode;
+  ai_provider: AIProvider;
+  ai_model: string | null;
+  ai_api_key_encrypted: string | null;
+  ai_base_url: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -43,6 +48,7 @@ export function useUserSettings() {
             theme: 'system',
             notifications_enabled: true,
             preferred_agenda_view: 'weekly',
+            ai_provider: 'lovable',
           })
           .select()
           .single();
@@ -58,7 +64,7 @@ export function useUserSettings() {
   });
 
   const updateSettings = useMutation({
-    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view' | 'ai_provider' | 'ai_model' | 'ai_api_key_encrypted' | 'ai_base_url'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase

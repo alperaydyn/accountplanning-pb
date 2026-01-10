@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.ai-action-assistant]
 verify_jwt = false
+
+[functions.generate-action-insights]
+verify_jwt = false
+
+[functions.test-ai-connection]
+verify_jwt = false

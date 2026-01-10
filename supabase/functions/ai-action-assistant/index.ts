@@ -7,6 +7,92 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Default models per provider
+const DEFAULT_MODELS: Record<string, string> = {
+  lovable: 'openai/gpt-5-mini',
+  openai: 'gpt-4o-mini',
+  openrouter: 'anthropic/claude-3.5-sonnet',
+  local: 'llama3',
+};
+
+// API endpoints per provider
+const ENDPOINTS: Record<string, string> = {
+  lovable: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+  openai: 'https://api.openai.com/v1/chat/completions',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+};
+
+interface AIProviderConfig {
+  provider: string;
+  model: string | null;
+  apiKey: string | null;
+  baseUrl: string | null;
+}
+
+async function callAI(config: AIProviderConfig, messages: any[], tools?: any[], toolChoice?: any) {
+  const { provider, model, apiKey, baseUrl } = config;
+  
+  // Determine API key
+  let resolvedApiKey: string = '';
+  if (provider === 'lovable') {
+    resolvedApiKey = Deno.env.get('LOVABLE_API_KEY') || '';
+  } else if (apiKey) {
+    resolvedApiKey = apiKey;
+  } else {
+    const envKeyMap: Record<string, string> = {
+      openai: 'OPENAI_API_KEY',
+      openrouter: 'OPENROUTER_API_KEY',
+      local: '',
+    };
+    resolvedApiKey = Deno.env.get(envKeyMap[provider] || '') || '';
+  }
+  
+  // Determine endpoint
+  let endpoint: string;
+  if (provider === 'local') {
+    if (!baseUrl) throw new Error('Local provider requires a base URL');
+    endpoint = baseUrl.endsWith('/v1/chat/completions') 
+      ? baseUrl 
+      : `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  } else {
+    endpoint = ENDPOINTS[provider] || ENDPOINTS.lovable;
+  }
+  
+  // Determine model
+  const resolvedModel = model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.lovable;
+  
+  // Build headers
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (resolvedApiKey) {
+    headers['Authorization'] = `Bearer ${resolvedApiKey}`;
+  }
+  if (provider === 'openrouter') {
+    headers['HTTP-Referer'] = 'https://lovable.dev';
+    headers['X-Title'] = 'Account Planning App';
+  }
+  
+  const body: any = { model: resolvedModel, messages };
+  if (tools) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
+  
+  console.log(`Calling AI: provider=${provider}, model=${resolvedModel}`);
+  
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+  
+  if (!response.ok) {
+    if (response.status === 429) throw { status: 429, message: 'Rate limit exceeded' };
+    if (response.status === 402) throw { status: 402, message: 'Payment required' };
+    const errorText = await response.text();
+    throw new Error(`AI error: ${response.status} - ${errorText}`);
+  }
+  
+  return response.json();
+}
+
 interface CustomerProduct {
   name: string;
   category: string;
@@ -69,12 +155,20 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub;
     console.log("Authenticated user:", userId);
-    // === End Authentication Check ===
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    // Fetch user's AI provider settings
+    const { data: userSettings } = await supabase
+      .from('user_settings')
+      .select('ai_provider, ai_model, ai_api_key_encrypted, ai_base_url')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const aiConfig: AIProviderConfig = {
+      provider: userSettings?.ai_provider || 'lovable',
+      model: userSettings?.ai_model || null,
+      apiKey: userSettings?.ai_api_key_encrypted || null,
+      baseUrl: userSettings?.ai_base_url || null,
+    };
 
     const { message, customers, actionTemplates, chatHistory } = await req.json();
 
@@ -105,16 +199,13 @@ serve(async (req) => {
       ).join(", ");
 
       // Build customer context - prioritize by status and PS score
-      // Include customers with products (not just those with gaps)
       const sortedCustomers = [...customers]
         .filter((c: CustomerData) => c.products && c.products.length > 0)
         .sort((a: CustomerData, b: CustomerData) => {
-          // Prioritize by status: Strong Target > Target > others
           const statusOrder: Record<string, number> = { "Strong Target": 0, "Target": 1, "Aktif": 2, "Ana Banka": 3, "Yeni Müşteri": 4 };
           const statusA = statusOrder[a.status] ?? 5;
           const statusB = statusOrder[b.status] ?? 5;
           if (statusA !== statusB) return statusA - statusB;
-          // Then by PS score (higher is better)
           return (b.principality_score || 0) - (a.principality_score || 0);
         })
         .slice(0, 20);
@@ -196,37 +287,7 @@ Türkçe yanıt ver.`;
       { role: "user", content: message },
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-5-mini",
-        messages,
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add funds to your workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
+    const data = await callAI(aiConfig, messages);
     console.log("AI response received, usage:", data.usage);
 
     const content = data.choices?.[0]?.message?.content || "Üzgünüm, bir yanıt oluşturamadım.";
@@ -236,11 +297,27 @@ Türkçe yanıt ver.`;
       content,
       usage,
       isPlanMyDay,
+      provider: aiConfig.provider,
+      model: aiConfig.model || DEFAULT_MODELS[aiConfig.provider],
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in AI assistant:", error);
+    
+    if (error.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (error.status === 402) {
+      return new Response(JSON.stringify({ error: "Payment required. Please add funds to your workspace." }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

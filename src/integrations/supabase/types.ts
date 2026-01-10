@@ -275,6 +275,7 @@ export type Database = {
           insights: Json
           model_name: string
           portfolio_manager_id: string
+          provider: string | null
           record_date: string
           updated_at: string
           version: number
@@ -286,6 +287,7 @@ export type Database = {
           insights?: Json
           model_name?: string
           portfolio_manager_id: string
+          provider?: string | null
           record_date?: string
           updated_at?: string
           version?: number
@@ -297,6 +299,7 @@ export type Database = {
           insights?: Json
           model_name?: string
           portfolio_manager_id?: string
+          provider?: string | null
           record_date?: string
           updated_at?: string
           version?: number
@@ -317,6 +320,7 @@ export type Database = {
           created_at: string
           customer_mapping: Json | null
           id: string
+          model_name: string | null
           role: string
           session_id: string
           usage: Json | null
@@ -326,6 +330,7 @@ export type Database = {
           created_at?: string
           customer_mapping?: Json | null
           id?: string
+          model_name?: string | null
           role: string
           session_id: string
           usage?: Json | null
@@ -335,6 +340,7 @@ export type Database = {
           created_at?: string
           customer_mapping?: Json | null
           id?: string
+          model_name?: string | null
           role?: string
           session_id?: string
           usage?: Json | null
@@ -354,6 +360,7 @@ export type Database = {
           created_at: string
           id: string
           portfolio_manager_id: string
+          provider: string | null
           title: string
           updated_at: string
         }
@@ -361,6 +368,7 @@ export type Database = {
           created_at?: string
           id?: string
           portfolio_manager_id: string
+          provider?: string | null
           title?: string
           updated_at?: string
         }
@@ -368,6 +376,7 @@ export type Database = {
           created_at?: string
           id?: string
           portfolio_manager_id?: string
+          provider?: string | null
           title?: string
           updated_at?: string
         }
@@ -389,6 +398,7 @@ export type Database = {
           insights: Json
           model_name: string
           portfolio_manager_id: string
+          provider: string | null
           record_date: string
           updated_at: string
           version: number
@@ -400,6 +410,7 @@ export type Database = {
           insights?: Json
           model_name?: string
           portfolio_manager_id: string
+          provider?: string | null
           record_date?: string
           updated_at?: string
           version?: number
@@ -411,6 +422,7 @@ export type Database = {
           insights?: Json
           model_name?: string
           portfolio_manager_id?: string
+          provider?: string | null
           record_date?: string
           updated_at?: string
           version?: number
@@ -807,6 +819,10 @@ export type Database = {
       }
       user_settings: {
         Row: {
+          ai_api_key_encrypted: string | null
+          ai_base_url: string | null
+          ai_model: string | null
+          ai_provider: string | null
           created_at: string
           id: string
           language: string
@@ -817,6 +833,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_api_key_encrypted?: string | null
+          ai_base_url?: string | null
+          ai_model?: string | null
+          ai_provider?: string | null
           created_at?: string
           id?: string
           language?: string
@@ -827,6 +847,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_api_key_encrypted?: string | null
+          ai_base_url?: string | null
+          ai_model?: string | null
+          ai_provider?: string | null
           created_at?: string
           id?: string
           language?: string
