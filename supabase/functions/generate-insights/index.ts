@@ -7,6 +7,82 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Default models per provider
+const DEFAULT_MODELS: Record<string, string> = {
+  lovable: 'openai/gpt-5-mini',
+  openai: 'gpt-4o-mini',
+  openrouter: 'anthropic/claude-3.5-sonnet',
+  local: 'llama3',
+};
+
+// API endpoints per provider
+const ENDPOINTS: Record<string, string> = {
+  lovable: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+  openai: 'https://api.openai.com/v1/chat/completions',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+};
+
+interface AIProviderConfig {
+  provider: string;
+  model: string | null;
+  apiKey: string | null;
+  baseUrl: string | null;
+}
+
+async function callAI(config: AIProviderConfig, messages: any[], tools?: any[], toolChoice?: any) {
+  const { provider, model, apiKey, baseUrl } = config;
+  
+  let resolvedApiKey: string = '';
+  if (provider === 'lovable') {
+    resolvedApiKey = Deno.env.get('LOVABLE_API_KEY') || '';
+  } else if (apiKey) {
+    resolvedApiKey = apiKey;
+  } else {
+    const envKeyMap: Record<string, string> = {
+      openai: 'OPENAI_API_KEY',
+      openrouter: 'OPENROUTER_API_KEY',
+      local: '',
+    };
+    resolvedApiKey = Deno.env.get(envKeyMap[provider] || '') || '';
+  }
+  
+  let endpoint: string;
+  if (provider === 'local') {
+    if (!baseUrl) throw new Error('Local provider requires a base URL');
+    endpoint = baseUrl.endsWith('/v1/chat/completions') 
+      ? baseUrl 
+      : `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  } else {
+    endpoint = ENDPOINTS[provider] || ENDPOINTS.lovable;
+  }
+  
+  const resolvedModel = model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.lovable;
+  
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (resolvedApiKey) headers['Authorization'] = `Bearer ${resolvedApiKey}`;
+  if (provider === 'openrouter') {
+    headers['HTTP-Referer'] = 'https://lovable.dev';
+    headers['X-Title'] = 'Account Planning App';
+  }
+  
+  const body: any = { model: resolvedModel, messages };
+  if (tools) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
+  
+  console.log(`Calling AI: provider=${provider}, model=${resolvedModel}`);
+  
+  const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
+  
+  if (!response.ok) {
+    if (response.status === 429) throw { status: 429, message: 'Rate limit exceeded' };
+    if (response.status === 402) throw { status: 402, message: 'Payment required' };
+    const errorText = await response.text();
+    throw new Error(`AI error: ${response.status} - ${errorText}`);
+  }
+  
+  return response.json();
+}
+
 interface ProductSummary {
   name: string;
   id: string;
@@ -24,10 +100,8 @@ serve(async (req) => {
   }
 
   try {
-    // === Authentication Check ===
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.error("Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -44,7 +118,6 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
     if (claimsError || !claimsData?.claims) {
-      console.error("JWT validation failed:", claimsError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -52,13 +125,20 @@ serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub;
-    console.log("Authenticated user:", userId);
-    // === End Authentication Check ===
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    // Fetch user's AI provider settings
+    const { data: userSettings } = await supabase
+      .from('user_settings')
+      .select('ai_provider, ai_model, ai_api_key_encrypted, ai_base_url')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const aiConfig: AIProviderConfig = {
+      provider: userSettings?.ai_provider || 'lovable',
+      model: userSettings?.ai_model || null,
+      apiKey: userSettings?.ai_api_key_encrypted || null,
+      baseUrl: userSettings?.ai_base_url || null,
+    };
 
     const { products } = await req.json();
 
@@ -66,18 +146,16 @@ serve(async (req) => {
       throw new Error("Missing required parameter: products array");
     }
 
-    // Build product name to ID mapping for the response
     const productMap = products.reduce((acc: Record<string, string>, p: ProductSummary) => {
       acc[p.name] = p.id;
       return acc;
     }, {});
 
-    // Optimize tokens: compact product summary (no IDs in prompt)
     const productSummaries = products.map((p: ProductSummary) => 
       `${p.name}|${p.status}|PA:${p.pendingActions}`
     ).join(";");
 
-const systemPrompt = `Sen bir banka portföy analisti AI'sın. Ürün performans verilerine göre 1-3 aksiyon odaklı içgörü üret.
+    const systemPrompt = `Sen bir banka portföy analisti AI'sın. Ürün performans verilerine göre 1-3 aksiyon odaklı içgörü üret.
 
 İçgörü türleri:
 - critical: Acil aksiyon gerekli (kritik veya eriyen ürünler)
@@ -112,86 +190,60 @@ DİL KURALLARI:
 
 generate_insights aracını çağır.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "openai/gpt-5-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_insights",
-              description: "Generate portfolio insights based on product performance",
-              parameters: {
-                type: "object",
-                properties: {
-                  insights: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        type: { type: "string", enum: ["critical", "warning", "info"] },
-                        title: { type: "string", description: "Kısa başlık Türkçe (max 5 kelime)" },
-                        message: { type: "string", description: "Özet cümle Türkçe (max 15 kelime)" },
-                        analysis: { type: "string", description: "Mevcut durum analizi Türkçe (2-3 cümle)" },
-                        recommendations: { 
-                          type: "array", 
-                          items: { type: "string", description: "Somut aksiyon önerisi (kısa ve net)" },
-                          description: "Önerilen aksiyonlar listesi",
-                          minItems: 2,
-                          maxItems: 4
-                        },
-                        productNames: { 
-                          type: "array", 
-                          items: { type: "string" },
-                          description: "Bu içgörüyle ilgili ürün isimleri (tam olarak verildiği gibi)"
-                        },
-                      },
-                      required: ["type", "title", "message", "analysis", "recommendations", "productNames"],
-                      additionalProperties: false,
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "generate_insights",
+          description: "Generate portfolio insights based on product performance",
+          parameters: {
+            type: "object",
+            properties: {
+              insights: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    type: { type: "string", enum: ["critical", "warning", "info"] },
+                    title: { type: "string", description: "Kısa başlık Türkçe (max 5 kelime)" },
+                    message: { type: "string", description: "Özet cümle Türkçe (max 15 kelime)" },
+                    analysis: { type: "string", description: "Mevcut durum analizi Türkçe (2-3 cümle)" },
+                    recommendations: { 
+                      type: "array", 
+                      items: { type: "string", description: "Somut aksiyon önerisi (kısa ve net)" },
+                      description: "Önerilen aksiyonlar listesi",
+                      minItems: 2,
+                      maxItems: 4
                     },
-                    minItems: 1,
-                    maxItems: 3,
+                    productNames: { 
+                      type: "array", 
+                      items: { type: "string" },
+                      description: "Bu içgörüyle ilgili ürün isimleri (tam olarak verildiği gibi)"
+                    },
                   },
+                  required: ["type", "title", "message", "analysis", "recommendations", "productNames"],
+                  additionalProperties: false,
                 },
-                required: ["insights"],
-                additionalProperties: false,
+                minItems: 1,
+                maxItems: 3,
               },
             },
+            required: ["insights"],
+            additionalProperties: false,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_insights" } },
-      }),
-    });
+        },
+      },
+    ];
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add funds to your workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("AI response:", JSON.stringify(data, null, 2));
+    const data = await callAI(
+      aiConfig,
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools,
+      { type: "function", function: { name: "generate_insights" } }
+    );
 
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
@@ -202,7 +254,6 @@ generate_insights aracını çağır.`;
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Map product names to IDs for frontend linking
     const insightsWithIds = (result.insights || []).map((insight: any) => ({
       ...insight,
       products: (insight.productNames || []).map((name: string) => ({
@@ -211,11 +262,28 @@ generate_insights aracını çağır.`;
       })),
     }));
 
-    return new Response(JSON.stringify({ insights: insightsWithIds }), {
+    return new Response(JSON.stringify({ 
+      insights: insightsWithIds,
+      provider: aiConfig.provider,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating insights:", error);
+    
+    if (error.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (error.status === 402) {
+      return new Response(JSON.stringify({ error: "Payment required. Please add funds to your workspace." }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

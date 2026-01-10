@@ -9,6 +9,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { QueryPanel } from "@/components/settings/QueryPanel";
 import { useUserSettings, AgendaViewMode } from "@/hooks/useUserSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 
 const Settings = () => {
   const { t } = useLanguage();
@@ -83,6 +84,9 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Provider Settings */}
+          <AIProviderSettings />
 
           {/* Documentation Link */}
           <Card>

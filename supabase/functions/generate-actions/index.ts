@@ -24,16 +24,90 @@ const ACTION_NAMES = [
   "Expand investment portfolio",
 ];
 
+// Default models per provider
+const DEFAULT_MODELS: Record<string, string> = {
+  lovable: 'google/gemini-2.5-flash',
+  openai: 'gpt-4o-mini',
+  openrouter: 'anthropic/claude-3.5-sonnet',
+  local: 'llama3',
+};
+
+// API endpoints per provider
+const ENDPOINTS: Record<string, string> = {
+  lovable: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+  openai: 'https://api.openai.com/v1/chat/completions',
+  openrouter: 'https://openrouter.ai/api/v1/chat/completions',
+};
+
+interface AIProviderConfig {
+  provider: string;
+  model: string | null;
+  apiKey: string | null;
+  baseUrl: string | null;
+}
+
+async function callAI(config: AIProviderConfig, messages: any[], tools?: any[], toolChoice?: any) {
+  const { provider, model, apiKey, baseUrl } = config;
+  
+  let resolvedApiKey: string = '';
+  if (provider === 'lovable') {
+    resolvedApiKey = Deno.env.get('LOVABLE_API_KEY') || '';
+  } else if (apiKey) {
+    resolvedApiKey = apiKey;
+  } else {
+    const envKeyMap: Record<string, string> = {
+      openai: 'OPENAI_API_KEY',
+      openrouter: 'OPENROUTER_API_KEY',
+      local: '',
+    };
+    resolvedApiKey = Deno.env.get(envKeyMap[provider] || '') || '';
+  }
+  
+  let endpoint: string;
+  if (provider === 'local') {
+    if (!baseUrl) throw new Error('Local provider requires a base URL');
+    endpoint = baseUrl.endsWith('/v1/chat/completions') 
+      ? baseUrl 
+      : `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+  } else {
+    endpoint = ENDPOINTS[provider] || ENDPOINTS.lovable;
+  }
+  
+  const resolvedModel = model || DEFAULT_MODELS[provider] || DEFAULT_MODELS.lovable;
+  
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (resolvedApiKey) headers['Authorization'] = `Bearer ${resolvedApiKey}`;
+  if (provider === 'openrouter') {
+    headers['HTTP-Referer'] = 'https://lovable.dev';
+    headers['X-Title'] = 'Account Planning App';
+  }
+  
+  const body: any = { model: resolvedModel, messages };
+  if (tools) body.tools = tools;
+  if (toolChoice) body.tool_choice = toolChoice;
+  
+  console.log(`Calling AI: provider=${provider}, model=${resolvedModel}`);
+  
+  const response = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(body) });
+  
+  if (!response.ok) {
+    if (response.status === 429) throw { status: 429, message: 'Rate limit exceeded' };
+    if (response.status === 402) throw { status: 402, message: 'Payment required' };
+    const errorText = await response.text();
+    throw new Error(`AI error: ${response.status} - ${errorText}`);
+  }
+  
+  return response.json();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // === Authentication Check ===
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.error("Missing or invalid Authorization header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -50,7 +124,6 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     
     if (claimsError || !claimsData?.claims) {
-      console.error("JWT validation failed:", claimsError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -58,13 +131,20 @@ serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub;
-    console.log("Authenticated user:", userId);
-    // === End Authentication Check ===
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+    // Fetch user's AI provider settings
+    const { data: userSettings } = await supabase
+      .from('user_settings')
+      .select('ai_provider, ai_model, ai_api_key_encrypted, ai_base_url')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const aiConfig: AIProviderConfig = {
+      provider: userSettings?.ai_provider || 'lovable',
+      model: userSettings?.ai_model || null,
+      apiKey: userSettings?.ai_api_key_encrypted || null,
+      baseUrl: userSettings?.ai_base_url || null,
+    };
 
     const { customer, products, ownedProductIds } = await req.json();
 
@@ -125,77 +205,51 @@ ${products.map((p: { id: string; name: string }) => `${p.id} -> ${p.name}`).join
 Generate 1-5 relevant actions based on this customer profile.
 IMPORTANT: You MUST call the generate_actions tool with your response.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "generate_actions",
-              description: "Generate a list of recommended actions for the customer",
-              parameters: {
-                type: "object",
-                properties: {
-                  actions: {
-                    type: "array",
-                    items: {
-                      type: "object",
-                      properties: {
-                        name: { type: "string", enum: ACTION_NAMES },
-                        product_id: { type: "string", description: "Target product ID" },
-                        priority: { type: "string", enum: PRIORITIES },
-                        description: { type: "string", description: "Brief description of why this action is recommended" },
-                        creation_reason: { type: "string", description: "Detailed reason for creating this action" },
-                        customer_hints: { type: "string", description: "Tips for approaching the customer about this action" },
-                        target_value: { type: "number", description: "Target value in TL for this action" },
-                      },
-                      required: ["name", "product_id", "priority", "description", "creation_reason", "customer_hints", "target_value"],
-                      additionalProperties: false,
-                    },
-                    minItems: 1,
-                    maxItems: 5,
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "generate_actions",
+          description: "Generate a list of recommended actions for the customer",
+          parameters: {
+            type: "object",
+            properties: {
+              actions: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string", enum: ACTION_NAMES },
+                    product_id: { type: "string", description: "Target product ID" },
+                    priority: { type: "string", enum: PRIORITIES },
+                    description: { type: "string", description: "Brief description of why this action is recommended" },
+                    creation_reason: { type: "string", description: "Detailed reason for creating this action" },
+                    customer_hints: { type: "string", description: "Tips for approaching the customer about this action" },
+                    target_value: { type: "number", description: "Target value in TL for this action" },
                   },
+                  required: ["name", "product_id", "priority", "description", "creation_reason", "customer_hints", "target_value"],
+                  additionalProperties: false,
                 },
-                required: ["actions"],
-                additionalProperties: false,
+                minItems: 1,
+                maxItems: 5,
               },
             },
+            required: ["actions"],
+            additionalProperties: false,
           },
-        ],
-        tool_choice: { type: "function", function: { name: "generate_actions" } },
-      }),
-    });
+        },
+      },
+    ];
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Payment required. Please add funds to your workspace." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    console.log("AI response:", JSON.stringify(data, null, 2));
+    const data = await callAI(
+      aiConfig,
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      tools,
+      { type: "function", function: { name: "generate_actions" } }
+    );
 
     const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
 
@@ -206,7 +260,6 @@ IMPORTANT: You MUST call the generate_actions tool with your response.`;
 
     const result = JSON.parse(toolCall.function.arguments);
 
-    // Validate and normalize actions
     const validActions = (result.actions || []).map((action: any) => ({
       name: action.name,
       product_id: action.product_id,
@@ -217,11 +270,28 @@ IMPORTANT: You MUST call the generate_actions tool with your response.`;
       target_value: Math.round(Number(action.target_value) || 100000),
     }));
 
-    return new Response(JSON.stringify({ actions: validActions }), {
+    return new Response(JSON.stringify({ 
+      actions: validActions,
+      provider: aiConfig.provider,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating actions:", error);
+    
+    if (error.status === 429) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (error.status === 402) {
+      return new Response(JSON.stringify({ error: "Payment required. Please add funds to your workspace." }), {
+        status: 402,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    
     return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
