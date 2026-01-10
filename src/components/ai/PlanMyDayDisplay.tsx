@@ -124,19 +124,22 @@ export function PlanMyDayDisplay({
     }
   };
 
+  // Guard against malformed plan data
+  const customers = plan?.customers || [];
+
   return (
     <div className="space-y-3">
       {/* Greeting */}
-      <p className="text-sm">{plan.greeting}</p>
+      <p className="text-sm">{plan?.greeting || 'Gününüz planlandı!'}</p>
       
       {/* Header */}
       <p className="text-sm font-medium">
-        📋 Bugün odaklanılacak {plan.customers.length} müşteri:
+        📋 Bugün odaklanılacak {customers.length} müşteri:
       </p>
 
       {/* Customers List */}
       <div className="space-y-4">
-        {plan.customers.map((customer, idx) => {
+        {customers.map((customer, idx) => {
           const customerInfo = mapping[customer.tempId];
           const customerName = customerInfo?.name || customer.tempId;
           const customerId = customerInfo?.id;
@@ -165,7 +168,7 @@ export function PlanMyDayDisplay({
 
               {/* Actions */}
               <div className="ml-4 space-y-1">
-                {customer.actions.map((action, actionIdx) => {
+                {(customer?.actions || []).map((action, actionIdx) => {
                   const actionKey = customerId 
                     ? getActionKey(customerId, action.product, action.action)
                     : `${customer.tempId}|${action.product}|${action.action}`;
@@ -217,7 +220,7 @@ export function PlanMyDayDisplay({
 
       {/* Summary */}
       <p className="text-sm text-muted-foreground mt-3">
-        💡 {plan.summary}
+        💡 {plan?.summary || ''}
       </p>
     </div>
   );
