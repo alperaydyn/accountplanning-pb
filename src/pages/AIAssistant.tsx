@@ -314,22 +314,24 @@ export default function AIAssistant() {
     }
   };
 
-  // Handle "plan my day" trigger from URL
+  // Handle "plan my day" trigger from URL - use ref to prevent duplicate calls
+  const planMyDayTriggeredRef = useRef(false);
   useEffect(() => {
     const prompt = searchParams.get("prompt");
     const dateParam = searchParams.get("date");
-    if (prompt === "plan-my-day" && !planMyDayTriggered && !sessionsLoading && preparedCustomerData.length > 0) {
+    if (prompt === "plan-my-day" && !planMyDayTriggeredRef.current && !sessionsLoading && preparedCustomerData.length > 0) {
+      planMyDayTriggeredRef.current = true;
       setPlanMyDayTriggered(true);
-      // Store the target date before clearing params
-      if (dateParam) {
-        setPlanTargetDate(dateParam);
-      }
-      // Clear the URL params
+      // Clear the URL params immediately
       setSearchParams({}, { replace: true });
-      // Create new session and send "plan my day"
-      handlePlanMyDay(dateParam || undefined);
+      // Store the target date and create new session
+      const targetDate = dateParam || undefined;
+      if (targetDate) {
+        setPlanTargetDate(targetDate);
+      }
+      handlePlanMyDay(targetDate);
     }
-  }, [searchParams, sessionsLoading, planMyDayTriggered, preparedCustomerData]);
+  }, [searchParams, sessionsLoading, preparedCustomerData.length > 0]);
 
   // Calculate total usage from messages
   useEffect(() => {
@@ -450,7 +452,7 @@ export default function AIAssistant() {
     }
 
     // After refresh, restore PlanMyDayDisplay from the persisted payload
-    if (isLastAssistantMessage && extracted.plan && message.customer_mapping) {
+    if (extracted.plan && message.customer_mapping) {
       const plan = extracted.plan as PlanMyDayResponse;
 
       const mappingWithNames: Record<string, { id: string; name: string }> = {};
