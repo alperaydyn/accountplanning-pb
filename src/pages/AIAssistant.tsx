@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { 
   Sparkles, Send, Loader2, User, Bot, ShieldCheck, ChevronDown, ChevronUp, 
-  Coins, Plus, Trash2, MessageSquare, MoreHorizontal 
+  Coins, Plus, Trash2, MessageSquare, MoreHorizontal, Save, CheckCircle2
 } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,9 @@ import {
 import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
 import { useProducts } from "@/hooks/useProducts";
-import { useActions } from "@/hooks/useActions";
+import { useActions, useCreateAction } from "@/hooks/useActions";
+import { useAllActionTemplates } from "@/hooks/useActionTemplates";
+import { useProductThresholds } from "@/hooks/useProductThresholds";
 import {
   useAIChatSessions,
   useAIChatMessages,
@@ -43,6 +45,24 @@ const WELCOME_MESSAGE = `Merhaba! Bugün hangi müşterilere odaklanmanız gerek
 • "Perakende sektöründeki yüksek potansiyelli müşterileri bul"
 • "Kredi ürünleri için takip gereken müşteriler kim?"`;
 
+interface PlanAction {
+  product: string;
+  action: string;
+  note: string;
+}
+
+interface PlanCustomer {
+  tempId: string;
+  reason: string;
+  actions: PlanAction[];
+}
+
+interface PlanMyDayResponse {
+  greeting: string;
+  customers: PlanCustomer[];
+  summary: string;
+}
+
 export default function AIAssistant() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -52,6 +72,9 @@ export default function AIAssistant() {
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [totalUsage, setTotalUsage] = useState({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
   const [planMyDayTriggered, setPlanMyDayTriggered] = useState(false);
+  const [pendingPlanData, setPendingPlanData] = useState<{ plan: PlanMyDayResponse; mapping: Record<string, { id: string; name: string }> } | null>(null);
+  const [isSavingActions, setIsSavingActions] = useState(false);
+  const [actionsSaved, setActionsSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -61,26 +84,59 @@ export default function AIAssistant() {
   const updateTitle = useUpdateChatSessionTitle();
   const deleteSession = useDeleteChatSession();
   const addMessage = useAddChatMessage();
+  const createAction = useCreateAction();
 
   const { data: customers = [] } = useCustomers();
   const { data: customerProducts = [] } = useAllCustomerProducts();
   const { data: products = [] } = useProducts();
   const { data: actions = [] } = useActions();
+  const { data: actionTemplates = [] } = useAllActionTemplates();
+  const { data: thresholds = [] } = useProductThresholds({ isActive: true });
 
-  // Prepare customer data with temp IDs (moved up for early access)
+  // Build action templates for AI
+  const actionTemplatesForAI = useMemo(() => {
+    return actionTemplates.map(template => {
+      const product = products.find(p => p.id === template.product_id);
+      return {
+        productId: template.product_id,
+        productName: product?.name || "Unknown",
+        actionName: template.name,
+      };
+    });
+  }, [actionTemplates, products]);
+
+  // Prepare customer data with temp IDs and threshold calculations
   const preparedCustomerData = useMemo(() => {
     return customers.map((customer, index) => {
       const tempId = `C${index + 1}`;
+      
       const customerProductList = customerProducts
         .filter((cp) => cp.customer_id === customer.id)
         .map((cp) => {
           const product = products.find((p) => p.id === cp.product_id);
+          
+          // Find threshold for this product/sector/segment
+          const threshold = thresholds.find(
+            t => t.product_id === cp.product_id && 
+                 t.sector === customer.sector && 
+                 t.segment === customer.segment
+          );
+          
+          const thresholdValue = threshold ? Math.floor(threshold.threshold_value / 10000) * 10000 : 0;
+          const gap = thresholdValue - (cp.current_value || 0);
+          
           return {
             name: product?.name || "Unknown",
             category: product?.category || "Unknown",
             current_value: cp.current_value || 0,
+            threshold: thresholdValue,
+            gap: gap,
+            productId: cp.product_id,
           };
         });
+
+      // Filter products below threshold
+      const belowThresholdProducts = customerProductList.filter(p => p.gap > 0);
 
       const customerActions = actions
         .filter((a) => a.customer_id === customer.id)
@@ -94,16 +150,28 @@ export default function AIAssistant() {
       return {
         id: customer.id,
         tempId,
+        name: customer.name,
         segment: customer.segment,
         sector: customer.sector,
         status: customer.status,
         principality_score: customer.principality_score,
         products: customerProductList,
+        belowThresholdProducts,
         actions: customerActions,
       };
     });
-  }, [customers, customerProducts, products, actions]);
+  }, [customers, customerProducts, products, actions, thresholds]);
 
+  // Create mapping from tempId to customer info
+  const tempIdToCustomer = useMemo(() => {
+    const mapping: Record<string, { id: string; name: string }> = {};
+    preparedCustomerData.forEach((c) => {
+      mapping[c.tempId] = { id: c.id, name: c.name };
+    });
+    return mapping;
+  }, [preparedCustomerData]);
+
+  // Legacy mapping for regular messages
   const tempIdToRealId = useMemo(() => {
     const mapping: Record<string, string> = {};
     preparedCustomerData.forEach((c) => {
@@ -119,8 +187,16 @@ export default function AIAssistant() {
     }
   }, [sessions, sessionsLoading, activeSessionId]);
 
+  // Reset saved state when session changes
+  useEffect(() => {
+    setActionsSaved(false);
+    setPendingPlanData(null);
+  }, [activeSessionId]);
+
   const sendMessage = async (sessionId: string, messageContent: string) => {
     setIsLoading(true);
+    setActionsSaved(false);
+    setPendingPlanData(null);
 
     try {
       // Save user message
@@ -140,6 +216,7 @@ export default function AIAssistant() {
         body: {
           message: messageContent,
           customers: preparedCustomerData,
+          actionTemplates: actionTemplatesForAI,
           chatHistory,
         },
       });
@@ -152,11 +229,31 @@ export default function AIAssistant() {
         return;
       }
 
+      let displayContent = data.content;
+      
+      // If this is a plan my day response, try to parse JSON and format it
+      if (data.isPlanMyDay) {
+        try {
+          // Try to extract JSON from the response
+          const jsonMatch = data.content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const planData: PlanMyDayResponse = JSON.parse(jsonMatch[0]);
+            setPendingPlanData({ plan: planData, mapping: tempIdToCustomer });
+            
+            // Format the response for display with customer names
+            displayContent = formatPlanMyDayResponse(planData, tempIdToCustomer);
+          }
+        } catch (parseError) {
+          console.error("Failed to parse plan my day response:", parseError);
+          // Use original content if parsing fails
+        }
+      }
+
       // Save assistant message
       await addMessage.mutateAsync({
         sessionId,
         role: "assistant",
-        content: data.content,
+        content: displayContent,
         customerMapping: tempIdToRealId,
         usage: data.usage,
       });
@@ -165,6 +262,85 @@ export default function AIAssistant() {
       toast.error("AI asistanla iletişim kurulamadı");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const formatPlanMyDayResponse = (plan: PlanMyDayResponse, mapping: Record<string, { id: string; name: string }>) => {
+    let response = `${plan.greeting}\n\n`;
+    
+    response += `📋 **Bugün odaklanılacak ${plan.customers.length} müşteri:**\n\n`;
+    
+    plan.customers.forEach((customer, idx) => {
+      const customerInfo = mapping[customer.tempId];
+      const customerName = customerInfo?.name || customer.tempId;
+      
+      response += `**${idx + 1}. ${customerName}**\n`;
+      response += `   📌 ${customer.reason}\n`;
+      response += `   Aksiyonlar:\n`;
+      
+      customer.actions.forEach((action) => {
+        response += `   • ${action.product} → ${action.action}`;
+        if (action.note) response += ` (${action.note})`;
+        response += `\n`;
+      });
+      response += `\n`;
+    });
+    
+    response += `\n💡 ${plan.summary}`;
+    
+    return response;
+  };
+
+  const handleSaveActions = async () => {
+    if (!pendingPlanData) return;
+    
+    setIsSavingActions(true);
+    const today = new Date().toISOString().split('T')[0];
+    let savedCount = 0;
+    
+    try {
+      for (const customer of pendingPlanData.plan.customers) {
+        const customerInfo = pendingPlanData.mapping[customer.tempId];
+        if (!customerInfo) continue;
+        
+        for (const action of customer.actions) {
+          // Find the product ID
+          const product = products.find(p => p.name === action.product);
+          if (!product) continue;
+          
+          // Find the action template
+          const template = actionTemplates.find(
+            t => t.product_id === product.id && t.name === action.action
+          );
+          
+          try {
+            await createAction.mutateAsync({
+              customer_id: customerInfo.id,
+              product_id: product.id,
+              name: action.action,
+              description: action.note || null,
+              priority: "medium",
+              type: "rm_action",
+              action_target_date: today,
+              source_data_date: today,
+              creator_name: "AI Assistant",
+              creation_reason: customer.reason,
+              current_planned_date: today,
+            });
+            savedCount++;
+          } catch (err) {
+            console.error("Failed to save action:", err);
+          }
+        }
+      }
+      
+      setActionsSaved(true);
+      toast.success(`${savedCount} aksiyon bugün için planlandı`);
+    } catch (error) {
+      console.error("Failed to save actions:", error);
+      toast.error("Aksiyonlar kaydedilemedi");
+    } finally {
+      setIsSavingActions(false);
     }
   };
 
@@ -297,21 +473,36 @@ export default function AIAssistant() {
       return <p className="text-sm whitespace-pre-line">{message.content}</p>;
     }
 
+    // For assistant messages, render with customer name links
     const parts = parseResponseWithLinks(message.content, message.customer_mapping);
 
     return (
       <p className="text-sm whitespace-pre-line">
         {parts.map((part, index) => {
           if (typeof part === "string") {
-            return <span key={index}>{part}</span>;
+            // Check for bold text patterns
+            const boldParts = part.split(/(\*\*[^*]+\*\*)/g);
+            return (
+              <span key={index}>
+                {boldParts.map((bp, bpIdx) => {
+                  if (bp.startsWith("**") && bp.endsWith("**")) {
+                    return <strong key={bpIdx}>{bp.slice(2, -2)}</strong>;
+                  }
+                  return <span key={bpIdx}>{bp}</span>;
+                })}
+              </span>
+            );
           }
+          // Get customer name from mapping
+          const customerInfo = tempIdToCustomer[part.tempId];
+          const displayName = customerInfo?.name || part.tempId;
           return (
             <Link
               key={index}
               to={`/customers/${part.realId}`}
               className="font-medium text-primary hover:underline"
             >
-              {part.tempId}
+              {displayName}
             </Link>
           );
         })}
@@ -490,6 +681,40 @@ export default function AIAssistant() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Portföyünüz analiz ediliyor...
                       </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Save Actions Link */}
+                {pendingPlanData && !actionsSaved && !isLoading && (
+                  <div className="flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleSaveActions}
+                      disabled={isSavingActions}
+                      className="gap-2 text-primary border-primary/50 hover:bg-primary/10"
+                    >
+                      {isSavingActions ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Kaydediliyor...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4" />
+                          Aksiyonları Kaydet
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
+                
+                {actionsSaved && (
+                  <div className="flex justify-center">
+                    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-lg">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Aksiyonlar bugün için planlandı
                     </div>
                   </div>
                 )}
