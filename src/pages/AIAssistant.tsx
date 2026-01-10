@@ -34,6 +34,7 @@ import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PlanMyDayDisplay } from "@/components/ai/PlanMyDayDisplay";
+import { appendPlanMyDayPayload, extractPlanMyDayPayload } from "@/lib/planMyDayMessage";
 
 const PRICING = {
   input: 0.15,
@@ -226,7 +227,8 @@ export default function AIAssistant() {
       }
 
       let displayContent = data.content;
-      
+      let storedContent = data.content;
+
       // If this is a plan my day response, try to parse JSON and format it
       if (data.isPlanMyDay) {
         try {
@@ -235,9 +237,12 @@ export default function AIAssistant() {
           if (jsonMatch) {
             const planData: PlanMyDayResponse = JSON.parse(jsonMatch[0]);
             setPendingPlanData({ plan: planData, mapping: tempIdToCustomer });
-            
+
             // Format the response for display with customer names
             displayContent = formatPlanMyDayResponse(planData, tempIdToCustomer);
+
+            // Persist the structured plan so it can be re-rendered after refresh
+            storedContent = appendPlanMyDayPayload(displayContent, planData);
           }
         } catch (parseError) {
           console.error("Failed to parse plan my day response:", parseError);
@@ -249,7 +254,7 @@ export default function AIAssistant() {
       await addMessage.mutateAsync({
         sessionId,
         role: "assistant",
-        content: displayContent,
+        content: storedContent,
         customerMapping: tempIdToRealId,
         usage: data.usage,
       });
@@ -416,6 +421,8 @@ export default function AIAssistant() {
       return <p className="text-sm whitespace-pre-line">{message.content}</p>;
     }
 
+    const extracted = extractPlanMyDayPayload(message.content);
+
     // For the last assistant message with plan data, render PlanMyDayDisplay
     if (isLastAssistantMessage && pendingPlanData) {
       return (
@@ -429,8 +436,31 @@ export default function AIAssistant() {
       );
     }
 
+    // After refresh, restore PlanMyDayDisplay from the persisted payload
+    if (isLastAssistantMessage && extracted.plan && message.customer_mapping) {
+      const plan = extracted.plan as PlanMyDayResponse;
+
+      const mappingWithNames: Record<string, { id: string; name: string }> = {};
+      plan.customers.forEach((c) => {
+        const realId = message.customer_mapping?.[c.tempId];
+        if (!realId) return;
+        const name = customers.find((cust) => cust.id === realId)?.name || c.tempId;
+        mappingWithNames[c.tempId] = { id: realId, name };
+      });
+
+      return (
+        <PlanMyDayDisplay
+          plan={plan}
+          mapping={mappingWithNames}
+          products={products}
+          actionTemplates={actionTemplates}
+          existingActions={actions}
+        />
+      );
+    }
+
     // For regular assistant messages, render with customer name links
-    const parts = parseResponseWithLinks(message.content, message.customer_mapping);
+    const parts = parseResponseWithLinks(extracted.text, message.customer_mapping);
 
     return (
       <p className="text-sm whitespace-pre-line">
