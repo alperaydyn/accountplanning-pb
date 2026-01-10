@@ -81,23 +81,34 @@ serve(async (req) => {
 
     const systemPrompt = `You are a Turkish banking data generator. Generate realistic primary bank data for corporate banking customers.
 
-RULES:
+CRITICAL RULES FOR CASH LOANS:
+1. If "Has Kredi Account" is true, the customer MUST have cash loans (cash_loan > 0) from at least one bank
+2. Our bank (code "A") is MANDATORY and should ALWAYS have cash_loan > 0 when customer has Kredi account
+3. Other banks may or may not have cash loans - vary it realistically
+
+LOAN AMOUNT RULES (based on segment):
+- MİKRO: 50K - 500K TL per bank
+- Kİ (Küçük İşletme): 200K - 2M TL per bank  
+- OBİ: 1M - 20M TL per bank
+- TİCARİ: 5M - 100M TL per bank
+
+NON-CASH LOAN RULES:
+- Non-cash loans (guarantees, letters of credit) are RARE - only 20-30% of customers have them
+- Most banks should have non_cash_loan = 0
+- When present, amounts are typically smaller than cash loans
+
+APPROVAL DATE RULES:
+- NOT all banks have last_approval_date - only 40-60% should have it
+- Set last_approval_date to null for banks without recent approvals
+- When present, dates should be within last 2 years
+
+GENERAL RULES:
 1. Each customer works with 1-5 banks (bank codes A-Z, our bank is always "A")
-2. Loan amounts should be realistic based on segment:
-   - Small: 100K - 5M TL
-   - Medium: 1M - 50M TL
-   - Large Enterprise: 10M - 500M TL
-3. Non-cash loans are typically guarantees, letters of credit
-4. Loan types: "Nakit Kredi", "Rotatif", "Spot", "İhracat Kredisi", "İthalat Kredisi", "Yatırım Kredisi"
-5. Loan statuses: "Aktif", "Kapalı", "Takipte"
-6. Collateral groups:
-   - Group1: Cash/Deposit (en likit)
-   - Group2: Real Estate/Machinery
-   - Group3: Commercial Receivables
-   - Group4: Other guarantees
-7. Generate data that reflects the customer's segment and sector realistically
-8. Our bank (code "A") should have reasonable market share (20-60%)
-9. Dates should be within last 3 years`;
+2. Loan types: "Nakit Kredi", "Rotatif", "Spot", "İhracat Kredisi", "İthalat Kredisi", "Yatırım Kredisi"
+3. Loan statuses: "Aktif", "Kapalı", "Takipte"
+4. Collateral groups: Group1=Cash/Deposit, Group2=Real Estate, Group3=Receivables, Group4=Other
+5. Our bank (code "A") should have 20-60% market share
+6. Generate realistic variety - not all banks should have same values`;
 
     const userPrompt = `Generate primary bank data for this customer:
 - Name: ${customer.customerName}
