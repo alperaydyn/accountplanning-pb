@@ -317,6 +317,15 @@ export interface Translations {
     clickStart: string;
     currentlyProcessing: string;
     processingDesc: string;
+    existing: string;
+    skipped: string;
+    overwriteExisting: string;
+    overwriteExistingDesc: string;
+    dataDeleted: string;
+    dataDeletedDesc: string;
+    removeData: string;
+    hasData: string;
+    noData: string;
   };
 
   // Customer Detail
@@ -712,6 +721,15 @@ export const translations: Record<Language, Translations> = {
       clickStart: "Veri oluşturmaya başlamak için Başlat'a tıklayın",
       currentlyProcessing: "Şu anda işleniyor",
       processingDesc: "Müşteri profili analiz ediliyor ve AI kullanarak gerçekçi bankacılık verileri oluşturuluyor...",
+      existing: "Mevcut Veri",
+      skipped: "Atlandı",
+      overwriteExisting: "Mevcut verilerin üzerine yaz",
+      overwriteExistingDesc: "İşaretlenirse, zaten verisi olan müşteriler de yeniden oluşturulur",
+      dataDeleted: "Veri silindi",
+      dataDeletedDesc: "Müşteri verileri başarıyla silindi",
+      removeData: "Veriyi Sil",
+      hasData: "Veri Var",
+      noData: "Veri Yok",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -1087,6 +1105,15 @@ export const translations: Record<Language, Translations> = {
       clickStart: "Click Start to begin generating data",
       currentlyProcessing: "Currently Processing",
       processingDesc: "Analyzing customer profile and generating realistic banking data using AI...",
+      existing: "Has Data",
+      skipped: "Skipped",
+      overwriteExisting: "Overwrite existing data",
+      overwriteExistingDesc: "If checked, customers with existing data will be regenerated",
+      dataDeleted: "Data deleted",
+      dataDeletedDesc: "Customer data has been successfully deleted",
+      removeData: "Remove Data",
+      hasData: "Has Data",
+      noData: "No Data",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1462,6 +1489,15 @@ export const translations: Record<Language, Translations> = {
       clickStart: "Haga clic en Iniciar para comenzar a generar datos",
       currentlyProcessing: "Procesando actualmente",
       processingDesc: "Analizando perfil del cliente y generando datos bancarios realistas usando AI...",
+      existing: "Tiene Datos",
+      skipped: "Omitido",
+      overwriteExisting: "Sobrescribir datos existentes",
+      overwriteExistingDesc: "Si está marcado, los clientes con datos existentes serán regenerados",
+      dataDeleted: "Datos eliminados",
+      dataDeletedDesc: "Los datos del cliente se han eliminado correctamente",
+      removeData: "Eliminar Datos",
+      hasData: "Tiene Datos",
+      noData: "Sin Datos",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",

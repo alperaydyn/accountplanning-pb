@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,9 +29,10 @@ interface GeneratedData {
 interface CustomerResult {
   customerId: string;
   customerName: string;
-  status: "pending" | "processing" | "success" | "error";
+  status: "pending" | "processing" | "success" | "error" | "existing" | "skipped";
   data?: GeneratedData;
   error?: string;
+  hasExistingData?: boolean;
 }
 
 const LOAN_PRODUCT_IDS = [
@@ -52,8 +55,79 @@ export default function PrimaryBankEngine() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<CustomerResult[]>([]);
   const [recordMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [overwriteExisting, setOverwriteExisting] = useState(false);
+  const [existingCustomerIds, setExistingCustomerIds] = useState<Set<string>>(new Set());
+  const [isLoadingExisting, setIsLoadingExisting] = useState(true);
+  const [isDeletingCustomer, setIsDeletingCustomer] = useState<string | null>(null);
+
+  // Fetch existing customers with primary bank data
+  const fetchExistingCustomers = useCallback(async () => {
+    setIsLoadingExisting(true);
+    try {
+      const { data } = await supabase
+        .from("primary_bank_loan_summary")
+        .select("customer_id")
+        .eq("record_month", recordMonth);
+      
+      const uniqueIds = new Set(data?.map(d => d.customer_id) || []);
+      setExistingCustomerIds(uniqueIds);
+      
+      // Initialize results with all customers
+      const initialResults: CustomerResult[] = customers.map(c => ({
+        customerId: c.id,
+        customerName: c.name,
+        status: uniqueIds.has(c.id) ? "existing" as const : "pending" as const,
+        hasExistingData: uniqueIds.has(c.id)
+      }));
+      setResults(initialResults);
+    } catch (error) {
+      console.error("Error fetching existing customers:", error);
+    } finally {
+      setIsLoadingExisting(false);
+    }
+  }, [customers, recordMonth]);
+
+  useEffect(() => {
+    if (customers.length > 0) {
+      fetchExistingCustomers();
+    }
+  }, [customers, fetchExistingCustomers]);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const deleteCustomerData = async (customerId: string) => {
+    setIsDeletingCustomer(customerId);
+    try {
+      // Delete from all primary bank tables
+      await Promise.all([
+        supabase.from("primary_bank_loan_summary").delete().eq("customer_id", customerId).eq("record_month", recordMonth),
+        supabase.from("primary_bank_loan_detail").delete().eq("customer_id", customerId).eq("record_month", recordMonth),
+        supabase.from("primary_bank_pos").delete().eq("customer_id", customerId).eq("record_month", recordMonth),
+        supabase.from("primary_bank_cheque").delete().eq("customer_id", customerId).eq("record_month", recordMonth),
+        supabase.from("primary_bank_collateral").delete().eq("customer_id", customerId).eq("record_month", recordMonth),
+      ]);
+
+      // Update state
+      setExistingCustomerIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(customerId);
+        return newSet;
+      });
+      
+      setResults(prev => prev.map(r => 
+        r.customerId === customerId 
+          ? { ...r, status: "pending" as const, hasExistingData: false, data: undefined }
+          : r
+      ));
+
+      toast({ title: t.primaryBankEngine.dataDeleted, description: t.primaryBankEngine.dataDeletedDesc });
+    } catch (error: any) {
+      console.error("Error deleting customer data:", error);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } finally {
+      setIsDeletingCustomer(null);
+    }
+  };
 
   const fetchCustomerProducts = async (customerId: string) => {
     const { data } = await supabase
@@ -144,16 +218,20 @@ export default function PrimaryBankEngine() {
     setIsRunning(true);
     setIsPaused(false);
 
-    // Initialize results
-    const initialResults: CustomerResult[] = customers.map(c => ({
-      customerId: c.id,
-      customerName: c.name,
-      status: "pending"
-    }));
-    setResults(initialResults);
-
     for (let i = currentIndex; i < customers.length; i++) {
       if (isPaused) break;
+
+      const customer = customers[i];
+      const hasExistingData = existingCustomerIds.has(customer.id);
+
+      // Skip customers with existing data if overwrite is disabled
+      if (hasExistingData && !overwriteExisting) {
+        setResults(prev => prev.map((r, idx) => 
+          idx === i ? { ...r, status: "skipped" as const } : r
+        ));
+        setCurrentIndex(i + 1);
+        continue;
+      }
 
       setCurrentIndex(i);
       
@@ -163,17 +241,20 @@ export default function PrimaryBankEngine() {
       ));
 
       try {
-        const data = await generateForCustomer(customers[i]);
+        const data = await generateForCustomer(customer);
         
         if (data) {
           await saveGeneratedData(data);
           
+          // Update existing customer IDs
+          setExistingCustomerIds(prev => new Set([...prev, customer.id]));
+          
           setResults(prev => prev.map((r, idx) => 
-            idx === i ? { ...r, status: "success" as const, data } : r
+            idx === i ? { ...r, status: "success" as const, data, hasExistingData: true } : r
           ));
         }
       } catch (error: any) {
-        console.error(`Error for customer ${customers[i].name}:`, error);
+        console.error(`Error for customer ${customer.name}:`, error);
         setResults(prev => prev.map((r, idx) => 
           idx === i ? { ...r, status: "error" as const, error: error.message } : r
         ));
@@ -187,7 +268,7 @@ export default function PrimaryBankEngine() {
 
     setIsRunning(false);
     toast({ title: "Engine Complete", description: `Processed ${customers.length} customers` });
-  }, [customers, currentIndex, generateForCustomer, isPaused, toast]);
+  }, [customers, currentIndex, generateForCustomer, isPaused, toast, existingCustomerIds, overwriteExisting]);
 
   const handleStart = () => {
     if (isPaused) {
@@ -195,7 +276,13 @@ export default function PrimaryBankEngine() {
       runEngine();
     } else {
       setCurrentIndex(0);
-      setResults([]);
+      // Reset results to initial state (preserve existing status)
+      setResults(customers.map(c => ({
+        customerId: c.id,
+        customerName: c.name,
+        status: existingCustomerIds.has(c.id) ? "existing" as const : "pending" as const,
+        hasExistingData: existingCustomerIds.has(c.id)
+      })));
       runEngine();
     }
   };
@@ -208,12 +295,14 @@ export default function PrimaryBankEngine() {
     setIsRunning(false);
     setIsPaused(false);
     setCurrentIndex(0);
-    setResults([]);
+    fetchExistingCustomers();
   };
 
   const progress = customers.length > 0 ? (currentIndex / customers.length) * 100 : 0;
   const successCount = results.filter(r => r.status === "success").length;
   const errorCount = results.filter(r => r.status === "error").length;
+  const existingCount = results.filter(r => r.hasExistingData).length;
+  const skippedCount = results.filter(r => r.status === "skipped").length;
 
   return (
     <AppLayout>
@@ -262,6 +351,26 @@ export default function PrimaryBankEngine() {
 
               <Separator />
 
+              {/* Overwrite checkbox */}
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="overwrite" 
+                  checked={overwriteExisting}
+                  onCheckedChange={(checked) => setOverwriteExisting(checked === true)}
+                  disabled={isRunning}
+                />
+                <div className="grid gap-1.5 leading-none">
+                  <Label htmlFor="overwrite" className="text-sm font-medium cursor-pointer">
+                    {t.primaryBankEngine.overwriteExisting}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t.primaryBankEngine.overwriteExistingDesc}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>{t.primaryBankEngine.progress}</span>
@@ -270,10 +379,14 @@ export default function PrimaryBankEngine() {
                 <Progress value={progress} />
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="rounded-lg bg-muted p-2">
                   <div className="text-lg font-bold">{customers.length}</div>
                   <div className="text-xs text-muted-foreground">{t.primaryBankEngine.total}</div>
+                </div>
+                <div className="rounded-lg bg-blue-500/10 p-2">
+                  <div className="text-lg font-bold text-blue-600">{existingCount}</div>
+                  <div className="text-xs text-muted-foreground">{t.primaryBankEngine.hasData}</div>
                 </div>
                 <div className="rounded-lg bg-green-500/10 p-2">
                   <div className="text-lg font-bold text-green-600">{successCount}</div>
@@ -298,69 +411,104 @@ export default function PrimaryBankEngine() {
               <CardDescription>{t.primaryBankEngine.customerProgressDesc}</CardDescription>
             </CardHeader>
             <CardContent>
-              <ScrollArea className="h-[400px]">
-                <div className="space-y-2">
-                  {results.map((result, idx) => (
-                    <div 
-                      key={result.customerId}
-                      className={`flex items-center justify-between rounded-lg border p-3 ${
-                        result.status === "processing" ? "border-primary bg-primary/5" : ""
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
-                          {idx + 1}
+              {isLoadingExisting ? (
+                <div className="flex h-[400px] items-center justify-center">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <ScrollArea className="h-[400px]">
+                  <div className="space-y-2">
+                    {results.map((result, idx) => (
+                      <div 
+                        key={result.customerId}
+                        className={`flex items-center justify-between rounded-lg border p-3 ${
+                          result.status === "processing" ? "border-primary bg-primary/5" : ""
+                        } ${result.hasExistingData ? "bg-blue-500/5" : ""}`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                            result.hasExistingData ? "bg-blue-500/20 text-blue-600" : "bg-muted"
+                          }`}>
+                            {result.hasExistingData ? <Database className="h-4 w-4" /> : idx + 1}
+                          </div>
+                          <div>
+                            <div className="font-medium">{result.customerName}</div>
+                            {result.status === "success" && result.data && (
+                              <div className="text-xs text-muted-foreground">
+                                {result.data.loan_summary?.length || 0} banks, {" "}
+                                {result.data.loan_detail?.length || 0} loans
+                                {result.data.pos_data ? ", POS" : ""}
+                                {result.data.cheque_data ? ", Cheque" : ""}
+                                {result.data.collateral_data?.length ? `, ${result.data.collateral_data.length} collaterals` : ""}
+                              </div>
+                            )}
+                            {result.status === "error" && (
+                              <div className="text-xs text-red-500">{result.error}</div>
+                            )}
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium">{result.customerName}</div>
-                          {result.status === "success" && result.data && (
-                            <div className="text-xs text-muted-foreground">
-                              {result.data.loan_summary?.length || 0} banks, {" "}
-                              {result.data.loan_detail?.length || 0} loans
-                              {result.data.pos_data ? ", POS" : ""}
-                              {result.data.cheque_data ? ", Cheque" : ""}
-                              {result.data.collateral_data?.length ? `, ${result.data.collateral_data.length} collaterals` : ""}
-                            </div>
+                        <div className="flex items-center gap-2">
+                          {result.status === "pending" && (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              {t.primaryBankEngine.pending}
+                            </Badge>
+                          )}
+                          {result.status === "existing" && (
+                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600">
+                              <Database className="mr-1 h-3 w-3" />
+                              {t.primaryBankEngine.existing}
+                            </Badge>
+                          )}
+                          {result.status === "skipped" && (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              {t.primaryBankEngine.skipped}
+                            </Badge>
+                          )}
+                          {result.status === "processing" && (
+                            <Badge variant="secondary" className="animate-pulse">
+                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              {t.primaryBankEngine.generating}
+                            </Badge>
+                          )}
+                          {result.status === "success" && (
+                            <Badge className="bg-green-500">
+                              <Check className="mr-1 h-3 w-3" />
+                              {t.primaryBankEngine.done}
+                            </Badge>
                           )}
                           {result.status === "error" && (
-                            <div className="text-xs text-red-500">{result.error}</div>
+                            <Badge variant="destructive">
+                              <AlertCircle className="mr-1 h-3 w-3" />
+                              {t.primaryBankEngine.failed}
+                            </Badge>
+                          )}
+                          {/* Remove button for customers with existing data */}
+                          {result.hasExistingData && !isRunning && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => deleteCustomerData(result.customerId)}
+                              disabled={isDeletingCustomer === result.customerId}
+                            >
+                              {isDeletingCustomer === result.customerId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Trash2 className="h-4 w-4" />
+                              )}
+                            </Button>
                           )}
                         </div>
                       </div>
-                      <div>
-                        {result.status === "pending" && (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            {t.primaryBankEngine.pending}
-                          </Badge>
-                        )}
-                        {result.status === "processing" && (
-                          <Badge variant="secondary" className="animate-pulse">
-                            <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-                            {t.primaryBankEngine.generating}
-                          </Badge>
-                        )}
-                        {result.status === "success" && (
-                          <Badge className="bg-green-500">
-                            <Check className="mr-1 h-3 w-3" />
-                            {t.primaryBankEngine.done}
-                          </Badge>
-                        )}
-                        {result.status === "error" && (
-                          <Badge variant="destructive">
-                            <AlertCircle className="mr-1 h-3 w-3" />
-                            {t.primaryBankEngine.failed}
-                          </Badge>
-                        )}
+                    ))}
+                    {results.length === 0 && (
+                      <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                        {t.primaryBankEngine.clickStart}
                       </div>
-                    </div>
-                  ))}
-                  {results.length === 0 && (
-                    <div className="flex h-[300px] items-center justify-center text-muted-foreground">
-                      {t.primaryBankEngine.clickStart}
-                    </div>
-                  )}
-                </div>
-              </ScrollArea>
+                    )}
+                  </div>
+                </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </div>
