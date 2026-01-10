@@ -71,12 +71,12 @@ export default function ActionsAgenda() {
   }, [currentDate, viewMode]);
 
   const days = useMemo(() => {
-    const allDays = eachDayOfInterval(dateRange);
+    const allDays = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
     if (viewMode === "weekly") {
       return allDays.filter(day => !isWeekend(day));
     }
     return allDays;
-  }, [dateRange, viewMode]);
+  }, [dateRange.start, dateRange.end, viewMode]);
 
   const filteredActions = useMemo(() => {
     let result = actions;
@@ -228,13 +228,14 @@ export default function ActionsAgenda() {
                     </div>
                     <div className="space-y-1">
                       {dayActions.slice(0, 3).map(action => (
-                        <div 
-                          key={action.id} 
-                          className={`text-xs p-1 rounded border truncate ${priorityColors[action.priority]}`}
+                        <Link 
+                          key={action.id}
+                          to={`/customers/${action.customer_id}?action=${action.id}`}
+                          className={`text-xs p-1 rounded border truncate block hover:underline ${priorityColors[action.priority]}`}
                           title={`${action.name} - ${getCustomerName(action.customer_id)}`}
                         >
                           {action.name}
-                        </div>
+                        </Link>
                       ))}
                       {dayActions.length > 3 && (
                         <div className="text-xs text-muted-foreground">
@@ -284,7 +285,13 @@ export default function ActionsAgenda() {
                                 {getCustomerName(action.customer_id)}
                               </Link>
                               <span className="text-muted-foreground">•</span>
-                              <span className="truncate max-w-[150px]">{action.name}</span>
+                              <Link 
+                                to={`/customers/${action.customer_id}?action=${action.id}`}
+                                className="truncate max-w-[150px] hover:underline hover:text-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {action.name}
+                              </Link>
                               <Badge variant={statusConfig[action.current_status].variant} className="text-[10px] px-1 py-0 h-4">
                                 {statusConfig[action.current_status].label}
                               </Badge>
@@ -325,7 +332,12 @@ export default function ActionsAgenda() {
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-sm truncate">{action.name}</p>
+                                <Link 
+                                  to={`/customers/${action.customer_id}?action=${action.id}`}
+                                  className="font-medium text-sm truncate hover:underline hover:text-primary block"
+                                >
+                                  {action.name}
+                                </Link>
                                 <Link 
                                   to={`/customers/${action.customer_id}`}
                                   className="text-xs text-muted-foreground truncate hover:underline hover:text-primary block"
