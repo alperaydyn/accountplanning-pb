@@ -177,6 +177,11 @@ export interface Translations {
     daily: string;
     weekly: string;
     monthly: string;
+    list: string;
+    noActionsFound: string;
+    planDay: string;
+    preferredView: string;
+    preferredViewDescription: string;
   };
 
   // Settings
@@ -497,6 +502,11 @@ export const translations: Record<Language, Translations> = {
       daily: "Günlük",
       weekly: "Haftalık",
       monthly: "Aylık",
+      list: "Liste",
+      noActionsFound: "Aksiyon bulunamadı",
+      planDay: "Planla",
+      preferredView: "Tercih Edilen Görünüm",
+      preferredViewDescription: "Aksiyon takvimi için varsayılan görünümü seçin",
     },
     settings: {
       title: "Ayarlar",
@@ -791,6 +801,11 @@ export const translations: Record<Language, Translations> = {
       daily: "Daily",
       weekly: "Weekly",
       monthly: "Monthly",
+      list: "List",
+      noActionsFound: "No actions found",
+      planDay: "Plan",
+      preferredView: "Preferred View",
+      preferredViewDescription: "Select default view for actions agenda",
     },
     settings: {
       title: "Settings",
@@ -1085,6 +1100,11 @@ export const translations: Record<Language, Translations> = {
       daily: "Diario",
       weekly: "Semanal",
       monthly: "Mensual",
+      list: "Lista",
+      noActionsFound: "No se encontraron acciones",
+      planDay: "Planificar",
+      preferredView: "Vista Preferida",
+      preferredViewDescription: "Seleccione la vista predeterminada para la agenda de acciones",
     },
     settings: {
       title: "Configuración",

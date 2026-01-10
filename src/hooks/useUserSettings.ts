@@ -3,12 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Language } from '@/i18n/translations';
 
+export type AgendaViewMode = "daily" | "weekly" | "monthly" | "list";
+
 interface UserSettings {
   id: string;
   user_id: string;
   language: Language;
   theme: string;
   notifications_enabled: boolean;
+  preferred_agenda_view: AgendaViewMode;
   created_at: string;
   updated_at: string;
 }
@@ -39,6 +42,7 @@ export function useUserSettings() {
             language: 'tr',
             theme: 'system',
             notifications_enabled: true,
+            preferred_agenda_view: 'weekly',
           })
           .select()
           .single();
@@ -54,7 +58,7 @@ export function useUserSettings() {
   });
 
   const updateSettings = useMutation({
-    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
