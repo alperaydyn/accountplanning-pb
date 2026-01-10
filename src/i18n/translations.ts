@@ -207,6 +207,17 @@ export interface Translations {
     notificationsDescription: string;
     projectDocumentation: string;
     backToSettings: string;
+    sqlRunner: string;
+    sqlRunnerDescription: string;
+    savedQueries: string;
+    selectQuery: string;
+    writeQuery: string;
+    queryName: string;
+    saveQuery: string;
+    runQuery: string;
+    running: string;
+    noResults: string;
+    executionTime: string;
   };
 
   // Thresholds
@@ -245,6 +256,41 @@ export interface Translations {
     privacyDetail4: string;
     communicationError: string;
     planMyDay: string;
+    pageTitle: string;
+    pageDescription: string;
+    chatWindowTitle: string;
+  };
+
+  // Primary Bank
+  primaryBank: {
+    pageTitle: string;
+    pageSubtitle: string;
+    segment: string;
+    sector: string;
+    allSegments: string;
+    allSectors: string;
+    primaryBankPercent: string;
+    principalityScore: string;
+    avgScoreDescription: string;
+    scoreExplanation: string;
+    loansTitle: string;
+    loansDescription: string;
+    posTitle: string;
+    posDescription: string;
+    chequeTitle: string;
+    chequeDescription: string;
+    collateralsTitle: string;
+    collateralsDescription: string;
+    productsAxis: string;
+    productsAxisDescription: string;
+    transactionalAxis: string;
+    transactionalAxisDescription: string;
+    liabilitiesAxis: string;
+    liabilitiesAxisDescription: string;
+    assetsAxis: string;
+    assetsAxisDescription: string;
+    bottomExplanation: string;
+    current: string;
   };
 
   // Customer Detail
@@ -538,6 +584,17 @@ export const translations: Record<Language, Translations> = {
       notificationsDescription: "Bildirim tercihlerini yönetin",
       projectDocumentation: "Proje Dokümantasyonu",
       backToSettings: "Ayarlara Dön",
+      sqlRunner: "SQL Sorgu Çalıştırıcı",
+      sqlRunnerDescription: "Veritabanında özel SQL sorguları çalıştırın",
+      savedQueries: "Kayıtlı Sorgular",
+      selectQuery: "Sorgu seçin",
+      writeQuery: "SQL sorgunuzu buraya yazın...",
+      queryName: "Sorgu adı",
+      saveQuery: "Sorguyu Kaydet",
+      runQuery: "Sorguyu Çalıştır",
+      running: "Çalışıyor...",
+      noResults: "Sonuç bulunamadı",
+      executionTime: "Çalışma süresi",
     },
     thresholds: {
       title: "Eşik Değerleri",
@@ -572,6 +629,39 @@ export const translations: Record<Language, Translations> = {
       privacyDetail4: "Notlardaki hassas bilgiler prompt gönderilmeden önce maskelenir",
       communicationError: "AI asistanla iletişim kurulamadı",
       planMyDay: "Günümü Planla",
+      pageTitle: "AI Asistan",
+      pageDescription: "Portföyünüz hakkında sorular sorun ve aksiyon önerileri alın",
+      chatWindowTitle: "AI Aksiyon Asistanı",
+    },
+    primaryBank: {
+      pageTitle: "Ana Banka Skoru",
+      pageSubtitle: "Portföy Genel Bakış",
+      segment: "Segment",
+      sector: "Sektör",
+      allSegments: "Tüm Segmentler",
+      allSectors: "Tüm Sektörler",
+      primaryBankPercent: "Ana Banka %",
+      principalityScore: "Prensiplik Skoru",
+      avgScoreDescription: "seçili segment/sektör genelinde ortalama prensiplik skoru.",
+      scoreExplanation: "Prensiplik Skoru, bankacılık ilişkisinin ne kadarının bankamızda yoğunlaştığını dört eksen üzerinden performans ölçerek sayısallaştıran bir metriktir.",
+      loansTitle: "Kredi",
+      loansDescription: "Eşik üzerindeki krediler",
+      posTitle: "Üye İşyeri",
+      posDescription: "Eşik üzerindeki POS hacmi",
+      chequeTitle: "Ödeme Çeki",
+      chequeDescription: "Eşik üzerindeki çek hacmi",
+      collateralsTitle: "Teminat",
+      collateralsDescription: "Eşik üzerindeki sigorta ürünleri",
+      productsAxis: "Ürünler",
+      productsAxisDescription: "Kredi, garanti, sigorta payı",
+      transactionalAxis: "İşlem Hizmetleri",
+      transactionalAxisDescription: "Aylık ödeme hacmi payı",
+      liabilitiesAxis: "Yükümlülükler",
+      liabilitiesAxisDescription: "Mevduat ve diğer yükümlülükler payı",
+      assetsAxis: "Varlıklar / Cüzdan Payı",
+      assetsAxisDescription: "Kısa ve uzun vadeli borç payı",
+      bottomExplanation: "Dört eksen (Ürünler, İşlem Hizmetleri, Yükümlülükler ve Varlıklar), portföyün finansal aktivitesinin ne kadarının bankamız tarafından yakalandığını ölçer. Prensiplik Skoru, bankamızın ana banka olarak ne kadar merkezi olduğunu belirlemek için bu eksenleri birleştirerek, kurumumuzdaki bankacılık ilişkisinin yoğunluğunu gösteren 0-100 arasında bir skor sağlar.",
+      current: "Güncel",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -845,6 +935,17 @@ export const translations: Record<Language, Translations> = {
       notificationsDescription: "Manage notification preferences",
       projectDocumentation: "Project Documentation",
       backToSettings: "Back to Settings",
+      sqlRunner: "SQL Query Runner",
+      sqlRunnerDescription: "Run custom SQL queries on the database",
+      savedQueries: "Saved Queries",
+      selectQuery: "Select a query",
+      writeQuery: "Write your SQL query here...",
+      queryName: "Query name",
+      saveQuery: "Save Query",
+      runQuery: "Run Query",
+      running: "Running...",
+      noResults: "No results found",
+      executionTime: "Execution time",
     },
     thresholds: {
       title: "Thresholds",
@@ -879,6 +980,39 @@ export const translations: Record<Language, Translations> = {
       privacyDetail4: "Sensitive information in notes is masked before sending the prompt",
       communicationError: "Failed to communicate with AI assistant",
       planMyDay: "Plan My Day",
+      pageTitle: "AI Assistant",
+      pageDescription: "Ask questions about your portfolio and get action recommendations",
+      chatWindowTitle: "AI Action Assistant",
+    },
+    primaryBank: {
+      pageTitle: "Primary Bank Score",
+      pageSubtitle: "Portfolio Overview",
+      segment: "Segment",
+      sector: "Sector",
+      allSegments: "All Segments",
+      allSectors: "All Sectors",
+      primaryBankPercent: "Primary Bank %",
+      principalityScore: "Principality Score",
+      avgScoreDescription: "Average principality score across the selected segment/sector.",
+      scoreExplanation: "Principality Score is a metric that quantifies how much of the banking relationship is concentrated at our bank by measuring performance across four axes.",
+      loansTitle: "Loans",
+      loansDescription: "Loans over threshold",
+      posTitle: "POS Merchant",
+      posDescription: "POS volume over threshold",
+      chequeTitle: "Payment Cheque",
+      chequeDescription: "Cheque volume over threshold",
+      collateralsTitle: "Collaterals",
+      collateralsDescription: "Insurance products over threshold",
+      productsAxis: "Products",
+      productsAxisDescription: "Share of loans, guarantees, insurance",
+      transactionalAxis: "Transactional Services",
+      transactionalAxisDescription: "Share of monthly payment volume",
+      liabilitiesAxis: "Liabilities",
+      liabilitiesAxisDescription: "Share of deposits and other liabilities",
+      assetsAxis: "Assets / Share of Wallet",
+      assetsAxisDescription: "Share of drawn short and long term debt",
+      bottomExplanation: "The four axes (Products, Transactional Services, Liabilities, and Assets) measure how much of the portfolio's financial activity is captured by our bank. The Principality Score aggregates these axes to determine how central our bank is as the main bank, providing a score from 0-100 that indicates the extent of the banking relationship concentrated at our institution.",
+      current: "Current",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1152,6 +1286,17 @@ export const translations: Record<Language, Translations> = {
       notificationsDescription: "Administrar preferencias de notificación",
       projectDocumentation: "Documentación del Proyecto",
       backToSettings: "Volver a Configuración",
+      sqlRunner: "Ejecutor de Consultas SQL",
+      sqlRunnerDescription: "Ejecutar consultas SQL personalizadas en la base de datos",
+      savedQueries: "Consultas Guardadas",
+      selectQuery: "Seleccionar consulta",
+      writeQuery: "Escriba su consulta SQL aquí...",
+      queryName: "Nombre de consulta",
+      saveQuery: "Guardar Consulta",
+      runQuery: "Ejecutar Consulta",
+      running: "Ejecutando...",
+      noResults: "No se encontraron resultados",
+      executionTime: "Tiempo de ejecución",
     },
     thresholds: {
       title: "Umbrales",
@@ -1186,6 +1331,39 @@ export const translations: Record<Language, Translations> = {
       privacyDetail4: "La información sensible en las notas se enmascara antes de enviar el prompt",
       communicationError: "Error al comunicarse con el asistente AI",
       planMyDay: "Planificar Mi Día",
+      pageTitle: "Asistente AI",
+      pageDescription: "Haga preguntas sobre su cartera y obtenga recomendaciones de acciones",
+      chatWindowTitle: "Asistente de Acciones AI",
+    },
+    primaryBank: {
+      pageTitle: "Puntuación de Banco Principal",
+      pageSubtitle: "Resumen de Cartera",
+      segment: "Segmento",
+      sector: "Sector",
+      allSegments: "Todos los Segmentos",
+      allSectors: "Todos los Sectores",
+      primaryBankPercent: "Banco Principal %",
+      principalityScore: "Puntuación de Principalidad",
+      avgScoreDescription: "Puntuación promedio de principalidad en el segmento/sector seleccionado.",
+      scoreExplanation: "La Puntuación de Principalidad es una métrica que cuantifica cuánto de la relación bancaria está concentrada en nuestro banco midiendo el rendimiento en cuatro ejes.",
+      loansTitle: "Créditos",
+      loansDescription: "Préstamos sobre umbral",
+      posTitle: "Comercio POS",
+      posDescription: "Volumen POS sobre umbral",
+      chequeTitle: "Cheque de Pago",
+      chequeDescription: "Volumen de cheques sobre umbral",
+      collateralsTitle: "Garantías",
+      collateralsDescription: "Productos de seguros sobre umbral",
+      productsAxis: "Productos",
+      productsAxisDescription: "Participación de préstamos, garantías, seguros",
+      transactionalAxis: "Servicios Transaccionales",
+      transactionalAxisDescription: "Participación del volumen de pago mensual",
+      liabilitiesAxis: "Pasivos",
+      liabilitiesAxisDescription: "Participación de depósitos y otros pasivos",
+      assetsAxis: "Activos / Cuota de Cartera",
+      assetsAxisDescription: "Participación de deuda a corto y largo plazo",
+      bottomExplanation: "Los cuatro ejes (Productos, Servicios Transaccionales, Pasivos y Activos) miden cuánto de la actividad financiera de la cartera es capturada por nuestro banco. La Puntuación de Principalidad agrega estos ejes para determinar qué tan central es nuestro banco como banco principal, proporcionando una puntuación de 0-100 que indica el grado de la relación bancaria concentrada en nuestra institución.",
+      current: "Actual",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",

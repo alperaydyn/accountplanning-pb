@@ -22,6 +22,7 @@ import { usePortfolioTargets, useCreatePortfolioTargets } from "@/hooks/usePortf
 import { useActions } from "@/hooks/useActions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ProductPerformanceTableProps {
   selectedDate?: string;
@@ -40,22 +41,23 @@ const statusColors: Record<ProductStatus, string> = {
   diversity: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
 };
 
-const statusLabels: Record<ProductStatus, string> = {
-  on_track: "On Track",
-  at_risk: "At Risk",
-  critical: "Critical",
-  melting: "Melting",
-  growing: "Growing",
-  ticket_size: "Ticket Size ⚠",
-  diversity: "Diversity ⚠",
-};
-
 export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductPerformanceTableProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   const { data: targets = [], isLoading: targetsLoading } = usePortfolioTargets(selectedDate);
   const { data: actions = [] } = useActions();
   const createTargets = useCreatePortfolioTargets();
+
+  const statusLabels: Record<ProductStatus, string> = {
+    on_track: t.dashboard.onTrack,
+    at_risk: t.dashboard.atRisk,
+    critical: t.dashboard.critical,
+    melting: t.dashboard.melting,
+    growing: t.dashboard.growing,
+    ticket_size: t.dashboard.ticketSize,
+    diversity: t.dashboard.diversity,
+  };
 
   const renderChange = (value: number, isVolume: boolean = false) => {
     const displayValue = isVolume ? `${Math.abs(value).toFixed(1)}M` : Math.abs(value).toString();
@@ -140,7 +142,7 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
     <Card className="bg-card border-border">
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-lg font-semibold text-card-foreground">
-          Product Performance
+          {t.dashboard.productPerformance}
         </CardTitle>
         <Button
           variant="outline"
@@ -149,36 +151,36 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
           disabled={createTargets.isPending || !selectedDate}
         >
           <Plus className="h-4 w-4 mr-1" />
-          {noData ? "Create Records" : "Regenerate"}
+          {noData ? t.dashboard.createRecords : t.dashboard.regenerateInsights}
         </Button>
       </CardHeader>
       <CardContent>
         {targetsLoading ? (
-          <div className="text-center py-8 text-muted-foreground">Loading...</div>
+          <div className="text-center py-8 text-muted-foreground">{t.common.loading}</div>
         ) : noData ? (
           <div className="text-center py-8 text-muted-foreground">
-            No data available. Click "Create Records" to initialize targets.
+            {t.dashboard.noDataAvailable}
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="border-border border-b-0">
-                <TableHead rowSpan={2} className="text-muted-foreground align-bottom border-r border-border">Product</TableHead>
-                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Type</TableHead>
-                <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Customer Count</TableHead>
-                <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">Volume</TableHead>
-                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">Actions</TableHead>
-                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom">Status</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground align-bottom border-r border-border">{t.actions.product}</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">{t.dashboard.type}</TableHead>
+                <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">{t.dashboard.customerCount}</TableHead>
+                <TableHead colSpan={4} className="text-muted-foreground text-center border-r border-border">{t.dashboard.volume}</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom border-r border-border">{t.common.actions}</TableHead>
+                <TableHead rowSpan={2} className="text-muted-foreground text-center align-bottom">{t.common.status}</TableHead>
               </TableRow>
               <TableRow className="border-border">
                 <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs">YTD</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MTD</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">{t.dashboard.hgo} %</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">{t.dashboard.ytd}</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">{t.dashboard.mtd}</TableHead>
                 <TableHead className="text-muted-foreground text-center text-xs">#</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs">HGO %</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs">YTD</TableHead>
-                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">MTD</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">{t.dashboard.hgo} %</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs">{t.dashboard.ytd}</TableHead>
+                <TableHead className="text-muted-foreground text-center text-xs border-r border-border">{t.dashboard.mtd}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -203,7 +205,7 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
                         </div>
                       </TableCell>
                       <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                        Stock
+                        {t.dashboard.stock}
                       </TableCell>
                       <TableCell className="text-center text-card-foreground">
                         {target.stock_count}
@@ -250,7 +252,7 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
                       onClick={() => navigate(`/customers?product=${target.product_id}`)}
                     >
                       <TableCell className="text-center text-xs text-muted-foreground font-medium">
-                        Flow
+                        {t.dashboard.flow}
                       </TableCell>
                       <TableCell className="text-center text-card-foreground">
                         {target.flow_count}

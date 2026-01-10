@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLanguage } from "@/contexts/LanguageContext";
 
 // Generate fixed date options
-const generateDateOptions = () => {
+const generateDateOptions = (currentLabel: string) => {
   const now = new Date();
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1; // 1-indexed
@@ -25,7 +25,7 @@ const generateDateOptions = () => {
   };
   
   // 1. Current month (with "Current" label)
-  addDate(currentYear, currentMonth, '(Current)');
+  addDate(currentYear, currentMonth, `(${currentLabel})`);
   
   // 2. Last 3 months
   for (let i = 1; i <= 3; i++) {
@@ -55,10 +55,10 @@ const generateDateOptions = () => {
 };
 
 const Dashboard = () => {
-  const dateOptions = useMemo(() => generateDateOptions(), []);
+  const { t } = useLanguage();
+  const dateOptions = useMemo(() => generateDateOptions(t.primaryBank.current), [t]);
   const { data: portfolioManager } = usePortfolioManager();
   const [selectedDate, setSelectedDate] = useState<string>(dateOptions[0].value);
-  const { t } = useLanguage();
   
   const effectiveDate = selectedDate;
 

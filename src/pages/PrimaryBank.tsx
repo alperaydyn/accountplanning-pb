@@ -25,43 +25,6 @@ interface ScoreAxis {
   description: string;
 }
 
-const generateScoreBreakdown = (avgScore: number): ScoreAxis[] => {
-  const baseScore = avgScore;
-  const variance = 15;
-  
-  const productsScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
-  const transactionalScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
-  const liabilitiesScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
-  const assetsScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
-
-  return [
-    {
-      name: "Products",
-      icon: <Package className="h-5 w-5" />,
-      score: productsScore,
-      description: "Share of loans, guarantees, insurance",
-    },
-    {
-      name: "Transactional Services",
-      icon: <CreditCard className="h-5 w-5" />,
-      score: transactionalScore,
-      description: "Share of monthly payment volume",
-    },
-    {
-      name: "Liabilities",
-      icon: <PiggyBank className="h-5 w-5" />,
-      score: liabilitiesScore,
-      description: "Share of deposits and other liabilities",
-    },
-    {
-      name: "Assets / Share of Wallet",
-      icon: <Wallet className="h-5 w-5" />,
-      score: assetsScore,
-      description: "Share of drawn short and long term debt",
-    },
-  ];
-};
-
 const getProgressColor = (score: number) => {
   if (score >= 80) return "bg-success";
   if (score >= 60) return "bg-warning";
@@ -140,13 +103,46 @@ const PrimaryBank = () => {
     };
   }, [customers, products, thresholds, allCustomerProducts]);
 
-  const axes = useMemo(() => 
-    generateScoreBreakdown(metrics.avgPrincipalityScore),
-    [metrics.avgPrincipalityScore]
-  );
+  // Generate score axes with translations
+  const axes = useMemo(() => {
+    const baseScore = metrics.avgPrincipalityScore;
+    const variance = 15;
+    
+    const productsScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
+    const transactionalScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
+    const liabilitiesScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
+    const assetsScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
 
-  const segmentLabel = selectedSegment === "all" ? "All Segments" : selectedSegment;
-  const sectorLabel = selectedSector === "all" ? "All Sectors" : selectedSector;
+    return [
+      {
+        name: t.primaryBank.productsAxis,
+        icon: <Package className="h-5 w-5" />,
+        score: productsScore,
+        description: t.primaryBank.productsAxisDescription,
+      },
+      {
+        name: t.primaryBank.transactionalAxis,
+        icon: <CreditCard className="h-5 w-5" />,
+        score: transactionalScore,
+        description: t.primaryBank.transactionalAxisDescription,
+      },
+      {
+        name: t.primaryBank.liabilitiesAxis,
+        icon: <PiggyBank className="h-5 w-5" />,
+        score: liabilitiesScore,
+        description: t.primaryBank.liabilitiesAxisDescription,
+      },
+      {
+        name: t.primaryBank.assetsAxis,
+        icon: <Wallet className="h-5 w-5" />,
+        score: assetsScore,
+        description: t.primaryBank.assetsAxisDescription,
+      },
+    ];
+  }, [metrics.avgPrincipalityScore, t]);
+
+  const segmentLabel = selectedSegment === "all" ? t.primaryBank.allSegments : selectedSegment;
+  const sectorLabel = selectedSector === "all" ? t.primaryBank.allSectors : selectedSector;
 
   return (
     <AppLayout>
@@ -158,8 +154,8 @@ const PrimaryBank = () => {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Primary Bank Score</h1>
-            <p className="text-muted-foreground">Portfolio Overview</p>
+            <h1 className="text-2xl font-bold">{t.primaryBank.pageTitle}</h1>
+            <p className="text-muted-foreground">{t.primaryBank.pageSubtitle}</p>
           </div>
         </div>
 
@@ -172,13 +168,13 @@ const PrimaryBank = () => {
                   <Users className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Segment</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t.primaryBank.segment}</p>
                   <Select value={selectedSegment} onValueChange={setSelectedSegment}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="All Segments" />
+                      <SelectValue placeholder={t.primaryBank.allSegments} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Segments</SelectItem>
+                      <SelectItem value="all">{t.primaryBank.allSegments}</SelectItem>
                       {SEGMENTS.map((segment) => (
                         <SelectItem key={segment} value={segment}>
                           {segment}
@@ -193,13 +189,13 @@ const PrimaryBank = () => {
                   <Factory className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm text-muted-foreground mb-1">Sector</p>
+                  <p className="text-sm text-muted-foreground mb-1">{t.primaryBank.sector}</p>
                   <Select value={selectedSector} onValueChange={setSelectedSector}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="All Sectors" />
+                      <SelectValue placeholder={t.primaryBank.allSectors} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Sectors</SelectItem>
+                      <SelectItem value="all">{t.primaryBank.allSectors}</SelectItem>
                       {SECTORS.map((sector) => (
                         <SelectItem key={sector} value={sector}>
                           {sector}
@@ -214,7 +210,7 @@ const PrimaryBank = () => {
                   <Percent className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Primary Bank %</p>
+                  <p className="text-sm text-muted-foreground">{t.primaryBank.primaryBankPercent}</p>
                   <p className="font-semibold">
                     {isLoading ? "..." : `${metrics.primaryBankPercentage}% (${metrics.primaryBankCustomers}/${metrics.totalCustomers})`}
                   </p>
@@ -227,7 +223,7 @@ const PrimaryBank = () => {
         {/* Main Score */}
         <Card>
           <CardHeader>
-            <CardTitle>Principality Score</CardTitle>
+            <CardTitle>{t.primaryBank.principalityScore}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-baseline gap-4 mb-4">
@@ -235,12 +231,11 @@ const PrimaryBank = () => {
                 {isLoading ? "..." : `${metrics.avgPrincipalityScore}%`}
               </span>
               <span className="text-muted-foreground">
-                Average principality score across {segmentLabel} / {sectorLabel}.
+                {segmentLabel} / {sectorLabel} {t.primaryBank.avgScoreDescription}
               </span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Principality Score is a metric that quantifies how much of the banking relationship is concentrated 
-              at our bank by measuring performance across four axes.
+              {t.primaryBank.scoreExplanation}
             </p>
           </CardContent>
         </Card>
@@ -251,7 +246,7 @@ const PrimaryBank = () => {
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Banknote className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Kredi</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.primaryBank.loansTitle}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -262,14 +257,14 @@ const PrimaryBank = () => {
                   style={{ width: `${productMetrics.loans}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground leading-tight">Loans over threshold</p>
+              <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.loansDescription}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Receipt className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Üye İşyeri</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.primaryBank.posTitle}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -280,14 +275,14 @@ const PrimaryBank = () => {
                   style={{ width: `${productMetrics.posGiro}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground leading-tight">POS volume over threshold</p>
+              <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.posDescription}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <FileCheck className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Ödeme Çeki</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.primaryBank.chequeTitle}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -298,14 +293,14 @@ const PrimaryBank = () => {
                   style={{ width: `${productMetrics.cheque}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground leading-tight">Cheque volume over threshold</p>
+              <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.chequeDescription}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Shield className="h-5 w-5" />
-                <CardTitle className="text-sm font-medium">Teminat</CardTitle>
+                <CardTitle className="text-sm font-medium">{t.primaryBank.collateralsTitle}</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -316,7 +311,7 @@ const PrimaryBank = () => {
                   style={{ width: `${productMetrics.collaterals}%` }}
                 />
               </div>
-              <p className="text-xs text-muted-foreground leading-tight">Insurance products over threshold</p>
+              <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.collateralsDescription}</p>
             </CardContent>
           </Card>
         </div>
@@ -349,10 +344,7 @@ const PrimaryBank = () => {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground leading-relaxed">
-              The four axes (Products, Transactional Services, Liabilities, and Assets) measure how much of 
-              the portfolio's financial activity is captured by our bank. The Principality Score aggregates 
-              these axes to determine how central our bank is as the main bank, providing a score from 0-100 
-              that indicates the extent of the banking relationship concentrated at our institution.
+              {t.primaryBank.bottomExplanation}
             </p>
           </CardContent>
         </Card>
