@@ -350,13 +350,52 @@ Generate appropriate banking data based on the customer profile.`;
     }
 
     const aiResponse = await response.json();
+    
+    // Log response structure for debugging
+    console.log("AI response structure:", JSON.stringify({
+      has_choices: !!aiResponse.choices,
+      choices_length: aiResponse.choices?.length,
+      has_tool_calls: !!aiResponse.choices?.[0]?.message?.tool_calls,
+      has_content: !!aiResponse.choices?.[0]?.message?.content,
+    }));
+
+    let generatedData: GeneratedData;
+    
+    // Try to extract data from tool_calls first
     const toolCall = aiResponse.choices?.[0]?.message?.tool_calls?.[0];
     
-    if (!toolCall || toolCall.function.name !== "generate_primary_bank_data") {
-      throw new Error("Invalid AI response structure");
+    if (toolCall && toolCall.function?.name === "generate_primary_bank_data") {
+      generatedData = JSON.parse(toolCall.function.arguments);
+    } else {
+      // Fallback: some models return JSON in content instead of tool_calls
+      const content = aiResponse.choices?.[0]?.message?.content;
+      if (content) {
+        console.log("Attempting to parse content as JSON fallback");
+        // Try to extract JSON from content (may be wrapped in markdown code blocks)
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const jsonStr = jsonMatch[1] || jsonMatch[0];
+          try {
+            const parsed = JSON.parse(jsonStr);
+            // Check if it has the expected structure
+            if (parsed.loan_summary && Array.isArray(parsed.loan_summary)) {
+              generatedData = parsed;
+            } else {
+              throw new Error("Parsed JSON missing loan_summary array");
+            }
+          } catch (parseErr) {
+            console.error("Failed to parse content JSON:", parseErr);
+            throw new Error(`Model returned content but couldn't parse as valid data. Try using a model with better tool calling support (e.g., Lovable, OpenAI GPT-4, Claude).`);
+          }
+        } else {
+          console.error("No JSON found in content:", content.substring(0, 500));
+          throw new Error(`Model doesn't support tool calling. Try using Lovable (default) or OpenAI models.`);
+        }
+      } else {
+        console.error("No tool_calls and no content in response");
+        throw new Error("Invalid AI response: no tool_calls or content. Try a different model.");
+      }
     }
-
-    const generatedData: GeneratedData = JSON.parse(toolCall.function.arguments);
 
     // Ensure our bank (A) is always included and properly flagged
     const ourBankIdx = generatedData.loan_summary.findIndex((ls) => ls.bank_code === "A");
