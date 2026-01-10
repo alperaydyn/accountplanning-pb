@@ -698,6 +698,229 @@ export type Database = {
           },
         ]
       }
+      primary_bank_cheque: {
+        Row: {
+          cheque_volume_12m: number | null
+          cheque_volume_1m: number | null
+          cheque_volume_3m: number | null
+          created_at: string
+          customer_id: string
+          id: string
+          record_month: string
+        }
+        Insert: {
+          cheque_volume_12m?: number | null
+          cheque_volume_1m?: number | null
+          cheque_volume_3m?: number | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          record_month: string
+        }
+        Update: {
+          cheque_volume_12m?: number | null
+          cheque_volume_1m?: number | null
+          cheque_volume_3m?: number | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          record_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primary_bank_cheque_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      primary_bank_collateral: {
+        Row: {
+          bank_code: string
+          created_at: string
+          customer_id: string
+          group1_amount: number | null
+          group2_amount: number | null
+          group3_amount: number | null
+          group4_amount: number | null
+          id: string
+          our_bank_flag: boolean
+          record_month: string
+        }
+        Insert: {
+          bank_code: string
+          created_at?: string
+          customer_id: string
+          group1_amount?: number | null
+          group2_amount?: number | null
+          group3_amount?: number | null
+          group4_amount?: number | null
+          id?: string
+          our_bank_flag?: boolean
+          record_month: string
+        }
+        Update: {
+          bank_code?: string
+          created_at?: string
+          customer_id?: string
+          group1_amount?: number | null
+          group2_amount?: number | null
+          group3_amount?: number | null
+          group4_amount?: number | null
+          id?: string
+          our_bank_flag?: boolean
+          record_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primary_bank_collateral_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      primary_bank_loan_detail: {
+        Row: {
+          account_id: string
+          bank_code: string
+          created_at: string
+          current_amount: number
+          customer_id: string
+          id: string
+          loan_status: string
+          loan_type: string
+          open_amount: number
+          open_date: string
+          our_bank_flag: boolean
+          record_month: string
+        }
+        Insert: {
+          account_id: string
+          bank_code: string
+          created_at?: string
+          current_amount: number
+          customer_id: string
+          id?: string
+          loan_status: string
+          loan_type: string
+          open_amount: number
+          open_date: string
+          our_bank_flag?: boolean
+          record_month: string
+        }
+        Update: {
+          account_id?: string
+          bank_code?: string
+          created_at?: string
+          current_amount?: number
+          customer_id?: string
+          id?: string
+          loan_status?: string
+          loan_type?: string
+          open_amount?: number
+          open_date?: string
+          our_bank_flag?: boolean
+          record_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primary_bank_loan_detail_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      primary_bank_loan_summary: {
+        Row: {
+          bank_code: string
+          cash_loan: number | null
+          created_at: string
+          customer_id: string
+          id: string
+          last_approval_date: string | null
+          non_cash_loan: number | null
+          our_bank_flag: boolean
+          record_month: string
+        }
+        Insert: {
+          bank_code: string
+          cash_loan?: number | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          last_approval_date?: string | null
+          non_cash_loan?: number | null
+          our_bank_flag?: boolean
+          record_month: string
+        }
+        Update: {
+          bank_code?: string
+          cash_loan?: number | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          last_approval_date?: string | null
+          non_cash_loan?: number | null
+          our_bank_flag?: boolean
+          record_month?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primary_bank_loan_summary_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      primary_bank_pos: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          number_of_banks: number | null
+          our_bank_pos_volume: number | null
+          pos_share: number | null
+          record_month: string
+          total_pos_volume: number | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          number_of_banks?: number | null
+          our_bank_pos_volume?: number | null
+          pos_share?: number | null
+          record_month: string
+          total_pos_volume?: number | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          number_of_banks?: number | null
+          our_bank_pos_volume?: number | null
+          pos_share?: number | null
+          record_month?: string
+          total_pos_volume?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "primary_bank_pos_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_thresholds: {
         Row: {
           calculation_date: string

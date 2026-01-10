@@ -291,6 +291,32 @@ export interface Translations {
     assetsAxisDescription: string;
     bottomExplanation: string;
     current: string;
+    title: string;
+  };
+
+  // Primary Bank Engine
+  primaryBankEngine: {
+    title: string;
+    subtitle: string;
+    controls: string;
+    controlsDesc: string;
+    start: string;
+    pause: string;
+    resume: string;
+    progress: string;
+    total: string;
+    success: string;
+    errors: string;
+    recordMonth: string;
+    customerProgress: string;
+    customerProgressDesc: string;
+    pending: string;
+    generating: string;
+    done: string;
+    failed: string;
+    clickStart: string;
+    currentlyProcessing: string;
+    processingDesc: string;
   };
 
   // Customer Detail
@@ -662,6 +688,30 @@ export const translations: Record<Language, Translations> = {
       assetsAxisDescription: "Kısa ve uzun vadeli borç payı",
       bottomExplanation: "Dört eksen (Ürünler, İşlem Hizmetleri, Yükümlülükler ve Varlıklar), portföyün finansal aktivitesinin ne kadarının bankamız tarafından yakalandığını ölçer. Prensiplik Skoru, bankamızın ana banka olarak ne kadar merkezi olduğunu belirlemek için bu eksenleri birleştirerek, kurumumuzdaki bankacılık ilişkisinin yoğunluğunu gösteren 0-100 arasında bir skor sağlar.",
       current: "Güncel",
+      title: "Ana Banka",
+    },
+    primaryBankEngine: {
+      title: "Ana Banka Veri Motoru",
+      subtitle: "AI kullanarak tüm müşteriler için ana banka verileri oluştur",
+      controls: "Motor Kontrolleri",
+      controlsDesc: "Oluşturma sürecini başlat, duraklat veya sıfırla",
+      start: "Başlat",
+      pause: "Duraklat",
+      resume: "Devam Et",
+      progress: "İlerleme",
+      total: "Toplam",
+      success: "Başarılı",
+      errors: "Hatalar",
+      recordMonth: "Kayıt Ayı",
+      customerProgress: "Müşteri İlerlemesi",
+      customerProgressDesc: "Her müşterinin veri oluşturma durumu",
+      pending: "Bekliyor",
+      generating: "Oluşturuluyor...",
+      done: "Tamamlandı",
+      failed: "Başarısız",
+      clickStart: "Veri oluşturmaya başlamak için Başlat'a tıklayın",
+      currentlyProcessing: "Şu anda işleniyor",
+      processingDesc: "Müşteri profili analiz ediliyor ve AI kullanarak gerçekçi bankacılık verileri oluşturuluyor...",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -1013,6 +1063,30 @@ export const translations: Record<Language, Translations> = {
       assetsAxisDescription: "Share of drawn short and long term debt",
       bottomExplanation: "The four axes (Products, Transactional Services, Liabilities, and Assets) measure how much of the portfolio's financial activity is captured by our bank. The Principality Score aggregates these axes to determine how central our bank is as the main bank, providing a score from 0-100 that indicates the extent of the banking relationship concentrated at our institution.",
       current: "Current",
+      title: "Primary Bank",
+    },
+    primaryBankEngine: {
+      title: "Primary Bank Data Engine",
+      subtitle: "Generate primary bank data for all customers using AI",
+      controls: "Engine Controls",
+      controlsDesc: "Start, pause, or reset the generation process",
+      start: "Start",
+      pause: "Pause",
+      resume: "Resume",
+      progress: "Progress",
+      total: "Total",
+      success: "Success",
+      errors: "Errors",
+      recordMonth: "Record Month",
+      customerProgress: "Customer Progress",
+      customerProgressDesc: "Real-time status of each customer's data generation",
+      pending: "Pending",
+      generating: "Generating...",
+      done: "Done",
+      failed: "Failed",
+      clickStart: "Click Start to begin generating data",
+      currentlyProcessing: "Currently Processing",
+      processingDesc: "Analyzing customer profile and generating realistic banking data using AI...",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1364,6 +1438,30 @@ export const translations: Record<Language, Translations> = {
       assetsAxisDescription: "Participación de deuda a corto y largo plazo",
       bottomExplanation: "Los cuatro ejes (Productos, Servicios Transaccionales, Pasivos y Activos) miden cuánto de la actividad financiera de la cartera es capturada por nuestro banco. La Puntuación de Principalidad agrega estos ejes para determinar qué tan central es nuestro banco como banco principal, proporcionando una puntuación de 0-100 que indica el grado de la relación bancaria concentrada en nuestra institución.",
       current: "Actual",
+      title: "Banco Principal",
+    },
+    primaryBankEngine: {
+      title: "Motor de Datos de Banco Principal",
+      subtitle: "Generar datos de banco principal para todos los clientes usando AI",
+      controls: "Controles del Motor",
+      controlsDesc: "Iniciar, pausar o reiniciar el proceso de generación",
+      start: "Iniciar",
+      pause: "Pausar",
+      resume: "Reanudar",
+      progress: "Progreso",
+      total: "Total",
+      success: "Éxito",
+      errors: "Errores",
+      recordMonth: "Mes de Registro",
+      customerProgress: "Progreso de Clientes",
+      customerProgressDesc: "Estado en tiempo real de la generación de datos de cada cliente",
+      pending: "Pendiente",
+      generating: "Generando...",
+      done: "Completado",
+      failed: "Fallido",
+      clickStart: "Haga clic en Iniciar para comenzar a generar datos",
+      currentlyProcessing: "Procesando actualmente",
+      processingDesc: "Analizando perfil del cliente y generando datos bancarios realistas usando AI...",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",
