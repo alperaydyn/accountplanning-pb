@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { format } from "date-fns";
 import { 
   Sparkles, Send, Loader2, User, Bot, ShieldCheck, ChevronDown, ChevronUp, 
-  Coins, Plus, Trash2, MessageSquare, MoreHorizontal, Save, CheckCircle2
+  Coins, Plus, Trash2, MessageSquare, MoreHorizontal
 } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
 import { useCustomers } from "@/hooks/useCustomers";
 import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
 import { useProducts } from "@/hooks/useProducts";
-import { useActions, useCreateAction } from "@/hooks/useActions";
+import { useActions } from "@/hooks/useActions";
 import { useAllActionTemplates } from "@/hooks/useActionTemplates";
 import { useProductThresholds } from "@/hooks/useProductThresholds";
 import {
@@ -33,6 +33,7 @@ import {
 import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { PlanMyDayDisplay } from "@/components/ai/PlanMyDayDisplay";
 
 const PRICING = {
   input: 0.15,
@@ -73,8 +74,6 @@ export default function AIAssistant() {
   const [totalUsage, setTotalUsage] = useState({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
   const [planMyDayTriggered, setPlanMyDayTriggered] = useState(false);
   const [pendingPlanData, setPendingPlanData] = useState<{ plan: PlanMyDayResponse; mapping: Record<string, { id: string; name: string }> } | null>(null);
-  const [isSavingActions, setIsSavingActions] = useState(false);
-  const [actionsSaved, setActionsSaved] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -84,7 +83,6 @@ export default function AIAssistant() {
   const updateTitle = useUpdateChatSessionTitle();
   const deleteSession = useDeleteChatSession();
   const addMessage = useAddChatMessage();
-  const createAction = useCreateAction();
 
   const { data: customers = [] } = useCustomers();
   const { data: customerProducts = [] } = useAllCustomerProducts();
@@ -187,15 +185,13 @@ export default function AIAssistant() {
     }
   }, [sessions, sessionsLoading, activeSessionId]);
 
-  // Reset saved state when session changes
+  // Reset plan data when session changes
   useEffect(() => {
-    setActionsSaved(false);
     setPendingPlanData(null);
   }, [activeSessionId]);
 
   const sendMessage = async (sessionId: string, messageContent: string) => {
     setIsLoading(true);
-    setActionsSaved(false);
     setPendingPlanData(null);
 
     try {
@@ -289,59 +285,6 @@ export default function AIAssistant() {
     response += `\n💡 ${plan.summary}`;
     
     return response;
-  };
-
-  const handleSaveActions = async () => {
-    if (!pendingPlanData) return;
-    
-    setIsSavingActions(true);
-    const today = new Date().toISOString().split('T')[0];
-    let savedCount = 0;
-    
-    try {
-      for (const customer of pendingPlanData.plan.customers) {
-        const customerInfo = pendingPlanData.mapping[customer.tempId];
-        if (!customerInfo) continue;
-        
-        for (const action of customer.actions) {
-          // Find the product ID
-          const product = products.find(p => p.name === action.product);
-          if (!product) continue;
-          
-          // Find the action template
-          const template = actionTemplates.find(
-            t => t.product_id === product.id && t.name === action.action
-          );
-          
-          try {
-            await createAction.mutateAsync({
-              customer_id: customerInfo.id,
-              product_id: product.id,
-              name: action.action,
-              description: action.note || null,
-              priority: "medium",
-              type: "rm_action",
-              action_target_date: today,
-              source_data_date: today,
-              creator_name: "AI Assistant",
-              creation_reason: customer.reason,
-              current_planned_date: today,
-            });
-            savedCount++;
-          } catch (err) {
-            console.error("Failed to save action:", err);
-          }
-        }
-      }
-      
-      setActionsSaved(true);
-      toast.success(`${savedCount} aksiyon bugün için planlandı`);
-    } catch (error) {
-      console.error("Failed to save actions:", error);
-      toast.error("Aksiyonlar kaydedilemedi");
-    } finally {
-      setIsSavingActions(false);
-    }
   };
 
   const handlePlanMyDay = async () => {
@@ -468,12 +411,24 @@ export default function AIAssistant() {
     return inputCost + outputCost;
   };
 
-  const renderMessageContent = (message: ChatMessage) => {
+  const renderMessageContent = (message: ChatMessage, isLastAssistantMessage: boolean) => {
     if (message.role === "user") {
       return <p className="text-sm whitespace-pre-line">{message.content}</p>;
     }
 
-    // For assistant messages, render with customer name links
+    // For the last assistant message with plan data, render PlanMyDayDisplay
+    if (isLastAssistantMessage && pendingPlanData) {
+      return (
+        <PlanMyDayDisplay
+          plan={pendingPlanData.plan}
+          mapping={pendingPlanData.mapping}
+          products={products}
+          actionTemplates={actionTemplates}
+        />
+      );
+    }
+
+    // For regular assistant messages, render with customer name links
     const parts = parseResponseWithLinks(message.content, message.customer_mapping);
 
     return (
@@ -643,34 +598,40 @@ export default function AIAssistant() {
 
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               <div className="space-y-4">
-                {displayMessages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    {message.role === "assistant" && (
-                      <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
-                        <Bot className="h-4 w-4 text-violet-500" />
-                      </div>
-                    )}
+                {displayMessages.map((message, msgIdx) => {
+                  // Check if this is the last assistant message
+                  const isLastAssistantMessage = message.role === "assistant" && 
+                    msgIdx === displayMessages.length - 1;
+                  
+                  return (
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
-                        message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                      }`}
+                      key={message.id}
+                      className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                     >
-                      {message.id === "welcome" ? (
-                        <p className="text-sm whitespace-pre-line">{message.content}</p>
-                      ) : (
-                        renderMessageContent(message as ChatMessage)
+                      {message.role === "assistant" && (
+                        <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
+                          <Bot className="h-4 w-4 text-violet-500" />
+                        </div>
+                      )}
+                      <div
+                        className={`max-w-[80%] rounded-lg p-3 ${
+                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                        }`}
+                      >
+                        {message.id === "welcome" ? (
+                          <p className="text-sm whitespace-pre-line">{message.content}</p>
+                        ) : (
+                          renderMessageContent(message as ChatMessage, isLastAssistantMessage)
+                        )}
+                      </div>
+                      {message.role === "user" && (
+                        <div className="p-1.5 rounded-full bg-primary/10 h-fit">
+                          <User className="h-4 w-4 text-primary" />
+                        </div>
                       )}
                     </div>
-                    {message.role === "user" && (
-                      <div className="p-1.5 rounded-full bg-primary/10 h-fit">
-                        <User className="h-4 w-4 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
                 {isLoading && (
                   <div className="flex gap-3 justify-start">
                     <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
@@ -681,40 +642,6 @@ export default function AIAssistant() {
                         <Loader2 className="h-4 w-4 animate-spin" />
                         Portföyünüz analiz ediliyor...
                       </div>
-                    </div>
-                  </div>
-                )}
-                
-                {/* Save Actions Link */}
-                {pendingPlanData && !actionsSaved && !isLoading && (
-                  <div className="flex justify-center">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleSaveActions}
-                      disabled={isSavingActions}
-                      className="gap-2 text-primary border-primary/50 hover:bg-primary/10"
-                    >
-                      {isSavingActions ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Kaydediliyor...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="h-4 w-4" />
-                          Aksiyonları Kaydet
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
-                
-                {actionsSaved && (
-                  <div className="flex justify-center">
-                    <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 dark:bg-green-900/20 px-4 py-2 rounded-lg">
-                      <CheckCircle2 className="h-4 w-4" />
-                      Aksiyonlar bugün için planlandı
                     </div>
                   </div>
                 )}
