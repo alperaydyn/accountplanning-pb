@@ -272,27 +272,28 @@ export default function AIAssistant() {
   };
 
   const formatPlanMyDayResponse = (plan: PlanMyDayResponse, mapping: Record<string, { id: string; name: string }>) => {
-    let response = `${plan.greeting}\n\n`;
+    const customers = plan?.customers || [];
+    let response = `${plan?.greeting || 'Gününüz planlandı!'}\n\n`;
     
-    response += `📋 **Bugün odaklanılacak ${plan.customers.length} müşteri:**\n\n`;
+    response += `📋 **Bugün odaklanılacak ${customers.length} müşteri:**\n\n`;
     
-    plan.customers.forEach((customer, idx) => {
+    customers.forEach((customer, idx) => {
       const customerInfo = mapping[customer.tempId];
       const customerName = customerInfo?.name || customer.tempId;
       
       response += `**${idx + 1}. ${customerName}**\n`;
-      response += `   📌 ${customer.reason}\n`;
+      response += `   📌 ${customer?.reason || ''}\n`;
       response += `   Aksiyonlar:\n`;
       
-      customer.actions.forEach((action) => {
-        response += `   • ${action.product} → ${action.action}`;
-        if (action.note) response += ` (${action.note})`;
+      (customer?.actions || []).forEach((action) => {
+        response += `   • ${action?.product || ''} → ${action?.action || ''}`;
+        if (action?.note) response += ` (${action.note})`;
         response += `\n`;
       });
       response += `\n`;
     });
     
-    response += `\n💡 ${plan.summary}`;
+    response += `\n💡 ${plan?.summary || ''}`;
     
     return response;
   };
