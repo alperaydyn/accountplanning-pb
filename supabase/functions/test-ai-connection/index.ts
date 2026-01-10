@@ -107,12 +107,18 @@ serve(async (req) => {
     const prompt = testPrompt || 'Say "OK" in one word.';
     const maxTokens = testPrompt ? 500 : 10;
 
-    // Test request
-    const body = {
+    // Build request body - use max_completion_tokens for Lovable AI (GPT-5 models)
+    const body: Record<string, unknown> = {
       model: resolvedModel,
       messages: [{ role: 'user', content: prompt }],
-      max_tokens: maxTokens,
     };
+
+    // GPT-5 models use max_completion_tokens, others use max_tokens
+    if (provider === 'lovable' || resolvedModel.includes('gpt-5')) {
+      body.max_completion_tokens = maxTokens;
+    } else {
+      body.max_tokens = maxTokens;
+    }
 
     console.log(`Testing AI connection: provider=${provider}, model=${resolvedModel}, endpoint=${endpoint}`);
 
