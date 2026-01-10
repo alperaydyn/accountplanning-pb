@@ -151,7 +151,10 @@ export function ActionPlanningModal({
       setCustomerExplanation(latestUpdate?.notes || "");
       setHintsExpanded(false);
     }
-  }, [open, currentActionId, action, updates]);
+  // Note: updates is intentionally excluded to prevent infinite loop
+  // (updates changes reference on re-render, causing effect to re-run)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, currentActionId, action]);
 
   if (!customer || !action || !product) return null;
 
