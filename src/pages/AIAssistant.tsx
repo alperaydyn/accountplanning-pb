@@ -527,7 +527,7 @@ export default function AIAssistant() {
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-220px)]">
           {/* Sessions Sidebar */}
-          <Card className="lg:col-span-1 flex flex-col">
+          <Card className="lg:col-span-1 flex flex-col overflow-hidden">
             <CardHeader className="pb-3 border-b shrink-0">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm">Sohbet Geçmişi</CardTitle>
@@ -536,71 +536,73 @@ export default function AIAssistant() {
                 </Button>
               </div>
             </CardHeader>
-            <ScrollArea className="flex-1">
-              <div className="p-2 space-y-1">
-                {sessions.map((session) => (
-                  <div
-                    key={session.id}
-                    className={`group flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
-                      activeSessionId === session.id
-                        ? "bg-accent text-accent-foreground"
-                        : "hover:bg-muted"
-                    }`}
-                    onClick={() => setActiveSessionId(session.id)}
-                  >
-                    <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{session.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(session.updated_at), "d MMM, HH:mm")}
-                      </p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteSession(session.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Sil
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))}
-                {sessions.length === 0 && !sessionsLoading && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">Henüz sohbet yok</p>
-                    <Button
-                      variant="link"
-                      size="sm"
-                      onClick={handleNewSession}
-                      className="mt-2"
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full">
+                <div className="p-2 space-y-1">
+                  {sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`group flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                        activeSessionId === session.id
+                          ? "bg-accent text-accent-foreground"
+                          : "hover:bg-muted"
+                      }`}
+                      onClick={() => setActiveSessionId(session.id)}
                     >
-                      Yeni sohbet başlat
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+                      <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{session.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(session.updated_at), "d MMM, HH:mm")}
+                        </p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSession(session.id);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Sil
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                  {sessions.length === 0 && !sessionsLoading && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Henüz sohbet yok</p>
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={handleNewSession}
+                        className="mt-2"
+                      >
+                        Yeni sohbet başlat
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
           </Card>
 
           {/* Chat Area */}
-          <Card className="lg:col-span-3 flex flex-col">
+          <Card className="lg:col-span-3 flex flex-col overflow-hidden">
             <CardHeader className="pb-3 border-b shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -643,57 +645,59 @@ export default function AIAssistant() {
               </div>
             </CardHeader>
 
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-              <div className="space-y-4">
-                {displayMessages.map((message, msgIdx) => {
-                  // Check if this is the last assistant message
-                  const isLastAssistantMessage = message.role === "assistant" && 
-                    msgIdx === displayMessages.length - 1;
-                  
-                  return (
-                    <div
-                      key={message.id}
-                      className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
-                    >
-                      {message.role === "assistant" && (
-                        <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
-                          <Bot className="h-4 w-4 text-violet-500" />
-                        </div>
-                      )}
+            <div className="flex-1 min-h-0">
+              <ScrollArea className="h-full" ref={scrollRef}>
+                <div className="p-4 space-y-4">
+                  {displayMessages.map((message, msgIdx) => {
+                    // Check if this is the last assistant message
+                    const isLastAssistantMessage = message.role === "assistant" && 
+                      msgIdx === displayMessages.length - 1;
+                    
+                    return (
                       <div
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
-                        }`}
+                        key={message.id}
+                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
-                        {message.id === "welcome" ? (
-                          <p className="text-sm whitespace-pre-line">{message.content}</p>
-                        ) : (
-                          renderMessageContent(message as ChatMessage, isLastAssistantMessage)
+                        {message.role === "assistant" && (
+                          <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
+                            <Bot className="h-4 w-4 text-violet-500" />
+                          </div>
+                        )}
+                        <div
+                          className={`max-w-[80%] rounded-lg p-3 ${
+                            message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                          }`}
+                        >
+                          {message.id === "welcome" ? (
+                            <p className="text-sm whitespace-pre-line">{message.content}</p>
+                          ) : (
+                            renderMessageContent(message as ChatMessage, isLastAssistantMessage)
+                          )}
+                        </div>
+                        {message.role === "user" && (
+                          <div className="p-1.5 rounded-full bg-primary/10 h-fit">
+                            <User className="h-4 w-4 text-primary" />
+                          </div>
                         )}
                       </div>
-                      {message.role === "user" && (
-                        <div className="p-1.5 rounded-full bg-primary/10 h-fit">
-                          <User className="h-4 w-4 text-primary" />
+                    );
+                  })}
+                  {isLoading && (
+                    <div className="flex gap-3 justify-start">
+                      <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
+                        <Bot className="h-4 w-4 text-violet-500" />
+                      </div>
+                      <div className="bg-muted rounded-lg p-3">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Portföyünüz analiz ediliyor...
                         </div>
-                      )}
-                    </div>
-                  );
-                })}
-                {isLoading && (
-                  <div className="flex gap-3 justify-start">
-                    <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
-                      <Bot className="h-4 w-4 text-violet-500" />
-                    </div>
-                    <div className="bg-muted rounded-lg p-3">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Portföyünüz analiz ediliyor...
                       </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
 
             <div className="border-t p-3 shrink-0">
               <form
