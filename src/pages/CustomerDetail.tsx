@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Sparkles, CalendarCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -52,9 +52,12 @@ type ViewMode = "products" | "actions" | "autopilot";
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
-  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const actionParam = searchParams.get("action");
+
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
   const [initialActionId, setInitialActionId] = useState<string | undefined>(undefined);
+  const [handledActionParam, setHandledActionParam] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("products");
   const [priorityFilter, setPriorityFilter] = useState<DBActionPriority | "all">("all");
   const [statusFilter, setStatusFilter] = useState<DBActionStatus | "all">("all");
@@ -89,6 +92,25 @@ const CustomerDetail = () => {
     segment: customer?.segment,
     isActive: true,
   });
+
+  // Deep-link support: /customers/:id?action=<actionId>
+  // Opens the Actions view and the planning modal for that action.
+  useEffect(() => {
+    if (!actionParam) return;
+    if (handledActionParam === actionParam) return;
+
+    // Wait until actions are loaded; otherwise we may "handle" too early.
+    if (actionsLoading) return;
+
+    const targetAction = customerActions.find(a => a.id === actionParam);
+    if (targetAction) {
+      setViewMode("actions");
+      openPlanningModal([targetAction.id], targetAction.id);
+    }
+
+    // Mark handled once we had a chance to search the loaded actions.
+    setHandledActionParam(actionParam);
+  }, [actionParam, handledActionParam, actionsLoading, customerActions]);
   
   const handleOpenAddAction = (productId?: string) => {
     setPreselectedProductId(productId || "");

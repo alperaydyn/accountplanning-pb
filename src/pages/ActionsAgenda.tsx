@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend } from "date-fns";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays } from "date-fns";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,12 +71,8 @@ export default function ActionsAgenda() {
   }, [currentDate, viewMode]);
 
   const days = useMemo(() => {
-    const allDays = eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
-    if (viewMode === "weekly") {
-      return allDays.filter(day => !isWeekend(day));
-    }
-    return allDays;
-  }, [dateRange.start, dateRange.end, viewMode]);
+    return eachDayOfInterval({ start: dateRange.start, end: dateRange.end });
+  }, [dateRange.start, dateRange.end]);
 
   const filteredActions = useMemo(() => {
     let result = actions;
