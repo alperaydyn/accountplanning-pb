@@ -1,18 +1,28 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, isWeekend, getDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles, List } from "lucide-react";
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, getDay } from "date-fns";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles, List, Search, Filter } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { useActions, Action } from "@/hooks/useActions";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUserSettings, AgendaViewMode } from "@/hooks/useUserSettings";
 import { Database } from "@/integrations/supabase/types";
+
+// Helper function to check if a day is weekend (Saturday = 6, Sunday = 0)
+const isWeekendDay = (date: Date): boolean => {
+  const day = getDay(date);
+  return day === 0 || day === 6;
+};
 
 type ViewMode = AgendaViewMode;
 type ActionStatus = Database['public']['Enums']['action_status'];
@@ -185,13 +195,53 @@ export default function ActionsAgenda() {
     return t.actions.noActionsMonth;
   };
 
-  const getWeekendClass = (day: Date) => {
-    const dayOfWeek = getDay(day);
-    if (dayOfWeek === 0 || dayOfWeek === 6) {
-      return "bg-muted/50";
+  // List view state
+  const [listSearchQuery, setListSearchQuery] = useState("");
+  const [listPriorityFilter, setListPriorityFilter] = useState<string>("all");
+  const [listStatusFilter, setListStatusFilter] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  // Filtered list for list view with search, priority, and status filters
+  const filteredListActions = useMemo(() => {
+    if (viewMode !== "list") return [];
+    
+    let result = allActionsInRange;
+    
+    // Search filter
+    if (listSearchQuery.trim()) {
+      const query = listSearchQuery.toLowerCase();
+      result = result.filter(action => 
+        action.name.toLowerCase().includes(query) ||
+        getCustomerName(action.customer_id).toLowerCase().includes(query) ||
+        getProductName(action.product_id).toLowerCase().includes(query)
+      );
     }
-    return "";
-  };
+    
+    // Priority filter
+    if (listPriorityFilter !== "all") {
+      result = result.filter(action => action.priority === listPriorityFilter);
+    }
+    
+    // Status filter
+    if (listStatusFilter !== "all") {
+      result = result.filter(action => action.current_status === listStatusFilter);
+    }
+    
+    return result;
+  }, [allActionsInRange, listSearchQuery, listPriorityFilter, listStatusFilter, viewMode]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredListActions.length / itemsPerPage);
+  const paginatedActions = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return filteredListActions.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredListActions, currentPage, itemsPerPage]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [listSearchQuery, listPriorityFilter, listStatusFilter]);
 
   return (
     <AppLayout>
@@ -269,59 +319,174 @@ export default function ActionsAgenda() {
           </Card>
         )}
 
-        {/* List View */}
-        {totalActionsInView > 0 && viewMode === "list" && (
+        {/* List View - Modern Table with Filters and Pagination */}
+        {viewMode === "list" && (
           <Card>
-            <CardContent className="p-0">
-              <div className="divide-y divide-border">
-                {allActionsInRange.map(action => {
-                  const StatusIcon = statusConfig[action.current_status].icon;
-                  const actionDate = action.current_planned_date || action.action_target_date;
-                  return (
-                    <div 
-                      key={action.id} 
-                      className={`p-4 hover:bg-muted/30 transition-colors ${priorityColors[action.priority]}`}
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Link 
-                              to={`/customers/${action.customer_id}?action=${action.id}`}
-                              className="font-semibold text-sm hover:underline hover:text-primary"
-                            >
-                              {action.name}
-                            </Link>
-                            <Badge variant={statusConfig[action.current_status].variant} className="text-xs">
-                              <StatusIcon className="h-3 w-3 mr-1" />
-                              {statusConfig[action.current_status].label}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <Link 
-                              to={`/customers/${action.customer_id}`}
-                              className="hover:underline hover:text-primary"
-                            >
-                              {getCustomerName(action.customer_id)}
-                            </Link>
-                            <span>•</span>
-                            <span>{getProductName(action.product_id)}</span>
-                            <span>•</span>
-                            <span className="flex items-center gap-1">
-                              <CalendarIcon className="h-3.5 w-3.5" />
-                              {actionDate ? format(new Date(actionDate), "d MMM yyyy") : "-"}
-                            </span>
-                          </div>
-                          {action.description && (
-                            <p className="text-xs text-muted-foreground mt-2 line-clamp-2">
-                              {action.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+            {/* Filters */}
+            <CardHeader className="pb-4 border-b">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder={t.common.search}
+                    value={listSearchQuery}
+                    onChange={(e) => setListSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Select value={listPriorityFilter} onValueChange={setListPriorityFilter}>
+                    <SelectTrigger className="w-[140px]">
+                      <Filter className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder={t.actions.priority} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.common.all} {t.actions.priority}</SelectItem>
+                      <SelectItem value="high">{t.actions.highPriority}</SelectItem>
+                      <SelectItem value="medium">{t.actions.mediumPriority}</SelectItem>
+                      <SelectItem value="low">{t.actions.lowPriority}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={listStatusFilter} onValueChange={setListStatusFilter}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder={t.actions.status} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">{t.common.all} {t.actions.status}</SelectItem>
+                      <SelectItem value="Beklemede">{t.statusLabels['Beklemede']}</SelectItem>
+                      <SelectItem value="Planlandı">{t.statusLabels['Planlandı']}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
+            </CardHeader>
+            
+            {/* Table */}
+            <CardContent className="p-0">
+              {filteredListActions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <p className="text-muted-foreground">{t.actions.noActionsFound}</p>
+                </div>
+              ) : (
+                <>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-muted/30">
+                        <TableHead className="w-[200px]">{t.actions.action}</TableHead>
+                        <TableHead>{t.actions.customer}</TableHead>
+                        <TableHead>{t.actions.product}</TableHead>
+                        <TableHead className="w-[100px]">{t.actions.priority}</TableHead>
+                        <TableHead className="w-[120px]">{t.actions.status}</TableHead>
+                        <TableHead className="w-[120px]">{t.actions.date}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedActions.map(action => {
+                        const StatusIcon = statusConfig[action.current_status].icon;
+                        const actionDate = action.current_planned_date || action.action_target_date;
+                        return (
+                          <TableRow key={action.id} className="hover:bg-muted/20">
+                            <TableCell>
+                              <Link 
+                                to={`/customers/${action.customer_id}?action=${action.id}`}
+                                className="font-medium hover:underline hover:text-primary"
+                              >
+                                {action.name}
+                              </Link>
+                              {action.description && (
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                  {action.description}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Link 
+                                to={`/customers/${action.customer_id}`}
+                                className="hover:underline hover:text-primary text-sm"
+                              >
+                                {getCustomerName(action.customer_id)}
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {getProductName(action.product_id)}
+                            </TableCell>
+                            <TableCell>
+                              <Badge 
+                                variant="outline" 
+                                className={`text-xs ${priorityColors[action.priority]}`}
+                              >
+                                {action.priority === 'high' ? t.actions.highPriority : 
+                                 action.priority === 'medium' ? t.actions.mediumPriority : 
+                                 t.actions.lowPriority}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={statusConfig[action.current_status].variant} className="text-xs">
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {statusConfig[action.current_status].label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              <div className="flex items-center gap-1">
+                                <CalendarIcon className="h-3.5 w-3.5" />
+                                {actionDate ? format(new Date(actionDate), "d MMM yyyy") : "-"}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                  
+                  {/* Pagination */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-3 border-t">
+                      <p className="text-sm text-muted-foreground">
+                        {t.common.showing} {(currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredListActions.length)} {t.common.of} {filteredListActions.length}
+                      </p>
+                      <Pagination>
+                        <PaginationContent>
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                              className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                          {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                            let pageNum = i + 1;
+                            if (totalPages > 5) {
+                              if (currentPage > 3) {
+                                pageNum = currentPage - 2 + i;
+                              }
+                              if (currentPage > totalPages - 2) {
+                                pageNum = totalPages - 4 + i;
+                              }
+                            }
+                            if (pageNum < 1 || pageNum > totalPages) return null;
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink
+                                  onClick={() => setCurrentPage(pageNum)}
+                                  isActive={currentPage === pageNum}
+                                  className="cursor-pointer"
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                              className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  )}
+                </>
+              )}
             </CardContent>
           </Card>
         )}
@@ -339,17 +504,17 @@ export default function ActionsAgenda() {
             ))}
             {days.map(day => {
               const dayActions = getActionsForDay(day);
-              const isWeekendDay = isWeekend(day);
+              const isWeekend = isWeekendDay(day);
               return (
                 <Card 
                   key={day.toISOString()} 
-                  className={`min-h-[120px] ${isToday(day) ? "ring-2 ring-primary" : ""} ${isWeekendDay ? "bg-muted/30" : ""}`}
+                  className={`min-h-[120px] ${isToday(day) ? "ring-2 ring-primary" : ""} ${isWeekend ? "bg-muted/30" : ""}`}
                 >
                   <CardContent className="p-2">
                     <div className="flex items-center justify-between mb-1">
                       <button
                         onClick={() => handleDayClick(day)}
-                        className={`text-sm font-medium hover:text-primary hover:underline cursor-pointer ${isToday(day) ? "text-primary" : isWeekendDay ? "text-muted-foreground/70" : "text-muted-foreground"}`}
+                        className={`text-sm font-medium hover:text-primary hover:underline cursor-pointer ${isToday(day) ? "text-primary" : isWeekend ? "text-muted-foreground/70" : "text-muted-foreground"}`}
                       >
                         {format(day, "d")}
                       </button>
@@ -394,7 +559,7 @@ export default function ActionsAgenda() {
             <CardContent className="p-0 divide-y divide-border">
               {days.map(day => {
                 const dayActions = getActionsForDay(day);
-                const isWeekendDay = isWeekend(day);
+                const isWeekend = isWeekendDay(day);
                 return (
                   <div 
                     key={day.toISOString()} 
