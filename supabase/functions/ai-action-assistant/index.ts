@@ -104,15 +104,28 @@ serve(async (req) => {
         new Set((actionTemplates || []).map((t: ActionTemplate) => t.productName))
       ).join(", ");
 
-      // Build customer context with below-threshold products
-      const customerContext = customers
-        .filter((c: CustomerData) => c.belowThresholdProducts && c.belowThresholdProducts.length > 0)
-        .slice(0, 20) // Limit to top 20 customers with gaps
+      // Build customer context - prioritize by status and PS score
+      // Include customers with products (not just those with gaps)
+      const sortedCustomers = [...customers]
+        .filter((c: CustomerData) => c.products && c.products.length > 0)
+        .sort((a: CustomerData, b: CustomerData) => {
+          // Prioritize by status: Strong Target > Target > others
+          const statusOrder: Record<string, number> = { "Strong Target": 0, "Target": 1, "Aktif": 2, "Ana Banka": 3, "Yeni Müşteri": 4 };
+          const statusA = statusOrder[a.status] ?? 5;
+          const statusB = statusOrder[b.status] ?? 5;
+          if (statusA !== statusB) return statusA - statusB;
+          // Then by PS score (higher is better)
+          return (b.principality_score || 0) - (a.principality_score || 0);
+        })
+        .slice(0, 20);
+
+      const customerContext = sortedCustomers
         .map((c: CustomerData) => {
-          const gaps = c.belowThresholdProducts
-            .map((p) => `${p.name}(açık:${Math.round(p.gap / 1000)}K)`)
-            .join(", ");
-          return `${c.tempId}: ${c.status}, PS:${c.principality_score || 0}%, Açıklar: ${gaps}`;
+          const productList = c.products.map((p) => p.name).join(", ");
+          const gaps = c.belowThresholdProducts?.length > 0
+            ? c.belowThresholdProducts.map((p) => `${p.name}(açık:${Math.round(p.gap / 1000)}K)`).join(", ")
+            : "Yok";
+          return `${c.tempId}: ${c.status}, PS:${c.principality_score || 0}%, Ürünler: ${productList}, Açıklar: ${gaps}`;
         })
         .join("\n");
 
@@ -151,8 +164,8 @@ KURALLAR (ÇOK ÖNEMLİ):
 - "action" alanı: Seçtiğin product için yalnızca şablonlarda geçen aksiyon adlarından BİREBİR olmalı
 - ÜRÜN-AKSİYON EŞLEŞMESİ KORUNACAK: (product, action) ikilisi şablonlarda bir satır olarak bulunmalı
 - Aynı müşteri içinde ürün TEKRARI YOK: actions dizisinde aynı "product" iki kez geçemez
-- Aksiyonlar tercihen müşterinin "Açıklar" listesindeki ürünlerden seçilsin
-- Yüksek PS skorlu ve büyük açığı olan müşterileri öncelikle seç
+- Aksiyonları müşterinin sahip olduğu ürünlerden veya açık listesinden seç
+- Yüksek PS skorlu müşterileri öncelikle seç
 - "Strong Target" ve "Target" statüsündeki müşterileri tercih et`;
 
 
