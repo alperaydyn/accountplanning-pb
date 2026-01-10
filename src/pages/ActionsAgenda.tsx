@@ -41,7 +41,8 @@ export default function ActionsAgenda() {
   };
 
   const handleAIPlanMyDay = () => {
-    navigate("/ai-assistant?prompt=plan-my-day");
+    const dateParam = format(currentDate, "yyyy-MM-dd");
+    navigate(`/ai-assistant?prompt=plan-my-day&date=${dateParam}`);
   };
   
   const { data: actions = [] } = useActions();

@@ -82,9 +82,15 @@ serve(async (req) => {
       throw new Error("Missing required parameters: message, customers");
     }
 
-    // Check if this is a "plan my day" request
+    // Check if this is a "plan my day" request and extract date if provided
     const isPlanMyDay = message.toLowerCase().includes("plan my day") || 
                         message.toLowerCase().includes("günümü planla");
+
+    // Extract target date from message like "plan my day for 2026-01-15"
+    const dateMatch = message.match(/for\s+(\d{4}-\d{2}-\d{2})/i);
+    const targetDate = dateMatch ? dateMatch[1] : new Date().toISOString().split("T")[0];
+    const isToday = targetDate === new Date().toISOString().split("T")[0];
+    const dateLabel = isToday ? "Bugün" : targetDate;
 
     let systemPrompt: string;
 
@@ -112,7 +118,7 @@ serve(async (req) => {
 
       systemPrompt = `Sen bir Portföy Yöneticisine günlük satış planı hazırlayan AI asistanısın.
 
-GÖREV: Bugün odaklanılacak EN İYİ 5 müşteriyi seç ve her biri için 2-3 aksiyon öner.
+GÖREV: ${dateLabel} için odaklanılacak EN İYİ 5 müşteriyi seç ve her biri için 2-3 aksiyon öner.
 
 MÜŞTERİ VERİLERİ (ürün adlarını olduğu gibi kopyala):
 ${customerContext}

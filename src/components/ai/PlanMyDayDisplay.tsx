@@ -34,6 +34,7 @@ interface PlanMyDayDisplayProps {
   products: { id: string; name: string }[];
   actionTemplates: { product_id: string; name: string }[];
   existingActions: Action[];
+  targetDate?: string; // YYYY-MM-DD format, defaults to today
 }
 
 const normalizeKeyPart = (value: string) =>
@@ -44,7 +45,8 @@ export function PlanMyDayDisplay({
   mapping, 
   products, 
   actionTemplates,
-  existingActions 
+  existingActions,
+  targetDate,
 }: PlanMyDayDisplayProps) {
   const [newlySavedActions, setNewlySavedActions] = useState<Set<string>>(new Set());
   const [savingActions, setSavingActions] = useState<Set<string>>(new Set());
@@ -90,7 +92,7 @@ export function PlanMyDayDisplay({
     }
 
     setSavingActions(prev => new Set(prev).add(actionKey));
-    const today = new Date().toISOString().split('T')[0];
+    const dateToUse = targetDate || new Date().toISOString().split('T')[0];
 
     try {
       await createAction.mutateAsync({
@@ -100,11 +102,11 @@ export function PlanMyDayDisplay({
         description: action.note || null,
         priority: "medium",
         type: "rm_action",
-        action_target_date: today,
-        source_data_date: today,
+        action_target_date: dateToUse,
+        source_data_date: dateToUse,
         creator_name: "AI Assistant",
         creation_reason: customer.reason,
-        current_planned_date: today,
+        current_planned_date: dateToUse,
       });
 
       setNewlySavedActions(prev => new Set(prev).add(actionKey));
