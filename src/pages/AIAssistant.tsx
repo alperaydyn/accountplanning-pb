@@ -614,12 +614,7 @@ export default function AIAssistant() {
                   <div className="p-2 rounded-full bg-violet-500/10">
                     <Sparkles className="h-5 w-5 text-violet-500" />
                   </div>
-                  <div>
-                    <CardTitle className="text-base">AI Action Assistant</CardTitle>
-                    <p className="text-xs text-muted-foreground">
-                      {userSettings?.ai_model || (userSettings?.ai_provider === 'lovable' ? 'openai/gpt-5-mini' : userSettings?.ai_provider === 'openai' ? 'gpt-4o-mini' : 'AI')} powered
-                    </p>
-                  </div>
+                  <CardTitle className="text-base">AI Action Assistant</CardTitle>
                 </div>
               </div>
 
@@ -679,6 +674,12 @@ export default function AIAssistant() {
                             <p className="text-sm whitespace-pre-line">{message.content}</p>
                           ) : (
                             renderMessageContent(message as ChatMessage, isLastAssistantMessage)
+                          )}
+                          {/* Provider and model info for assistant messages */}
+                          {message.role === "assistant" && message.id !== "welcome" && (message as ChatMessage).model_name && (
+                            <p className="text-[10px] text-muted-foreground/60 mt-2 pt-2 border-t border-border/30">
+                              {(message as ChatMessage).provider && `${(message as ChatMessage).provider} · `}{(message as ChatMessage).model_name}
+                            </p>
                           )}
                         </div>
                         {message.role === "user" && (

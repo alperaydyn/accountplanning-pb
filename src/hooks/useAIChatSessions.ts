@@ -9,6 +9,8 @@ export interface ChatMessage {
   content: string;
   customer_mapping: Record<string, string> | null;
   usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null;
+  provider: string | null;
+  model_name: string | null;
   created_at: string;
 }
 
@@ -59,6 +61,8 @@ export const useAIChatMessages = (sessionId: string | null) => {
         role: msg.role as 'user' | 'assistant',
         customer_mapping: msg.customer_mapping as Record<string, string> | null,
         usage: msg.usage as { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null,
+        provider: msg.provider || null,
+        model_name: msg.model_name || null,
       }));
     },
     enabled: !!sessionId,
