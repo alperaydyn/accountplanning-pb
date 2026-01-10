@@ -33,10 +33,10 @@ const generateDateOptions = () => {
     addDate(date.getFullYear(), date.getMonth() + 1);
   }
   
-  // 3. Last 4 quarters' end months (going back from current quarter)
+  // 3. Last 4 quarters' end months (going back from PREVIOUS quarter, not current)
   // Quarter end months: Q1=03, Q2=06, Q3=09, Q4=12
   const currentQuarter = Math.ceil(currentMonth / 3);
-  for (let i = 0; i < 4; i++) {
+  for (let i = 1; i <= 4; i++) {  // Start from i=1 to skip current (unfinished) quarter
     let q = currentQuarter - i;
     let year = currentYear;
     while (q <= 0) {
