@@ -321,6 +321,7 @@ export type Database = {
           customer_mapping: Json | null
           id: string
           model_name: string | null
+          provider: string | null
           role: string
           session_id: string
           usage: Json | null
@@ -331,6 +332,7 @@ export type Database = {
           customer_mapping?: Json | null
           id?: string
           model_name?: string | null
+          provider?: string | null
           role: string
           session_id: string
           usage?: Json | null
@@ -341,6 +343,7 @@ export type Database = {
           customer_mapping?: Json | null
           id?: string
           model_name?: string | null
+          provider?: string | null
           role?: string
           session_id?: string
           usage?: Json | null

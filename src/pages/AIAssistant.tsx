@@ -35,6 +35,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { PlanMyDayDisplay } from "@/components/ai/PlanMyDayDisplay";
 import { appendPlanMyDayPayload, extractPlanMyDayPayload } from "@/lib/planMyDayMessage";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 const PRICING = {
   input: 0.15,
@@ -92,6 +93,7 @@ export default function AIAssistant() {
   const { data: actions = [] } = useActions();
   const { data: actionTemplates = [] } = useAllActionTemplates();
   const { data: thresholds = [] } = useProductThresholds({ isActive: true });
+  const { settings: userSettings } = useUserSettings();
 
   // Build action templates for AI
   const actionTemplatesForAI = useMemo(() => {
@@ -251,13 +253,15 @@ export default function AIAssistant() {
         }
       }
 
-      // Save assistant message
+      // Save assistant message with provider and model info
       await addMessage.mutateAsync({
         sessionId,
         role: "assistant",
         content: storedContent,
         customerMapping: tempIdToRealId,
         usage: data.usage,
+        provider: data.provider,
+        modelName: data.model,
       });
     } catch (error) {
       console.error("AI assistant error:", error);
@@ -611,7 +615,9 @@ export default function AIAssistant() {
                   </div>
                   <div>
                     <CardTitle className="text-base">AI Action Assistant</CardTitle>
-                    <p className="text-xs text-muted-foreground">GPT-5-Mini powered</p>
+                    <p className="text-xs text-muted-foreground">
+                      {userSettings?.ai_model || (userSettings?.ai_provider === 'lovable' ? 'openai/gpt-5-mini' : userSettings?.ai_provider === 'openai' ? 'gpt-4o-mini' : 'AI')} powered
+                    </p>
                   </div>
                 </div>
               </div>
