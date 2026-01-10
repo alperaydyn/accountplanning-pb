@@ -267,6 +267,50 @@ export type Database = {
           },
         ]
       }
+      ai_action_insights: {
+        Row: {
+          created_at: string
+          feedback: string | null
+          id: string
+          insights: Json
+          model_name: string
+          portfolio_manager_id: string
+          record_date: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          insights?: Json
+          model_name?: string
+          portfolio_manager_id: string
+          record_date?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          insights?: Json
+          model_name?: string
+          portfolio_manager_id?: string
+          record_date?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_action_insights_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_chat_messages: {
         Row: {
           content: string

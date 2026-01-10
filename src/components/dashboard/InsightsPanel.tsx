@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown } from "lucide-react";
+import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown, ClipboardList, Target, Users, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useInsights, Insight, StoredInsights } from "@/hooks/useInsights";
+import { useActionInsights, ActionInsight, StoredActionInsights } from "@/hooks/useActionInsights";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
 
 interface InsightsPanelProps {
@@ -39,25 +40,57 @@ const statusLabels: Record<string, string> = {
   diversity: "Diversity ⚠",
 };
 
+const categoryIcons: Record<string, React.ElementType> = {
+  sufficiency: Target,
+  alignment: ClipboardList,
+  balance: Users,
+  quality: CheckCircle,
+};
+
+const categoryLabels: Record<string, string> = {
+  sufficiency: "Yeterlilik",
+  alignment: "Uyum",
+  balance: "Denge",
+  quality: "Kalite",
+};
+
 export function InsightsPanel({ recordDate }: InsightsPanelProps) {
   const navigate = useNavigate();
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null);
+  const [selectedActionInsight, setSelectedActionInsight] = useState<ActionInsight | null>(null);
   
+  // Product Insights
   const { 
     data: storedInsights, 
-    isLoading, 
-    error, 
-    refreshInsights, 
-    isRefreshing, 
-    submitFeedback, 
-    isSubmittingFeedback,
-    versions,
-    selectVersion,
-    isSelectingVersion,
+    isLoading: isLoadingProduct, 
+    error: productError, 
+    refreshInsights: refreshProductInsights, 
+    isRefreshing: isRefreshingProduct, 
+    submitFeedback: submitProductFeedback, 
+    isSubmittingFeedback: isSubmittingProductFeedback,
+    versions: productVersions,
+    selectVersion: selectProductVersion,
+    isSelectingVersion: isSelectingProductVersion,
   } = useInsights(recordDate);
+
+  // Action Insights
+  const {
+    data: storedActionInsights,
+    isLoading: isLoadingAction,
+    error: actionError,
+    refreshInsights: refreshActionInsights,
+    isRefreshing: isRefreshingAction,
+    submitFeedback: submitActionFeedback,
+    isSubmittingFeedback: isSubmittingActionFeedback,
+    versions: actionVersions,
+    selectVersion: selectActionVersion,
+    isSelectingVersion: isSelectingActionVersion,
+  } = useActionInsights(recordDate);
+
   const { data: targets } = usePortfolioTargets(recordDate);
 
   const insights = storedInsights?.insights || [];
+  const actionInsights = storedActionInsights?.insights || [];
 
   const getIconForType = (type: "critical" | "warning" | "info") => {
     switch (type) {
@@ -88,14 +121,16 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
     navigate(`/customers?product=${productId}`);
   };
 
-  const handleRefresh = () => {
-    refreshInsights();
-  };
-
-  const handleFeedback = (feedback: "like" | "dislike") => {
+  const handleProductFeedback = (feedback: "like" | "dislike") => {
     if (!storedInsights?.id) return;
     const newFeedback = storedInsights.feedback === feedback ? null : feedback;
-    submitFeedback({ insightId: storedInsights.id, feedback: newFeedback });
+    submitProductFeedback({ insightId: storedInsights.id, feedback: newFeedback });
+  };
+
+  const handleActionFeedback = (feedback: "like" | "dislike") => {
+    if (!storedActionInsights?.id) return;
+    const newFeedback = storedActionInsights.feedback === feedback ? null : feedback;
+    submitActionFeedback({ insightId: storedActionInsights.id, feedback: newFeedback });
   };
 
   const calculateStatus = (t: typeof targets extends (infer U)[] | undefined ? U : never) => {
@@ -140,150 +175,253 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
     return null;
   }
 
-  if (isLoading || isRefreshing || isSelectingVersion) {
-    return (
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-            AI Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>AI is analyzing product performance for {recordDate}...</span>
-          </div>
-          <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-20 w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
+  // Render loading skeleton for a panel
+  const renderLoadingSkeleton = (title: string, icon: React.ReactNode) => (
+    <Card className="bg-card border-border flex-1">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span>AI is analyzing...</span>
+        </div>
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-20 w-full" />
+      </CardContent>
+    </Card>
+  );
 
-  if (error) {
+  // Render error state for a panel
+  const renderError = (title: string, icon: React.ReactNode, onRetry: () => void) => (
+    <Card className="bg-card border-border flex-1">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+          {icon}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground">Failed to load insights.</p>
+        <Button variant="outline" size="sm" onClick={onRetry} className="mt-2">
+          <RefreshCw className="h-4 w-4 mr-2" />
+          Retry
+        </Button>
+      </CardContent>
+    </Card>
+  );
+
+  // Render version dropdown
+  const renderVersionDropdown = (
+    versions: { version: number; created_at: string }[],
+    currentVersion: number,
+    onSelect: (version: number) => void
+  ) => {
+    if (versions.length <= 1) {
+      return <span className="text-xs text-muted-foreground">v{currentVersion}</span>;
+    }
     return (
-      <Card className="bg-card border-border">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            AI Insights
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">Failed to load insights. Please try again later.</p>
-          <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-2">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Retry
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs gap-0.5">
+            v{currentVersion}
+            <ChevronDown className="h-3 w-3" />
           </Button>
-        </CardContent>
-      </Card>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="min-w-[140px]">
+          {versions.map((v) => (
+            <DropdownMenuItem
+              key={v.version}
+              onClick={() => onSelect(v.version)}
+              className={v.version === currentVersion ? "bg-muted" : ""}
+            >
+              <span className="font-medium">v{v.version}</span>
+              <span className="text-xs text-muted-foreground ml-2">
+                {formatVersionTime(v.created_at)}
+              </span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
-  }
+  };
 
-  if (!insights || insights.length === 0) {
-    return null;
-  }
+  // Render action buttons (feedback + refresh)
+  const renderActionButtons = (
+    storedData: { id: string; feedback: "like" | "dislike" | null } | null | undefined,
+    isSubmitting: boolean,
+    isRefreshing: boolean,
+    onFeedback: (feedback: "like" | "dislike") => void,
+    onRefresh: () => void
+  ) => (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onFeedback("like")}
+        disabled={isSubmitting || !storedData?.id}
+        className={`h-8 w-8 ${storedData?.feedback === "like" ? "text-success bg-success/10" : ""}`}
+      >
+        <ThumbsUp className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={() => onFeedback("dislike")}
+        disabled={isSubmitting || !storedData?.id}
+        className={`h-8 w-8 ${storedData?.feedback === "dislike" ? "text-destructive bg-destructive/10" : ""}`}
+      >
+        <ThumbsDown className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        onClick={onRefresh}
+        disabled={isRefreshing}
+        className="h-8 w-8"
+      >
+        <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+      </Button>
+    </div>
+  );
 
   return (
     <>
-      <Card className="bg-card border-border">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              AI Insights
-            </CardTitle>
-            {storedInsights && (
-              <div className="flex items-center gap-2 mt-1">
-                <Badge variant="outline" className="text-xs font-normal">
-                  {storedInsights.model_name}
-                </Badge>
-                <span className="text-xs text-muted-foreground">
-                  {recordDate}
-                </span>
-                {versions.length > 1 ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-5 px-1.5 text-xs gap-0.5">
-                        v{storedInsights.version}
-                        <ChevronDown className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="min-w-[140px]">
-                      {versions.map((v) => (
-                        <DropdownMenuItem
-                          key={v.version}
-                          onClick={() => selectVersion(v.version)}
-                          className={v.version === storedInsights.version ? "bg-muted" : ""}
-                        >
-                          <span className="font-medium">v{v.version}</span>
-                          <span className="text-xs text-muted-foreground ml-2">
-                            {formatVersionTime(v.created_at)}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <span className="text-xs text-muted-foreground">v{storedInsights.version}</span>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Product Insights - Left Side */}
+        {(isLoadingProduct || isRefreshingProduct || isSelectingProductVersion) ? (
+          renderLoadingSkeleton("Ürün Performansı", <Sparkles className="h-5 w-5 text-primary animate-pulse" />)
+        ) : productError ? (
+          renderError("Ürün Performansı", <Sparkles className="h-5 w-5 text-primary" />, refreshProductInsights)
+        ) : insights.length === 0 ? (
+          <Card className="bg-card border-border flex-1">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Ürün Performansı
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Henüz içgörü yok.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-card border-border flex-1">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  Ürün Performansı
+                </CardTitle>
+                {storedInsights && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {storedInsights.model_name}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{recordDate}</span>
+                    {renderVersionDropdown(productVersions, storedInsights.version, selectProductVersion)}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleFeedback("like")}
-              disabled={isSubmittingFeedback || !storedInsights?.id}
-              className={`h-8 w-8 ${storedInsights?.feedback === "like" ? "text-success bg-success/10" : ""}`}
-            >
-              <ThumbsUp className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleFeedback("dislike")}
-              disabled={isSubmittingFeedback || !storedInsights?.id}
-              className={`h-8 w-8 ${storedInsights?.feedback === "dislike" ? "text-destructive bg-destructive/10" : ""}`}
-            >
-              <ThumbsDown className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="h-8 w-8"
-            >
-              <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {insights.map((insight, index) => {
-            const Icon = getIconForType(insight.type);
-            return (
-              <div
-                key={index}
-                className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
-                onClick={() => setSelectedInsight(insight)}
-              >
-                <div className="flex items-start gap-3">
-                  <Icon className={`h-5 w-5 mt-0.5 ${getIconColor(insight.type)}`} />
-                  <div className="flex-1">
-                    <h4 className="font-medium text-card-foreground">{insight.title}</h4>
-                    <p className="text-sm text-muted-foreground mt-1">{insight.message}</p>
+              {renderActionButtons(storedInsights, isSubmittingProductFeedback, isRefreshingProduct, handleProductFeedback, refreshProductInsights)}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {insights.map((insight, index) => {
+                const Icon = getIconForType(insight.type);
+                return (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
+                    onClick={() => setSelectedInsight(insight)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Icon className={`h-5 w-5 mt-0.5 ${getIconColor(insight.type)}`} />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-card-foreground">{insight.title}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">{insight.message}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                </div>
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
 
+        {/* Action Insights - Right Side */}
+        {(isLoadingAction || isRefreshingAction || isSelectingActionVersion) ? (
+          renderLoadingSkeleton("Aksiyon Kalitesi", <ClipboardList className="h-5 w-5 text-primary animate-pulse" />)
+        ) : actionError ? (
+          renderError("Aksiyon Kalitesi", <ClipboardList className="h-5 w-5 text-primary" />, refreshActionInsights)
+        ) : actionInsights.length === 0 ? (
+          <Card className="bg-card border-border flex-1">
+            <CardHeader>
+              <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-primary" />
+                Aksiyon Kalitesi
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">Henüz içgörü yok.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-card border-border flex-1">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
+                  <ClipboardList className="h-5 w-5 text-primary" />
+                  Aksiyon Kalitesi
+                </CardTitle>
+                {storedActionInsights && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-xs font-normal">
+                      {storedActionInsights.model_name}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{recordDate}</span>
+                    {renderVersionDropdown(actionVersions, storedActionInsights.version, selectActionVersion)}
+                  </div>
+                )}
+              </div>
+              {renderActionButtons(storedActionInsights, isSubmittingActionFeedback, isRefreshingAction, handleActionFeedback, refreshActionInsights)}
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {actionInsights.map((insight, index) => {
+                const Icon = getIconForType(insight.type);
+                const CategoryIcon = categoryIcons[insight.category] || Target;
+                return (
+                  <div
+                    key={index}
+                    className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
+                    onClick={() => setSelectedActionInsight(insight)}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Icon className={`h-5 w-5 mt-0.5 ${getIconColor(insight.type)}`} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium text-card-foreground">{insight.title}</h4>
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <CategoryIcon className="h-3 w-3" />
+                            {categoryLabels[insight.category] || insight.category}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{insight.message}</p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Product Insight Detail Dialog */}
       <Dialog open={!!selectedInsight} onOpenChange={() => setSelectedInsight(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           {selectedInsight && (
@@ -351,6 +489,42 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
                   </div>
                 </div>
               )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Insight Detail Dialog */}
+      <Dialog open={!!selectedActionInsight} onOpenChange={() => setSelectedActionInsight(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          {selectedActionInsight && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {(() => {
+                    const Icon = getIconForType(selectedActionInsight.type);
+                    return <Icon className={`h-5 w-5 ${getIconColor(selectedActionInsight.type)}`} />;
+                  })()}
+                  {selectedActionInsight.title}
+                  <Badge variant="outline" className="text-xs gap-1 ml-2">
+                    {(() => {
+                      const CategoryIcon = categoryIcons[selectedActionInsight.category] || Target;
+                      return <CategoryIcon className="h-3 w-3" />;
+                    })()}
+                    {categoryLabels[selectedActionInsight.category] || selectedActionInsight.category}
+                  </Badge>
+                </DialogTitle>
+                <DialogDescription className="text-base whitespace-pre-wrap">
+                  {selectedActionInsight.detailedDescription}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-4 flex gap-2">
+                <Button variant="outline" onClick={() => navigate("/agenda")}>
+                  <ClipboardList className="h-4 w-4 mr-2" />
+                  Aksiyon Ajandası
+                </Button>
+              </div>
             </>
           )}
         </DialogContent>
