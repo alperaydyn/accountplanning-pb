@@ -35,10 +35,9 @@ interface CustomerResult {
   hasExistingData?: boolean;
 }
 
-const LOAN_PRODUCT_IDS = [
-  "prod-1", "prod-2", "prod-3", "prod-4" // Loan products from display_order 1-4
-];
+const LOAN_CATEGORY = "Kredi" as const;
 
+// NOTE: These IDs are placeholders (kept for now). Loan detection is done via category=Kredi.
 const POS_PRODUCT_ID = "prod-11"; // POS Giro
 const CHEQUE_PRODUCT_ID = "prod-12"; // Cheque
 const COLLATERAL_PRODUCT_IDS = ["prod-15", "prod-16", "prod-17"]; // Collateral products
@@ -130,18 +129,34 @@ export default function PrimaryBankEngine() {
   };
 
   const fetchCustomerProducts = async (customerId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("customer_products")
-      .select("product_id")
+      .select("product_id, products ( id, name, category, display_order )")
       .eq("customer_id", customerId);
-    return data?.map(cp => cp.product_id) || [];
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => {
+      const prod = Array.isArray(row.products) ? row.products[0] : row.products;
+      return {
+        id: row.product_id as string,
+        name: prod?.name as string | undefined,
+        category: prod?.category as string | undefined,
+        display_order: prod?.display_order as number | undefined,
+      };
+    });
   };
 
   const generateForCustomer = useCallback(async (customer: any): Promise<GeneratedData | null> => {
-    const productIds = await fetchCustomerProducts(customer.id);
-    
-    const hasKrediAccount = LOAN_PRODUCT_IDS.some(id => productIds.includes(id));
-    const loanProducts = LOAN_PRODUCT_IDS.filter(id => productIds.includes(id));
+    const customerProducts = await fetchCustomerProducts(customer.id);
+    const productIds = customerProducts.map(p => p.id);
+
+    // FIX: DB products use real UUIDs; detect loan capability via category = 'Kredi'
+    const hasKrediAccount = customerProducts.some(p => p.category === LOAN_CATEGORY);
+    const loanProducts = customerProducts
+      .filter(p => p.category === LOAN_CATEGORY)
+      .map(p => p.name ?? p.id);
+
     const hasPosProduct = productIds.includes(POS_PRODUCT_ID);
     const hasChequeProduct = productIds.includes(CHEQUE_PRODUCT_ID);
     const hasCollateralProduct = COLLATERAL_PRODUCT_IDS.some(id => productIds.includes(id));
