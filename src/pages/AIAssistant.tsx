@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { PlanMyDayDisplay } from "@/components/ai/PlanMyDayDisplay";
 import { appendPlanMyDayPayload, extractPlanMyDayPayload } from "@/lib/planMyDayMessage";
 import { useUserSettings } from "@/hooks/useUserSettings";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const PRICING = {
   input: 0.15,
@@ -69,6 +70,7 @@ interface PlanMyDayResponse {
 export default function AIAssistant() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
