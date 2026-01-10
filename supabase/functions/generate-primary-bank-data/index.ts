@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,6 +67,21 @@ interface GeneratedData {
   collateral_data: CollateralData[];
 }
 
+// Default models per provider
+const DEFAULT_MODELS: Record<string, string> = {
+  lovable: "google/gemini-3-flash-preview",
+  openai: "gpt-4o-mini",
+  openrouter: "anthropic/claude-3.5-sonnet",
+  local: "llama3",
+};
+
+// API endpoints per provider
+const ENDPOINTS: Record<string, string> = {
+  lovable: "https://ai.gateway.lovable.dev/v1/chat/completions",
+  openai: "https://api.openai.com/v1/chat/completions",
+  openrouter: "https://openrouter.ai/api/v1/chat/completions",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -74,10 +90,79 @@ serve(async (req) => {
   try {
     const { customer, recordMonth } = await req.json() as { customer: CustomerInput; recordMonth: string };
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // Get the authorization header for user identification
+    const authHeader = req.headers.get("Authorization");
+    
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: authHeader ? { Authorization: authHeader } : {} }
+    });
+
+    // Get user from auth header
+    let aiProvider = "lovable";
+    let aiModel: string | null = null;
+    let aiApiKey: string | null = null;
+    let aiBaseUrl: string | null = null;
+
+    if (authHeader) {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        // Fetch user's AI settings
+        const { data: userSettings } = await supabase
+          .from("user_settings")
+          .select("ai_provider, ai_model, ai_api_key_encrypted, ai_base_url")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (userSettings) {
+          aiProvider = userSettings.ai_provider || "lovable";
+          aiModel = userSettings.ai_model;
+          aiApiKey = userSettings.ai_api_key_encrypted;
+          aiBaseUrl = userSettings.ai_base_url;
+        }
+      }
     }
+
+    // Determine API key based on provider
+    let resolvedApiKey: string;
+    if (aiProvider === "lovable") {
+      resolvedApiKey = Deno.env.get("LOVABLE_API_KEY") || "";
+    } else if (aiApiKey) {
+      resolvedApiKey = aiApiKey;
+    } else {
+      const envKeyMap: Record<string, string> = {
+        openai: "OPENAI_API_KEY",
+        openrouter: "OPENROUTER_API_KEY",
+        local: "",
+      };
+      resolvedApiKey = Deno.env.get(envKeyMap[aiProvider] || "") || "";
+    }
+
+    if (!resolvedApiKey && aiProvider !== "local") {
+      throw new Error(`API key not configured for provider: ${aiProvider}`);
+    }
+
+    // Determine endpoint
+    let endpoint: string;
+    if (aiProvider === "local") {
+      if (!aiBaseUrl) {
+        throw new Error("Local provider requires a base URL");
+      }
+      endpoint = aiBaseUrl.endsWith("/v1/chat/completions")
+        ? aiBaseUrl
+        : `${aiBaseUrl.replace(/\/$/, "")}/v1/chat/completions`;
+    } else {
+      endpoint = ENDPOINTS[aiProvider] || ENDPOINTS.lovable;
+    }
+
+    // Determine model
+    const resolvedModel = aiModel || DEFAULT_MODELS[aiProvider] || DEFAULT_MODELS.lovable;
+
+    console.log(`Using AI provider: ${aiProvider}, model: ${resolvedModel}`);
 
     const systemPrompt = `You are a Turkish banking data generator. Generate realistic primary bank data for corporate banking customers.
 
@@ -208,21 +293,36 @@ Generate appropriate banking data based on the customer profile.`;
       }
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Build headers
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    if (resolvedApiKey) {
+      headers["Authorization"] = `Bearer ${resolvedApiKey}`;
+    }
+
+    // OpenRouter specific headers
+    if (aiProvider === "openrouter") {
+      headers["HTTP-Referer"] = "https://lovable.dev";
+      headers["X-Title"] = "Account Planning App";
+    }
+
+    // Build request body
+    const body: Record<string, unknown> = {
+      model: resolvedModel,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      tools,
+      tool_choice: { type: "function", function: { name: "generate_primary_bank_data" } }
+    };
+
+    const response = await fetch(endpoint, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        tools,
-        tool_choice: { type: "function", function: { name: "generate_primary_bank_data" } }
-      }),
+      headers,
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
@@ -235,6 +335,12 @@ Generate appropriate banking data based on the customer profile.`;
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI credits exhausted" }), {
           status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 401) {
+        return new Response(JSON.stringify({ error: "Invalid API key" }), {
+          status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
@@ -320,7 +426,9 @@ Generate appropriate banking data based on the customer profile.`;
         ...cd,
         record_month: recordMonth,
         customer_id: customer.customerId
-      }))
+      })),
+      provider: aiProvider,
+      model: resolvedModel
     };
 
     return new Response(JSON.stringify(result), {

@@ -326,6 +326,24 @@ export interface Translations {
     removeData: string;
     hasData: string;
     noData: string;
+    calculate: string;
+    calculationResult: string;
+    saveResult: string;
+    loanSummary: string;
+    loanDetails: string;
+    bankCode: string;
+    cashLoan: string;
+    nonCashLoan: string;
+    approvalDate: string;
+    accountId: string;
+    loanType: string;
+    loanStatus: string;
+    openAmount: string;
+    currentAmount: string;
+    totalVolume: string;
+    ourBankVolume: string;
+    share: string;
+    bankCount: string;
   };
 
   // Customer Detail
@@ -730,6 +748,24 @@ export const translations: Record<Language, Translations> = {
       removeData: "Veriyi Sil",
       hasData: "Veri Var",
       noData: "Veri Yok",
+      calculate: "Hesapla",
+      calculationResult: "Hesaplama Sonucu",
+      saveResult: "Sonucu Kaydet",
+      loanSummary: "Kredi Özeti",
+      loanDetails: "Kredi Detayları",
+      bankCode: "Banka",
+      cashLoan: "Nakit Kredi",
+      nonCashLoan: "Gayrinakdi",
+      approvalDate: "Onay Tarihi",
+      accountId: "Hesap No",
+      loanType: "Kredi Türü",
+      loanStatus: "Durum",
+      openAmount: "Açılış Tutarı",
+      currentAmount: "Güncel Tutar",
+      totalVolume: "Toplam Hacim",
+      ourBankVolume: "Bizim Hacim",
+      share: "Pay",
+      bankCount: "Banka Sayısı",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -1114,6 +1150,24 @@ export const translations: Record<Language, Translations> = {
       removeData: "Remove Data",
       hasData: "Has Data",
       noData: "No Data",
+      calculate: "Calculate",
+      calculationResult: "Calculation Result",
+      saveResult: "Save Result",
+      loanSummary: "Loan Summary",
+      loanDetails: "Loan Details",
+      bankCode: "Bank",
+      cashLoan: "Cash Loan",
+      nonCashLoan: "Non-Cash",
+      approvalDate: "Approval Date",
+      accountId: "Account ID",
+      loanType: "Loan Type",
+      loanStatus: "Status",
+      openAmount: "Open Amount",
+      currentAmount: "Current Amount",
+      totalVolume: "Total Volume",
+      ourBankVolume: "Our Volume",
+      share: "Share",
+      bankCount: "Bank Count",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1498,6 +1552,24 @@ export const translations: Record<Language, Translations> = {
       removeData: "Eliminar Datos",
       hasData: "Tiene Datos",
       noData: "Sin Datos",
+      calculate: "Calcular",
+      calculationResult: "Resultado del Cálculo",
+      saveResult: "Guardar Resultado",
+      loanSummary: "Resumen de Préstamos",
+      loanDetails: "Detalles de Préstamos",
+      bankCode: "Banco",
+      cashLoan: "Préstamo Efectivo",
+      nonCashLoan: "No Efectivo",
+      approvalDate: "Fecha Aprobación",
+      accountId: "ID Cuenta",
+      loanType: "Tipo Préstamo",
+      loanStatus: "Estado",
+      openAmount: "Monto Inicial",
+      currentAmount: "Monto Actual",
+      totalVolume: "Volumen Total",
+      ourBankVolume: "Nuestro Volumen",
+      share: "Participación",
+      bankCount: "Cantidad Bancos",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",

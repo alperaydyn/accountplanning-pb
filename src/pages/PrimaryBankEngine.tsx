@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { Button } from "@/components/ui/button";
@@ -11,11 +11,13 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { supabase } from "@/integrations/supabase/client";
 import { usePortfolioManager } from "@/hooks/usePortfolioManager";
 import { useCustomers } from "@/hooks/useCustomers";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { format } from "date-fns";
 
 interface GeneratedData {
@@ -24,11 +26,14 @@ interface GeneratedData {
   pos_data: any | null;
   cheque_data: any | null;
   collateral_data: any[];
+  provider?: string;
+  model?: string;
 }
 
 interface CustomerResult {
   customerId: string;
   customerName: string;
+  segment?: string;
   status: "pending" | "processing" | "success" | "error" | "existing" | "skipped";
   data?: GeneratedData;
   error?: string;
@@ -42,12 +47,19 @@ const POS_PRODUCT_ID = "prod-11"; // POS Giro
 const CHEQUE_PRODUCT_ID = "prod-12"; // Cheque
 const COLLATERAL_PRODUCT_IDS = ["prod-15", "prod-16", "prod-17"]; // Collateral products
 
+// Format currency for display
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value == null) return "-";
+  return new Intl.NumberFormat("tr-TR", { style: "decimal", maximumFractionDigits: 0 }).format(value) + " TL";
+};
+
 export default function PrimaryBankEngine() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useLanguage();
   const { data: portfolioManager } = usePortfolioManager();
   const { data: customers = [] } = useCustomers();
+  const { settings } = useUserSettings();
 
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -58,6 +70,11 @@ export default function PrimaryBankEngine() {
   const [existingCustomerIds, setExistingCustomerIds] = useState<Set<string>>(new Set());
   const [isLoadingExisting, setIsLoadingExisting] = useState(true);
   const [isDeletingCustomer, setIsDeletingCustomer] = useState<string | null>(null);
+
+  // Manual calculation state
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [isManualGenerating, setIsManualGenerating] = useState(false);
+  const [manualResult, setManualResult] = useState<CustomerResult | null>(null);
 
   // Fetch existing customers with primary bank data
   const fetchExistingCustomers = useCallback(async () => {
@@ -75,6 +92,7 @@ export default function PrimaryBankEngine() {
       const initialResults: CustomerResult[] = customers.map(c => ({
         customerId: c.id,
         customerName: c.name,
+        segment: c.segment,
         status: uniqueIds.has(c.id) ? "existing" as const : "pending" as const,
         hasExistingData: uniqueIds.has(c.id)
       }));
@@ -161,6 +179,9 @@ export default function PrimaryBankEngine() {
     const hasChequeProduct = productIds.includes(CHEQUE_PRODUCT_ID);
     const hasCollateralProduct = COLLATERAL_PRODUCT_IDS.some(id => productIds.includes(id));
 
+    // Get session for auth token
+    const { data: { session } } = await supabase.auth.getSession();
+
     const { data, error } = await supabase.functions.invoke("generate-primary-bank-data", {
       body: {
         customer: {
@@ -175,7 +196,8 @@ export default function PrimaryBankEngine() {
           hasCollateralProduct
         },
         recordMonth
-      }
+      },
+      headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : undefined
     });
 
     if (error) throw error;
@@ -295,6 +317,7 @@ export default function PrimaryBankEngine() {
       setResults(customers.map(c => ({
         customerId: c.id,
         customerName: c.name,
+        segment: c.segment,
         status: existingCustomerIds.has(c.id) ? "existing" as const : "pending" as const,
         hasExistingData: existingCustomerIds.has(c.id)
       })));
@@ -313,11 +336,85 @@ export default function PrimaryBankEngine() {
     fetchExistingCustomers();
   };
 
+  // Manual calculation handler
+  const handleManualCalculation = async (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (!customer) return;
+
+    setSelectedCustomerId(customerId);
+    setIsManualGenerating(true);
+    setManualResult({
+      customerId,
+      customerName: customer.name,
+      segment: customer.segment,
+      status: "processing"
+    });
+
+    try {
+      const data = await generateForCustomer(customer);
+      
+      if (data) {
+        setManualResult({
+          customerId,
+          customerName: customer.name,
+          segment: customer.segment,
+          status: "success",
+          data
+        });
+      }
+    } catch (error: any) {
+      console.error("Manual calculation error:", error);
+      setManualResult({
+        customerId,
+        customerName: customer.name,
+        segment: customer.segment,
+        status: "error",
+        error: error.message
+      });
+    } finally {
+      setIsManualGenerating(false);
+    }
+  };
+
+  // Save manual result
+  const handleSaveManualResult = async () => {
+    if (!manualResult?.data) return;
+
+    try {
+      await saveGeneratedData(manualResult.data);
+      
+      // Update existing customer IDs
+      setExistingCustomerIds(prev => new Set([...prev, manualResult.customerId]));
+      
+      // Update results list
+      setResults(prev => prev.map(r => 
+        r.customerId === manualResult.customerId 
+          ? { ...r, status: "success" as const, data: manualResult.data, hasExistingData: true }
+          : r
+      ));
+
+      toast({ title: t.common.save, description: t.primaryBankEngine.dataDeletedDesc });
+      setManualResult(null);
+      setSelectedCustomerId(null);
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  };
+
+  const closeManualResult = () => {
+    setManualResult(null);
+    setSelectedCustomerId(null);
+  };
+
   const progress = customers.length > 0 ? (currentIndex / customers.length) * 100 : 0;
   const successCount = results.filter(r => r.status === "success").length;
   const errorCount = results.filter(r => r.status === "error").length;
   const existingCount = results.filter(r => r.hasExistingData).length;
   const skippedCount = results.filter(r => r.status === "skipped").length;
+
+  // Get current AI model info
+  const currentProvider = settings?.ai_provider || "lovable";
+  const currentModel = settings?.ai_model || (currentProvider === "lovable" ? "google/gemini-3-flash-preview" : "");
 
   return (
     <AppLayout>
@@ -362,6 +459,16 @@ export default function PrimaryBankEngine() {
                 <Button onClick={handleReset} variant="outline" disabled={isRunning && !isPaused}>
                   <RotateCcw className="h-4 w-4" />
                 </Button>
+              </div>
+
+              <Separator />
+
+              {/* AI Model Info */}
+              <div className="rounded-lg bg-muted/50 p-3 text-xs">
+                <div className="font-medium mb-1">AI Model</div>
+                <div className="text-muted-foreground">
+                  {currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1)}: {currentModel || "Default"}
+                </div>
               </div>
 
               <Separator />
@@ -438,7 +545,9 @@ export default function PrimaryBankEngine() {
                         key={result.customerId}
                         className={`flex items-center justify-between rounded-lg border p-3 ${
                           result.status === "processing" ? "border-primary bg-primary/5" : ""
-                        } ${result.hasExistingData ? "bg-blue-500/5" : ""}`}
+                        } ${result.hasExistingData ? "bg-blue-500/5" : ""} ${
+                          selectedCustomerId === result.customerId ? "ring-2 ring-primary" : ""
+                        }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
@@ -448,6 +557,9 @@ export default function PrimaryBankEngine() {
                           </div>
                           <div>
                             <div className="font-medium">{result.customerName}</div>
+                            {result.segment && (
+                              <div className="text-xs text-muted-foreground">{result.segment}</div>
+                            )}
                             {result.status === "success" && result.data && (
                               <div className="text-xs text-muted-foreground">
                                 {result.data.loan_summary?.length || 0} banks, {" "}
@@ -497,6 +609,25 @@ export default function PrimaryBankEngine() {
                               {t.primaryBankEngine.failed}
                             </Badge>
                           )}
+
+                          {/* Manual Calculate button */}
+                          {!isRunning && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              onClick={() => handleManualCalculation(result.customerId)}
+                              disabled={isManualGenerating && selectedCustomerId === result.customerId}
+                              title={t.primaryBankEngine.calculate}
+                            >
+                              {isManualGenerating && selectedCustomerId === result.customerId ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Calculator className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
+
                           {/* Remove button for customers with existing data */}
                           {result.hasExistingData && !isRunning && (
                             <Button
@@ -541,6 +672,202 @@ export default function PrimaryBankEngine() {
               <div className="text-sm text-muted-foreground">
                 {t.primaryBankEngine.processingDesc}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Manual Calculation Result Panel */}
+        {manualResult && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  {manualResult.status === "processing" && <Loader2 className="h-5 w-5 animate-spin" />}
+                  {manualResult.status === "success" && <Check className="h-5 w-5 text-green-500" />}
+                  {manualResult.status === "error" && <AlertCircle className="h-5 w-5 text-destructive" />}
+                  {t.primaryBankEngine.calculationResult}: {manualResult.customerName}
+                </CardTitle>
+                <CardDescription>
+                  {manualResult.segment && <Badge variant="outline" className="mr-2">{manualResult.segment}</Badge>}
+                  {manualResult.data?.provider && (
+                    <span className="text-xs">
+                      {manualResult.data.provider} / {manualResult.data.model}
+                    </span>
+                  )}
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                {manualResult.status === "success" && manualResult.data && (
+                  <Button size="sm" onClick={handleSaveManualResult}>
+                    <Save className="mr-2 h-4 w-4" />
+                    {t.primaryBankEngine.saveResult}
+                  </Button>
+                )}
+                <Button variant="ghost" size="icon" onClick={closeManualResult}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {manualResult.status === "processing" && (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                </div>
+              )}
+
+              {manualResult.status === "error" && (
+                <div className="rounded-lg bg-destructive/10 p-4 text-destructive">
+                  {manualResult.error}
+                </div>
+              )}
+
+              {manualResult.status === "success" && manualResult.data && (
+                <div className="space-y-6">
+                  {/* Loan Summary */}
+                  {manualResult.data.loan_summary?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">{t.primaryBankEngine.loanSummary}</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t.primaryBankEngine.bankCode}</TableHead>
+                            <TableHead className="text-right">{t.primaryBankEngine.cashLoan}</TableHead>
+                            <TableHead className="text-right">{t.primaryBankEngine.nonCashLoan}</TableHead>
+                            <TableHead>{t.primaryBankEngine.approvalDate}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {manualResult.data.loan_summary.map((ls: any, idx: number) => (
+                            <TableRow key={idx} className={ls.our_bank_flag ? "bg-primary/5" : ""}>
+                              <TableCell>
+                                <span className="font-medium">{ls.bank_code}</span>
+                                {ls.our_bank_flag && <Badge variant="secondary" className="ml-2 text-xs">Ours</Badge>}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(ls.cash_loan)}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(ls.non_cash_loan)}</TableCell>
+                              <TableCell>{ls.last_approval_date || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {/* Loan Details */}
+                  {manualResult.data.loan_detail?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">{t.primaryBankEngine.loanDetails}</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t.primaryBankEngine.bankCode}</TableHead>
+                            <TableHead>{t.primaryBankEngine.accountId}</TableHead>
+                            <TableHead>{t.primaryBankEngine.loanType}</TableHead>
+                            <TableHead>{t.primaryBankEngine.loanStatus}</TableHead>
+                            <TableHead className="text-right">{t.primaryBankEngine.openAmount}</TableHead>
+                            <TableHead className="text-right">{t.primaryBankEngine.currentAmount}</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {manualResult.data.loan_detail.map((ld: any, idx: number) => (
+                            <TableRow key={idx} className={ld.our_bank_flag ? "bg-primary/5" : ""}>
+                              <TableCell>{ld.bank_code}</TableCell>
+                              <TableCell className="font-mono text-xs">{ld.account_id}</TableCell>
+                              <TableCell>{ld.loan_type}</TableCell>
+                              <TableCell>
+                                <Badge variant={ld.loan_status === "Aktif" ? "default" : "secondary"}>
+                                  {ld.loan_status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(ld.open_amount)}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(ld.current_amount)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+
+                  {/* POS & Cheque Data */}
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {manualResult.data.pos_data && (
+                      <div className="rounded-lg border p-4">
+                        <h4 className="font-semibold mb-2">POS</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t.primaryBankEngine.totalVolume}</span>
+                            <span className="font-mono">{formatCurrency(manualResult.data.pos_data.total_pos_volume)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t.primaryBankEngine.ourBankVolume}</span>
+                            <span className="font-mono">{formatCurrency(manualResult.data.pos_data.our_bank_pos_volume)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t.primaryBankEngine.share}</span>
+                            <span className="font-mono">{manualResult.data.pos_data.pos_share}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">{t.primaryBankEngine.bankCount}</span>
+                            <span>{manualResult.data.pos_data.number_of_banks}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {manualResult.data.cheque_data && (
+                      <div className="rounded-lg border p-4">
+                        <h4 className="font-semibold mb-2">{t.primaryBank.chequeTitle}</h4>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">1M</span>
+                            <span className="font-mono">{formatCurrency(manualResult.data.cheque_data.cheque_volume_1m)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">3M</span>
+                            <span className="font-mono">{formatCurrency(manualResult.data.cheque_data.cheque_volume_3m)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">12M</span>
+                            <span className="font-mono">{formatCurrency(manualResult.data.cheque_data.cheque_volume_12m)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Collateral Data */}
+                  {manualResult.data.collateral_data?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-2">{t.primaryBank.collateralsTitle}</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>{t.primaryBankEngine.bankCode}</TableHead>
+                            <TableHead className="text-right">Group 1</TableHead>
+                            <TableHead className="text-right">Group 2</TableHead>
+                            <TableHead className="text-right">Group 3</TableHead>
+                            <TableHead className="text-right">Group 4</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {manualResult.data.collateral_data.map((cd: any, idx: number) => (
+                            <TableRow key={idx} className={cd.our_bank_flag ? "bg-primary/5" : ""}>
+                              <TableCell>
+                                <span className="font-medium">{cd.bank_code}</span>
+                                {cd.our_bank_flag && <Badge variant="secondary" className="ml-2 text-xs">Ours</Badge>}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(cd.group1_amount)}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(cd.group2_amount)}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(cd.group3_amount)}</TableCell>
+                              <TableCell className="text-right font-mono">{formatCurrency(cd.group4_amount)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
