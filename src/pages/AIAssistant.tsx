@@ -74,7 +74,8 @@ export default function AIAssistant() {
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const [totalUsage, setTotalUsage] = useState({ prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 });
   const [planMyDayTriggered, setPlanMyDayTriggered] = useState(false);
-  const [pendingPlanData, setPendingPlanData] = useState<{ plan: PlanMyDayResponse; mapping: Record<string, { id: string; name: string }> } | null>(null);
+  const [pendingPlanData, setPendingPlanData] = useState<{ plan: PlanMyDayResponse; mapping: Record<string, { id: string; name: string }>; targetDate?: string } | null>(null);
+  const [planTargetDate, setPlanTargetDate] = useState<string | undefined>(undefined);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -236,13 +237,13 @@ export default function AIAssistant() {
           const jsonMatch = data.content.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             const planData: PlanMyDayResponse = JSON.parse(jsonMatch[0]);
-            setPendingPlanData({ plan: planData, mapping: tempIdToCustomer });
+            setPendingPlanData({ plan: planData, mapping: tempIdToCustomer, targetDate: planTargetDate });
 
             // Format the response for display with customer names
             displayContent = formatPlanMyDayResponse(planData, tempIdToCustomer);
 
             // Persist the structured plan so it can be re-rendered after refresh
-            storedContent = appendPlanMyDayPayload(displayContent, planData);
+            storedContent = appendPlanMyDayPayload(displayContent, planData, planTargetDate);
           }
         } catch (parseError) {
           console.error("Failed to parse plan my day response:", parseError);
@@ -292,15 +293,21 @@ export default function AIAssistant() {
     return response;
   };
 
-  const handlePlanMyDay = async () => {
+  const handlePlanMyDay = async (targetDate?: string) => {
     try {
       const session = await createSession.mutateAsync(undefined);
       setActiveSessionId(session.id);
       
+      // Store target date for use when saving the plan
+      if (targetDate) {
+        setPlanTargetDate(targetDate);
+      }
+      
       // Wait a tick for state to update, then send the message
       setTimeout(async () => {
-        await sendMessage(session.id, "plan my day");
-        updateTitle.mutate({ sessionId: session.id, title: "Günümü Planla" });
+        const dateInfo = targetDate ? ` for ${targetDate}` : "";
+        await sendMessage(session.id, `plan my day${dateInfo}`);
+        updateTitle.mutate({ sessionId: session.id, title: targetDate ? `${targetDate} Planı` : "Günümü Planla" });
       }, 100);
     } catch (error) {
       toast.error("Yeni sohbet oluşturulamadı");
@@ -310,12 +317,17 @@ export default function AIAssistant() {
   // Handle "plan my day" trigger from URL
   useEffect(() => {
     const prompt = searchParams.get("prompt");
+    const dateParam = searchParams.get("date");
     if (prompt === "plan-my-day" && !planMyDayTriggered && !sessionsLoading && preparedCustomerData.length > 0) {
       setPlanMyDayTriggered(true);
-      // Clear the URL param
+      // Store the target date before clearing params
+      if (dateParam) {
+        setPlanTargetDate(dateParam);
+      }
+      // Clear the URL params
       setSearchParams({}, { replace: true });
       // Create new session and send "plan my day"
-      handlePlanMyDay();
+      handlePlanMyDay(dateParam || undefined);
     }
   }, [searchParams, sessionsLoading, planMyDayTriggered, preparedCustomerData]);
 
@@ -432,6 +444,7 @@ export default function AIAssistant() {
           products={products}
           actionTemplates={actionTemplates}
           existingActions={actions}
+          targetDate={pendingPlanData.targetDate}
         />
       );
     }
@@ -455,6 +468,7 @@ export default function AIAssistant() {
           products={products}
           actionTemplates={actionTemplates}
           existingActions={actions}
+          targetDate={extracted.targetDate}
         />
       );
     }
