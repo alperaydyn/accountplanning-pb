@@ -7,15 +7,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+interface CustomerProduct {
+  name: string;
+  category: string;
+  current_value: number;
+  threshold: number;
+  gap: number;
+}
+
 interface CustomerData {
   id: string;
-  tempId: string; // One-time ID for privacy
+  tempId: string;
+  name: string;
   segment: string;
   sector: string;
   status: string;
   principality_score: number | null;
-  products: { name: string; category: string; current_value: number }[];
+  products: CustomerProduct[];
+  belowThresholdProducts: CustomerProduct[];
   actions: { name: string; description: string | null; priority: string; status: string }[];
+}
+
+interface ActionTemplate {
+  productId: string;
+  productName: string;
+  actionName: string;
 }
 
 serve(async (req) => {
@@ -60,19 +76,11 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { message, customers, chatHistory } = await req.json();
+    const { message, customers, actionTemplates, chatHistory } = await req.json();
 
     if (!message || !customers) {
       throw new Error("Missing required parameters: message, customers");
     }
-
-    // Build customer context with temp IDs (privacy preserved)
-    const customerContext = customers.map((c: CustomerData) => `
-Customer ${c.tempId}:
-- Segment: ${c.segment}, Sector: ${c.sector}, Status: ${c.status}
-- Principality Score: ${c.principality_score || 0}%
-- Products (${c.products.length}): ${c.products.map(p => `${p.name} (${p.category}, ${p.current_value.toLocaleString()} TL)`).join(", ") || "None"}
-- Active Actions (${c.actions.length}): ${c.actions.map(a => `${a.name} [${a.priority}/${a.status}]`).join(", ") || "None"}`).join("\n");
 
     // Check if this is a "plan my day" request
     const isPlanMyDay = message.toLowerCase().includes("plan my day") || 
@@ -81,49 +89,69 @@ Customer ${c.tempId}:
     let systemPrompt: string;
 
     if (isPlanMyDay) {
-      systemPrompt = `You are an AI assistant helping a Relationship Manager (RM) plan their day for maximum performance.
+      // Build action templates context
+      const templatesContext = (actionTemplates || [])
+        .map((t: ActionTemplate) => `${t.productName}: ${t.actionName}`)
+        .join("\n");
 
-When the user asks to "plan my day", you should:
-1. Start with an encouraging opener: "Gününüz planlanıyor! Sizi zirveye taşımak için buradayım. 🚀"
-2. Analyze their customer portfolio and identify the TOP 5 customers to focus on TODAY
-3. For each customer, provide:
-   - Why they should be prioritized (status, principality score, pending actions)
-   - What specific action to take
-   - Expected impact
+      // Build customer context with below-threshold products
+      const customerContext = customers
+        .filter((c: CustomerData) => c.belowThresholdProducts && c.belowThresholdProducts.length > 0)
+        .slice(0, 20) // Limit to top 20 customers with gaps
+        .map((c: CustomerData) => {
+          const gaps = c.belowThresholdProducts
+            .map(p => `${p.name}(açık:${Math.round(p.gap/1000)}K)`)
+            .join(", ");
+          return `${c.tempId}: ${c.status}, PS:${c.principality_score || 0}%, Açıklar: ${gaps}`;
+        })
+        .join("\n");
 
-Available customer data uses temporary IDs for privacy (like C1, C2, etc.). Always refer to customers by their temp IDs.
+      systemPrompt = `Sen bir Portföy Yöneticisine günlük satış planı hazırlayan AI asistanısın.
 
-Prioritization criteria:
-- High principality score customers needing attention
-- Strong Target / Target status customers with cross-sell opportunities
-- Customers with pending actions that need follow-up
-- Balance between quick wins and high-value prospects
+GÖREV: Bugün odaklanılacak EN İYİ 5 müşteriyi seç ve her biri için 2-3 aksiyon öner.
 
-Always respond in Turkish. Be motivational and action-oriented.
+MÜŞTERİ VERİLERİ:
+${customerContext}
 
-Customer Portfolio:
-${customerContext}`;
+MEVCUT AKSİYON ŞABLONLARI:
+${templatesContext}
+
+YANIT FORMATI (JSON):
+{
+  "greeting": "Gününüz planlanıyor! 🚀",
+  "customers": [
+    {
+      "tempId": "C1",
+      "reason": "Neden bu müşteri seçildi (max 15 kelime)",
+      "actions": [
+        {"product": "Ürün Adı", "action": "Aksiyon Adı", "note": "Kısa not (max 10 kelime)"}
+      ]
+    }
+  ],
+  "summary": "Günlük hedef özeti (max 20 kelime)"
+}
+
+KURALLAR:
+- Sadece JSON döndür, başka açıklama yazma
+- Her müşteri için 2-3 aksiyon öner
+- Aksiyonları mevcut şablonlardan seç
+- Yüksek PS skorlu ve büyük açığı olan müşterileri öncelikle seç
+- "Strong Target" ve "Target" statüsündeki müşterileri tercih et`;
+
     } else {
-      systemPrompt = `You are an AI assistant helping a Relationship Manager (RM) prioritize customers for sales actions.
+      // Regular query - simplified context
+      const customerContext = customers.map((c: CustomerData) => `
+${c.tempId}: ${c.segment}/${c.sector}, ${c.status}, PS:${c.principality_score || 0}%
+Ürünler: ${c.products.map(p => p.name).join(", ") || "Yok"}
+Açıklar: ${c.belowThresholdProducts?.map(p => `${p.name}(${Math.round(p.gap/1000)}K)`).join(", ") || "Yok"}`).join("\n");
 
-Your role is to analyze customer portfolios and recommend which customers to focus on based on the RM's query.
+      systemPrompt = `Sen bir Portföy Yöneticisine müşteri önceliklendirmede yardım eden AI asistanısın.
 
-Available customer data uses temporary IDs for privacy (like C1, C2, etc.). Always refer to customers by their temp IDs.
+Müşteri Portföyü:
+${customerContext}
 
-When recommending customers:
-1. Analyze their segment, sector, status, principality score, product ownership, and existing actions
-2. Consider cross-sell opportunities (products they don't have yet)
-3. Consider their engagement level (principality score)
-4. Consider their status (Target/Strong Target = high potential)
-5. Prioritize customers with fewer active actions (more capacity for new actions)
-
-Always respond in Turkish. Be concise but informative.
-
-When listing customers, format as:
-- **[TempID]**: [Reason for recommendation]
-
-Customer Portfolio:
-${customerContext}`;
+Kısa ve öz yanıtlar ver. Müşterileri tempId ile referans göster (C1, C2 vb.).
+Türkçe yanıt ver.`;
     }
 
     // Build messages with history (max 5 previous messages)
@@ -176,6 +204,7 @@ ${customerContext}`;
     return new Response(JSON.stringify({ 
       content,
       usage,
+      isPlanMyDay,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
