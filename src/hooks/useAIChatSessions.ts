@@ -137,12 +137,16 @@ export const useAddChatMessage = () => {
       content,
       customerMapping,
       usage,
+      provider,
+      modelName,
     }: {
       sessionId: string;
       role: 'user' | 'assistant';
       content: string;
       customerMapping?: Record<string, string>;
       usage?: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
+      provider?: string;
+      modelName?: string;
     }) => {
       const { data, error } = await supabase
         .from('ai_chat_messages')
@@ -152,6 +156,8 @@ export const useAddChatMessage = () => {
           content,
           customer_mapping: customerMapping || null,
           usage: usage || null,
+          provider: provider || null,
+          model_name: modelName || null,
         })
         .select()
         .single();
