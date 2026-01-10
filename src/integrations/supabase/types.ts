@@ -811,6 +811,7 @@ export type Database = {
           id: string
           language: string
           notifications_enabled: boolean
+          preferred_agenda_view: string
           theme: string
           updated_at: string
           user_id: string
@@ -820,6 +821,7 @@ export type Database = {
           id?: string
           language?: string
           notifications_enabled?: boolean
+          preferred_agenda_view?: string
           theme?: string
           updated_at?: string
           user_id: string
@@ -829,6 +831,7 @@ export type Database = {
           id?: string
           language?: string
           notifications_enabled?: boolean
+          preferred_agenda_view?: string
           theme?: string
           updated_at?: string
           user_id?: string
