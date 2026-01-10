@@ -53,7 +53,7 @@ serve(async (req) => {
     }
     // === End Authentication Check ===
 
-    const { provider, model, apiKey, baseUrl } = await req.json();
+    const { provider, model, apiKey, baseUrl, testPrompt } = await req.json();
 
     if (!provider) {
       throw new Error("Missing required parameter: provider");
@@ -104,11 +104,15 @@ serve(async (req) => {
       headers['X-Title'] = 'Account Planning App';
     }
 
-    // Simple test request
+    // Use custom test prompt or default
+    const prompt = testPrompt || 'Say "OK" in one word.';
+    const maxTokens = testPrompt ? 500 : 10;
+
+    // Test request
     const body = {
       model: resolvedModel,
-      messages: [{ role: 'user', content: 'Say "OK" in one word.' }],
-      max_tokens: 10,
+      messages: [{ role: 'user', content: prompt }],
+      max_tokens: maxTokens,
     };
 
     console.log(`Testing AI connection: provider=${provider}, model=${resolvedModel}, endpoint=${endpoint}`);
@@ -150,8 +154,8 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: `Connection successful`,
-      response: content.substring(0, 50),
+      message: `Bağlantı başarılı (${resolvedModel})`,
+      response: content,
       model: resolvedModel,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

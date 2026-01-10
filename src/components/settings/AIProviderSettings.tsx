@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bot, Key, Server, TestTube2, Loader2, CheckCircle2, XCircle, Info, Eye, EyeOff } from "lucide-react";
+import { Bot, Key, Server, TestTube2, Loader2, CheckCircle2, XCircle, Info, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,8 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Textarea } from "@/components/ui/textarea";
 
 type AIProvider = 'lovable' | 'openai' | 'openrouter' | 'local';
 
@@ -64,6 +66,8 @@ const PRESET_MODELS: Record<AIProvider, { value: string; label: string }[]> = {
   ],
 };
 
+const DEFAULT_TEST_PROMPT = "Merhaba! Türkiye'nin başkenti neresidir? Kısa bir cevap ver.";
+
 function maskApiKey(key: string): string {
   if (!key || key.length < 8) return '••••••••';
   const first4 = key.slice(0, 4);
@@ -84,11 +88,13 @@ export function AIProviderSettings() {
   const [apiKey, setApiKey] = useState<string>('');
   const [baseUrl, setBaseUrl] = useState<string>('');
   const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string; response?: string } | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [savedApiKeyMasked, setSavedApiKeyMasked] = useState<string | null>(null);
   const [isEditingApiKey, setIsEditingApiKey] = useState(false);
+  const [isTestPanelOpen, setIsTestPanelOpen] = useState(false);
+  const [testPrompt, setTestPrompt] = useState(DEFAULT_TEST_PROMPT);
 
   // Load settings
   useEffect(() => {
@@ -155,7 +161,12 @@ export function AIProviderSettings() {
       const accessToken = session.data.session?.access_token;
       
       if (!accessToken) {
-        throw new Error('Not authenticated');
+        setTestResult({
+          success: false,
+          message: 'Kimlik doğrulama gerekli',
+        });
+        setIsTesting(false);
+        return;
       }
 
       const resolvedModel = model === 'custom' ? customModel : model;
@@ -169,16 +180,23 @@ export function AIProviderSettings() {
           model: resolvedModel || null,
           apiKey: testApiKey,
           baseUrl: baseUrl || null,
+          testPrompt: testPrompt,
         },
       });
 
       if (response.error) {
-        throw new Error(response.error.message);
+        setTestResult({
+          success: false,
+          message: response.error.message || 'Bağlantı hatası',
+        });
+        setIsTesting(false);
+        return;
       }
 
       setTestResult({
         success: response.data.success,
         message: response.data.message,
+        response: response.data.response,
       });
 
       if (response.data.success) {
@@ -191,7 +209,7 @@ export function AIProviderSettings() {
       console.error('Test connection error:', error);
       setTestResult({
         success: false,
-        message: error instanceof Error ? error.message : 'Unknown error',
+        message: error instanceof Error ? error.message : 'Bilinmeyen hata',
       });
     } finally {
       setIsTesting(false);
@@ -238,6 +256,18 @@ export function AIProviderSettings() {
     }
   };
 
+  const getSelectedProviderLabel = () => {
+    const selected = PROVIDERS.find(p => p.value === provider);
+    return selected?.label || 'Seçiniz';
+  };
+
+  const getSelectedModelLabel = () => {
+    if (isCustomModel && customModel) return customModel;
+    if (model === 'custom') return 'Özel model';
+    const selected = presetModels.find(m => m.value === model);
+    return selected?.label || 'Model seçin';
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -257,19 +287,17 @@ export function AIProviderSettings() {
             <Label>Sağlayıcı</Label>
             <Select value={provider} onValueChange={handleProviderChange}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>{getSelectedProviderLabel()}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {PROVIDERS.map((p) => (
                   <SelectItem key={p.value} value={p.value}>
-                    <div className="flex flex-col">
-                      <span>{p.label}</span>
-                      <span className="text-xs text-muted-foreground">{p.description}</span>
-                    </div>
+                    <span>{p.label}</span>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{currentProvider?.description}</p>
           </div>
 
           {/* Model Selection */}
@@ -289,20 +317,20 @@ export function AIProviderSettings() {
             </div>
             <Select value={isCustomModel ? 'custom' : model} onValueChange={handleModelChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Model seçin" />
+                <SelectValue placeholder="Model seçin">{getSelectedModelLabel()}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {presetModels.map((m) => (
                   <SelectItem key={m.value} value={m.value}>
-                    <div className="flex flex-col">
-                      <span>{m.label}</span>
-                      <span className="text-xs text-muted-foreground font-mono">{m.value}</span>
-                    </div>
+                    <span>{m.label}</span>
                   </SelectItem>
                 ))}
                 <SelectItem value="custom">Özel model adı gir...</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground font-mono">
+              {model && model !== 'custom' ? model : (isCustomModel && customModel ? customModel : 'Model seçilmedi')}
+            </p>
           </div>
         </div>
 
@@ -401,20 +429,6 @@ export function AIProviderSettings() {
           </div>
         )}
 
-        {/* Test Result */}
-        {testResult && (
-          <div className={`flex items-center gap-2 p-3 rounded-lg ${
-            testResult.success ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'
-          }`}>
-            {testResult.success ? (
-              <CheckCircle2 className="h-4 w-4" />
-            ) : (
-              <XCircle className="h-4 w-4" />
-            )}
-            <span className="text-sm">{testResult.message}</span>
-          </div>
-        )}
-
         {/* Actions */}
         <div className="flex gap-3">
           <Button
@@ -440,6 +454,53 @@ export function AIProviderSettings() {
             Kaydet
           </Button>
         </div>
+
+        {/* Test Result */}
+        {testResult && (
+          <div className={`flex items-center gap-2 p-3 rounded-lg ${
+            testResult.success ? 'bg-green-500/10 text-green-600' : 'bg-destructive/10 text-destructive'
+          }`}>
+            {testResult.success ? (
+              <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-4 w-4 flex-shrink-0" />
+            )}
+            <span className="text-sm">{testResult.message}</span>
+          </div>
+        )}
+
+        {/* Collapsible Test Panel */}
+        <Collapsible open={isTestPanelOpen} onOpenChange={setIsTestPanelOpen}>
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="w-full justify-between px-0 hover:bg-transparent">
+              <span className="text-sm font-medium">Test Detayları</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${isTestPanelOpen ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label>Test Metni</Label>
+              <Textarea
+                placeholder="Test için gönderilecek mesajı yazın..."
+                value={testPrompt}
+                onChange={(e) => setTestPrompt(e.target.value)}
+                rows={2}
+              />
+              <p className="text-xs text-muted-foreground">
+                AI modeline gönderilecek test mesajı. Varsayılan metin kullanabilir veya özelleştirebilirsiniz.
+              </p>
+            </div>
+            
+            {testResult?.response && (
+              <div className="space-y-2">
+                <Label>AI Yanıtı</Label>
+                <div className="p-3 bg-muted rounded-lg">
+                  <p className="text-sm whitespace-pre-wrap">{testResult.response}</p>
+                </div>
+              </div>
+            )}
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
