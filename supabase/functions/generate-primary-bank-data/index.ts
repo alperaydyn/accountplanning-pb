@@ -252,11 +252,46 @@ Generate appropriate banking data based on the customer profile.`;
 
     const generatedData: GeneratedData = JSON.parse(toolCall.function.arguments);
 
-    // Ensure our bank is always included
-    const hasOurBank = generatedData.loan_summary.some(ls => ls.our_bank_flag);
-    if (!hasOurBank && generatedData.loan_summary.length > 0) {
-      generatedData.loan_summary[0].our_bank_flag = true;
-      generatedData.loan_summary[0].bank_code = "A";
+    // Ensure our bank (A) is always included and properly flagged
+    const ourBankIdx = generatedData.loan_summary.findIndex((ls) => ls.bank_code === "A");
+    if (ourBankIdx === -1) {
+      generatedData.loan_summary.unshift({
+        bank_code: "A",
+        our_bank_flag: true,
+        cash_loan: 0,
+        non_cash_loan: 0,
+        last_approval_date: null,
+      });
+    } else {
+      generatedData.loan_summary[ourBankIdx].our_bank_flag = true;
+    }
+
+    // Deterministic safety net (model sometimes returns 0):
+    // If customer has Kredi, force cash_loan > 0 for our bank and at least one bank.
+    if (customer.hasKrediAccount) {
+      const range = (() => {
+        switch (customer.segment) {
+          case "MİKRO":
+            return { min: 50_000, max: 500_000 };
+          case "Kİ":
+            return { min: 200_000, max: 2_000_000 };
+          case "OBİ":
+            return { min: 1_000_000, max: 20_000_000 };
+          case "TİCARİ":
+            return { min: 5_000_000, max: 100_000_000 };
+          default:
+            return { min: 200_000, max: 5_000_000 };
+        }
+      })();
+
+      const randRounded = (min: number, max: number) =>
+        Math.round((min + Math.random() * (max - min)) / 10_000) * 10_000;
+
+      const anyCash = generatedData.loan_summary.some((ls) => (ls.cash_loan ?? 0) > 0);
+      const our = generatedData.loan_summary.find((ls) => ls.bank_code === "A");
+      if (our && (!anyCash || (our.cash_loan ?? 0) <= 0)) {
+        our.cash_loan = randRounded(range.min, range.max);
+      }
     }
 
     // Add record_month and customer_id to all records
