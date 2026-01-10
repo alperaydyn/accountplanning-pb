@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Save, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCreateAction } from "@/hooks/useActions";
+import { useCreateAction, Action } from "@/hooks/useActions";
 import { toast } from "sonner";
 
 interface PlanAction {
@@ -33,26 +33,38 @@ interface PlanMyDayDisplayProps {
   mapping: Record<string, CustomerMapping>;
   products: { id: string; name: string }[];
   actionTemplates: { product_id: string; name: string }[];
-}
-
-interface SavedActionKey {
-  customerId: string;
-  productName: string;
-  actionName: string;
+  existingActions: Action[];
 }
 
 export function PlanMyDayDisplay({ 
   plan, 
   mapping, 
   products, 
-  actionTemplates 
+  actionTemplates,
+  existingActions 
 }: PlanMyDayDisplayProps) {
-  const [savedActions, setSavedActions] = useState<Set<string>>(new Set());
+  const [newlySavedActions, setNewlySavedActions] = useState<Set<string>>(new Set());
   const [savingActions, setSavingActions] = useState<Set<string>>(new Set());
   const createAction = useCreateAction();
 
+  // Build a set of already-saved action keys from the database
+  const alreadySavedActions = useMemo(() => {
+    const keys = new Set<string>();
+    existingActions.forEach(action => {
+      const productName = action.products?.name;
+      if (productName) {
+        keys.add(`${action.customer_id}|${productName}|${action.name}`);
+      }
+    });
+    return keys;
+  }, [existingActions]);
+
   const getActionKey = (customerId: string, productName: string, actionName: string) => {
     return `${customerId}|${productName}|${actionName}`;
+  };
+
+  const isActionSaved = (actionKey: string) => {
+    return alreadySavedActions.has(actionKey) || newlySavedActions.has(actionKey);
   };
 
   const handleSaveAction = async (
@@ -92,7 +104,7 @@ export function PlanMyDayDisplay({
         current_planned_date: today,
       });
 
-      setSavedActions(prev => new Set(prev).add(actionKey));
+      setNewlySavedActions(prev => new Set(prev).add(actionKey));
       toast.success("Aksiyon kaydedildi");
     } catch (err) {
       console.error("Failed to save action:", err);
@@ -151,7 +163,7 @@ export function PlanMyDayDisplay({
                   const actionKey = customerId 
                     ? getActionKey(customerId, action.product, action.action)
                     : `${customer.tempId}|${action.product}|${action.action}`;
-                  const isSaved = savedActions.has(actionKey);
+                  const isSaved = isActionSaved(actionKey);
                   const isSaving = savingActions.has(actionKey);
 
                   return (

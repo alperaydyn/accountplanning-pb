@@ -424,6 +424,7 @@ export default function AIAssistant() {
           mapping={pendingPlanData.mapping}
           products={products}
           actionTemplates={actionTemplates}
+          existingActions={actions}
         />
       );
     }
