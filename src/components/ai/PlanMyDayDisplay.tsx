@@ -36,6 +36,9 @@ interface PlanMyDayDisplayProps {
   existingActions: Action[];
 }
 
+const normalizeKeyPart = (value: string) =>
+  value.normalize("NFKC").trim().toLowerCase();
+
 export function PlanMyDayDisplay({ 
   plan, 
   mapping, 
@@ -53,14 +56,14 @@ export function PlanMyDayDisplay({
     existingActions.forEach(action => {
       const productName = action.products?.name;
       if (productName) {
-        keys.add(`${action.customer_id}|${productName}|${action.name}`);
+        keys.add(`${action.customer_id}|${normalizeKeyPart(productName)}|${normalizeKeyPart(action.name)}`);
       }
     });
     return keys;
   }, [existingActions]);
 
   const getActionKey = (customerId: string, productName: string, actionName: string) => {
-    return `${customerId}|${productName}|${actionName}`;
+    return `${customerId}|${normalizeKeyPart(productName)}|${normalizeKeyPart(actionName)}`;
   };
 
   const isActionSaved = (actionKey: string) => {
@@ -79,8 +82,8 @@ export function PlanMyDayDisplay({
 
     const actionKey = getActionKey(customerInfo.id, action.product, action.action);
     
-    // Find the product ID
-    const product = products.find(p => p.name === action.product);
+    // Find the product ID (normalize to avoid minor AI formatting differences)
+    const product = products.find(p => normalizeKeyPart(p.name) === normalizeKeyPart(action.product));
     if (!product) {
       toast.error(`Ürün bulunamadı: ${action.product}`);
       return;

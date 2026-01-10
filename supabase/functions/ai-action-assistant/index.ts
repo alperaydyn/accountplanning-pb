@@ -89,10 +89,14 @@ serve(async (req) => {
     let systemPrompt: string;
 
     if (isPlanMyDay) {
-      // Build action templates context
+      // Build action templates context (explicit product→action pairs)
       const templatesContext = (actionTemplates || [])
-        .map((t: ActionTemplate) => `${t.productName}: ${t.actionName}`)
+        .map((t: ActionTemplate) => `${t.productName} → ${t.actionName}`)
         .join("\n");
+
+      const allowedProducts = Array.from(
+        new Set((actionTemplates || []).map((t: ActionTemplate) => t.productName))
+      ).join(", ");
 
       // Build customer context with below-threshold products
       const customerContext = customers
@@ -100,7 +104,7 @@ serve(async (req) => {
         .slice(0, 20) // Limit to top 20 customers with gaps
         .map((c: CustomerData) => {
           const gaps = c.belowThresholdProducts
-            .map(p => `${p.name}(açık:${Math.round(p.gap/1000)}K)`)
+            .map((p) => `${p.name}(açık:${Math.round(p.gap / 1000)}K)`)
             .join(", ");
           return `${c.tempId}: ${c.status}, PS:${c.principality_score || 0}%, Açıklar: ${gaps}`;
         })
@@ -110,11 +114,14 @@ serve(async (req) => {
 
 GÖREV: Bugün odaklanılacak EN İYİ 5 müşteriyi seç ve her biri için 2-3 aksiyon öner.
 
-MÜŞTERİ VERİLERİ:
+MÜŞTERİ VERİLERİ (ürün adlarını olduğu gibi kopyala):
 ${customerContext}
 
-MEVCUT AKSİYON ŞABLONLARI:
+MEVCUT AKSİYON ŞABLONLARI (ÜRÜN → AKSİYON):
 ${templatesContext}
+
+GEÇERLİ ÜRÜNLER (product alanı bunlardan BİREBİR olmalı):
+${allowedProducts}
 
 YANIT FORMATI (JSON):
 {
@@ -131,12 +138,17 @@ YANIT FORMATI (JSON):
   "summary": "Günlük hedef özeti (max 20 kelime)"
 }
 
-KURALLAR:
+KURALLAR (ÇOK ÖNEMLİ):
 - Sadece JSON döndür, başka açıklama yazma
-- Her müşteri için 2-3 aksiyon öner
-- Aksiyonları mevcut şablonlardan seç
+- Her müşteri için 2-3 aksiyon öner (yeterli benzersiz ürün yoksa daha az yaz)
+- "product" alanı: Yukarıdaki GEÇERLİ ÜRÜNLER listesinden BİREBİR aynı olmalı (kısaltma/çeviri/yeni isim YOK)
+- "action" alanı: Seçtiğin product için yalnızca şablonlarda geçen aksiyon adlarından BİREBİR olmalı
+- ÜRÜN-AKSİYON EŞLEŞMESİ KORUNACAK: (product, action) ikilisi şablonlarda bir satır olarak bulunmalı
+- Aynı müşteri içinde ürün TEKRARI YOK: actions dizisinde aynı "product" iki kez geçemez
+- Aksiyonlar tercihen müşterinin "Açıklar" listesindeki ürünlerden seçilsin
 - Yüksek PS skorlu ve büyük açığı olan müşterileri öncelikle seç
 - "Strong Target" ve "Target" statüsündeki müşterileri tercih et`;
+
 
     } else {
       // Regular query - simplified context
