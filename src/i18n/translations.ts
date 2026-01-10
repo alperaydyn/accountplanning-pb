@@ -27,6 +27,8 @@ export interface Translations {
     noData: string;
     unknown: string;
     more: string;
+    showing: string;
+    of: string;
   };
 
   // Auth
@@ -182,6 +184,12 @@ export interface Translations {
     planDay: string;
     preferredView: string;
     preferredViewDescription: string;
+    priority: string;
+    status: string;
+    action: string;
+    customer: string;
+    product: string;
+    date: string;
   };
 
   // Settings
@@ -361,6 +369,8 @@ export const translations: Record<Language, Translations> = {
       noData: "Veri bulunamadı",
       unknown: "Bilinmiyor",
       more: "daha fazla",
+      showing: "Gösterilen",
+      of: "/",
     },
     auth: {
       accountPlanning: "Account Planning",
@@ -507,6 +517,12 @@ export const translations: Record<Language, Translations> = {
       planDay: "Planla",
       preferredView: "Tercih Edilen Görünüm",
       preferredViewDescription: "Aksiyon takvimi için varsayılan görünümü seçin",
+      priority: "Öncelik",
+      status: "Durum",
+      action: "Aksiyon",
+      customer: "Müşteri",
+      product: "Ürün",
+      date: "Tarih",
     },
     settings: {
       title: "Ayarlar",
@@ -660,6 +676,8 @@ export const translations: Record<Language, Translations> = {
       noData: "No data found",
       unknown: "Unknown",
       more: "more",
+      showing: "Showing",
+      of: "of",
     },
     auth: {
       accountPlanning: "Account Planning",
@@ -806,6 +824,12 @@ export const translations: Record<Language, Translations> = {
       planDay: "Plan",
       preferredView: "Preferred View",
       preferredViewDescription: "Select default view for actions agenda",
+      priority: "Priority",
+      status: "Status",
+      action: "Action",
+      customer: "Customer",
+      product: "Product",
+      date: "Date",
     },
     settings: {
       title: "Settings",
@@ -959,6 +983,8 @@ export const translations: Record<Language, Translations> = {
       noData: "No se encontraron datos",
       unknown: "Desconocido",
       more: "más",
+      showing: "Mostrando",
+      of: "de",
     },
     auth: {
       accountPlanning: "Account Planning",
@@ -1105,6 +1131,12 @@ export const translations: Record<Language, Translations> = {
       planDay: "Planificar",
       preferredView: "Vista Preferida",
       preferredViewDescription: "Seleccione la vista predeterminada para la agenda de acciones",
+      priority: "Prioridad",
+      status: "Estado",
+      action: "Acción",
+      customer: "Cliente",
+      product: "Producto",
+      date: "Fecha",
     },
     settings: {
       title: "Configuración",
