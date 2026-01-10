@@ -9,41 +9,47 @@ import { useLanguage } from "@/contexts/LanguageContext";
 // Generate fixed date options
 const generateDateOptions = () => {
   const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-indexed
+  
+  const dateSet = new Set<string>();
   const options: { value: string; label: string }[] = [];
   
-  // Current month
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  options.push({ value: currentMonth, label: `${currentMonth} (Current)` });
+  const addDate = (year: number, month: number, labelSuffix?: string) => {
+    const value = `${year}-${String(month).padStart(2, '0')}`;
+    if (!dateSet.has(value)) {
+      dateSet.add(value);
+      const label = labelSuffix ? `${value} ${labelSuffix}` : value;
+      options.push({ value, label });
+    }
+  };
   
-  // Last 3 months
+  // 1. Current month (with "Current" label)
+  addDate(currentYear, currentMonth, '(Current)');
+  
+  // 2. Last 3 months
   for (let i = 1; i <= 3; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    options.push({ value, label: value });
+    const date = new Date(currentYear, currentMonth - 1 - i, 1);
+    addDate(date.getFullYear(), date.getMonth() + 1);
   }
   
-  // Last 4 quarters (Q4, Q3, Q2, Q1 of current/previous years)
-  const currentQuarter = Math.floor(now.getMonth() / 3);
+  // 3. Last 4 quarters' end months (going back from current quarter)
+  // Quarter end months: Q1=03, Q2=06, Q3=09, Q4=12
+  const currentQuarter = Math.ceil(currentMonth / 3);
   for (let i = 0; i < 4; i++) {
     let q = currentQuarter - i;
-    let year = now.getFullYear();
-    while (q < 0) {
+    let year = currentYear;
+    while (q <= 0) {
       q += 4;
       year -= 1;
     }
-    const quarterMonth = q * 3 + 3; // End of quarter month (3, 6, 9, 12)
-    const value = `${year}-${String(quarterMonth).padStart(2, '0')}`;
-    // Avoid duplicates
-    if (!options.find(o => o.value === value)) {
-      options.push({ value, label: `${year} Q${q + 1}` });
-    }
+    const quarterEndMonth = q * 3; // 3, 6, 9, or 12
+    addDate(year, quarterEndMonth);
   }
   
-  // Last year end
-  const lastYearEnd = `${now.getFullYear() - 1}-12`;
-  if (!options.find(o => o.value === lastYearEnd)) {
-    options.push({ value: lastYearEnd, label: `${now.getFullYear() - 1} Year End` });
-  }
+  // 4. Last 2 year ends
+  addDate(currentYear - 1, 12);
+  addDate(currentYear - 2, 12);
   
   return options;
 };
