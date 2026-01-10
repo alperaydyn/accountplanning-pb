@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Package, CreditCard, Wallet, PiggyBank, Users, Factory, ArrowLeft, Percent, Banknote, Receipt, FileCheck, Shield } from "lucide-react";
+import { Package, CreditCard, Wallet, PiggyBank, Users, Factory, ArrowLeft, Percent, Banknote, Receipt, FileCheck, Shield, Cog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -149,14 +149,20 @@ const PrimaryBank = () => {
       <div className="flex flex-col gap-6 p-6">
         <PageBreadcrumb items={[{ label: t.nav.primaryBank }]} />
 
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{t.primaryBank.pageTitle}</h1>
-            <p className="text-muted-foreground">{t.primaryBank.pageSubtitle}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{t.primaryBank.pageTitle}</h1>
+              <p className="text-muted-foreground">{t.primaryBank.pageSubtitle}</p>
+            </div>
           </div>
+          <Button variant="outline" onClick={() => navigate("/primary-bank/engine")}>
+            <Cog className="mr-2 h-4 w-4" />
+            {t.primaryBankEngine.title}
+          </Button>
         </div>
 
         {/* Filters and Info Header */}
