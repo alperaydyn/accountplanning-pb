@@ -10,8 +10,11 @@ export interface ActionInsight {
   type: "critical" | "warning" | "info";
   title: string;
   message: string;
-  detailedDescription: string;
+  analysis: string;
+  recommendations: string[];
   category: "sufficiency" | "alignment" | "balance" | "quality";
+  // Legacy field for backward compatibility
+  detailedDescription?: string;
 }
 
 export interface StoredActionInsights {
@@ -184,7 +187,12 @@ export function useActionInsights(recordDate?: string) {
           type: "warning" as const,
           title: "Aksiyon Planlanmamış",
           message: "Seçilen dönem için henüz aksiyon planlanmamış.",
-          detailedDescription: "Bu dönem için herhangi bir aksiyon oluşturulmamış. Portföy hedeflerine ulaşmak için aksiyon planlaması yapmanız önerilir.",
+          analysis: "Bu dönem için herhangi bir aksiyon oluşturulmamış. Portföy hedeflerine ulaşmak için aksiyon planlaması yapmanız gerekiyor.",
+          recommendations: [
+            "Kritik ürünler için öncelikli aksiyonlar oluşturun",
+            "Hedef müşteriler için satış fırsatlarını değerlendirin",
+            "Aylık aksiyon planlaması yapın"
+          ],
           category: "sufficiency" as const,
         },
       ];

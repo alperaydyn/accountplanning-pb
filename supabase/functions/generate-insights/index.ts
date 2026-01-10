@@ -77,7 +77,7 @@ serve(async (req) => {
       `${p.name}|${p.status}|PA:${p.pendingActions}`
     ).join(";");
 
-    const systemPrompt = `Sen bir banka portföy analisti AI'sın. Ürün performans verilerine göre 1-3 aksiyon odaklı içgörü üret.
+const systemPrompt = `Sen bir banka portföy analisti AI'sın. Ürün performans verilerine göre 1-3 aksiyon odaklı içgörü üret.
 
 İçgörü türleri:
 - critical: Acil aksiyon gerekli (kritik veya eriyen ürünler)
@@ -93,11 +93,15 @@ Durum açıklamaları:
 - işlem boyutu: Müşteri sayısı iyi ama hacim düşük (küçük işlemler)
 - çeşitlilik: Hacim iyi ama müşteri sayısı düşük (az sayıda büyük müşteri)
 
-KURALLAR:
+YAPILANDIRMA KURALLARI:
+- message: Kısa özet (maksimum 15 kelime)
+- analysis: Mevcut durumun kısa analizi (2-3 cümle, düz metin)
+- recommendations: 2-4 maddelik somut aksiyon önerileri listesi (her biri kısa ve net)
+
+DİL KURALLARI:
 - Teknik detaylar kullanma (ID'ler, yüzdeler vb.)
 - Ürün isimlerini aynen kullan
-- Açıklamaları iş diliyle yaz
-- Somut aksiyon önerileri ver`;
+- İş diliyle yaz, profesyonel tonda`;
 
     const userPrompt = `Ürünler: ${productSummaries}
 
@@ -136,15 +140,22 @@ generate_insights aracını çağır.`;
                       properties: {
                         type: { type: "string", enum: ["critical", "warning", "info"] },
                         title: { type: "string", description: "Kısa başlık Türkçe (max 5 kelime)" },
-                        message: { type: "string", description: "Kısa açıklama Türkçe" },
-                        detailedDescription: { type: "string", description: "Detaylı açıklama ve önerilen aksiyonlar Türkçe" },
+                        message: { type: "string", description: "Özet cümle Türkçe (max 15 kelime)" },
+                        analysis: { type: "string", description: "Mevcut durum analizi Türkçe (2-3 cümle)" },
+                        recommendations: { 
+                          type: "array", 
+                          items: { type: "string", description: "Somut aksiyon önerisi (kısa ve net)" },
+                          description: "Önerilen aksiyonlar listesi",
+                          minItems: 2,
+                          maxItems: 4
+                        },
                         productNames: { 
                           type: "array", 
                           items: { type: "string" },
                           description: "Bu içgörüyle ilgili ürün isimleri (tam olarak verildiği gibi)"
                         },
                       },
-                      required: ["type", "title", "message", "detailedDescription", "productNames"],
+                      required: ["type", "title", "message", "analysis", "recommendations", "productNames"],
                       additionalProperties: false,
                     },
                     minItems: 1,
