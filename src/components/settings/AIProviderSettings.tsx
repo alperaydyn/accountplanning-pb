@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bot, Key, Server, TestTube2, Loader2, CheckCircle2, XCircle, Info, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { Bot, Key, Server, TestTube2, Loader2, CheckCircle2, XCircle, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { supabase } from "@/integrations/supabase/client";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -297,24 +296,12 @@ export function AIProviderSettings() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">{currentProvider?.description}</p>
+            <p className="text-xs text-muted-foreground h-4">{currentProvider?.description}</p>
           </div>
 
           {/* Model Selection */}
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Label>Model</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger>
-                    <Info className="h-4 w-4 text-muted-foreground" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Hazır modellerden seçin veya özel model adı girin</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
+            <Label>Model</Label>
             <Select value={isCustomModel ? 'custom' : model} onValueChange={handleModelChange}>
               <SelectTrigger>
                 <SelectValue placeholder="Model seçin">{getSelectedModelLabel()}</SelectValue>
@@ -328,8 +315,8 @@ export function AIProviderSettings() {
                 <SelectItem value="custom">Özel model adı gir...</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground font-mono">
-              {model && model !== 'custom' ? model : (isCustomModel && customModel ? customModel : 'Model seçilmedi')}
+            <p className="text-xs text-muted-foreground font-mono h-4 truncate">
+              {model && model !== 'custom' ? model : (isCustomModel && customModel ? customModel : '\u00A0')}
             </p>
           </div>
         </div>
