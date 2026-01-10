@@ -37,8 +37,8 @@ interface PlanMyDayDisplayProps {
   targetDate?: string; // YYYY-MM-DD format, defaults to today
 }
 
-const normalizeKeyPart = (value: string) =>
-  value.normalize("NFKC").trim().toLowerCase();
+const normalizeKeyPart = (value: string | undefined | null) =>
+  (value || '').normalize("NFKC").trim().toLowerCase();
 
 export function PlanMyDayDisplay({ 
   plan, 
