@@ -525,9 +525,9 @@ export default function AIAssistant() {
     <AppLayout>
       <div className="space-y-4">
         <div>
-          <PageBreadcrumb items={[{ label: "AI Assistant" }]} />
-          <h1 className="text-2xl font-bold text-foreground">AI Action Assistant</h1>
-          <p className="text-muted-foreground">Find the best customers to focus on</p>
+          <PageBreadcrumb items={[{ label: t.ai.pageTitle }]} />
+          <h1 className="text-2xl font-bold text-foreground">{t.ai.pageTitle}</h1>
+          <p className="text-muted-foreground">{t.ai.pageDescription}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-220px)]">
@@ -535,7 +535,7 @@ export default function AIAssistant() {
           <Card className="lg:col-span-1 flex flex-col overflow-hidden">
             <CardHeader className="pb-3 border-b shrink-0">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">Sohbet Geçmişi</CardTitle>
+                <CardTitle className="text-sm">{t.ai.chatHistory}</CardTitle>
                 <Button variant="ghost" size="icon" onClick={handleNewSession} disabled={createSession.isPending}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -614,7 +614,7 @@ export default function AIAssistant() {
                   <div className="p-2 rounded-full bg-violet-500/10">
                     <Sparkles className="h-5 w-5 text-violet-500" />
                   </div>
-                  <CardTitle className="text-base">AI Action Assistant</CardTitle>
+                  <CardTitle className="text-base">{t.ai.chatWindowTitle}</CardTitle>
                 </div>
               </div>
 
@@ -627,7 +627,7 @@ export default function AIAssistant() {
                 >
                   <ShieldCheck className="h-4 w-4 text-green-600" />
                   <span className="text-xs text-muted-foreground flex-1">
-                    Your customer identities are preserved
+                    {t.ai.privacyNotice}
                   </span>
                   {showPrivacyDetails ? (
                     <ChevronUp className="h-3 w-3 text-muted-foreground" />
@@ -638,10 +638,10 @@ export default function AIAssistant() {
 
                 {showPrivacyDetails && (
                   <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground space-y-1.5">
-                    <p>• Customer names are not directly shared with the AI</p>
-                    <p>• Undetectable one-time IDs are generated for each session separately</p>
-                    <p>• Incoming IDs are mapped to customers inside your browser session</p>
-                    <p>• Sensitive information in notes is masked before sending the prompt</p>
+                    <p>• {t.ai.privacyDetail1}</p>
+                    <p>• {t.ai.privacyDetail2}</p>
+                    <p>• {t.ai.privacyDetail3}</p>
+                    <p>• {t.ai.privacyDetail4}</p>
                   </div>
                 )}
               </div>

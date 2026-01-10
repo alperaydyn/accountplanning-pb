@@ -152,10 +152,10 @@ export function QueryPanel() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Database className="h-5 w-5" />
-          SQL Query Runner
+          {t.settings.sqlRunner}
         </CardTitle>
         <CardDescription>
-          Run SELECT queries with your authenticated user context (RLS applied)
+          {t.settings.sqlRunnerDescription}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -163,16 +163,16 @@ export function QueryPanel() {
         <div className="flex gap-2">
           <div className="flex-1">
             <Label htmlFor="saved-queries" className="sr-only">
-              Saved Queries
+              {t.settings.savedQueries}
             </Label>
             <Select onValueChange={handleLoadQuery}>
               <SelectTrigger>
-                <SelectValue placeholder="Load saved query..." />
+                <SelectValue placeholder={t.settings.selectQuery} />
               </SelectTrigger>
               <SelectContent>
                 {savedQueries.length === 0 ? (
                   <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                    No saved queries
+                    {t.settings.noResults}
                   </div>
                 ) : (
                   savedQueries.map((sq) => (
@@ -198,12 +198,12 @@ export function QueryPanel() {
 
         {/* Query Input */}
         <div>
-          <Label htmlFor="query">SQL Query</Label>
+          <Label htmlFor="query">{t.settings.sqlRunner}</Label>
           <Textarea
             id="query"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="SELECT * FROM customers LIMIT 10"
+            placeholder={t.settings.writeQuery}
             className="font-mono text-sm min-h-[120px]"
           />
         </div>
@@ -211,7 +211,7 @@ export function QueryPanel() {
         {/* Save Query */}
         <div className="flex gap-2">
           <Input
-            placeholder="Query name..."
+            placeholder={t.settings.queryName}
             value={queryName}
             onChange={(e) => setQueryName(e.target.value)}
             className="flex-1"
@@ -222,7 +222,7 @@ export function QueryPanel() {
             disabled={saveQueryMutation.isPending}
           >
             <Save className="h-4 w-4 mr-2" />
-            Save
+            {t.settings.saveQuery}
           </Button>
           <Button onClick={runQuery} disabled={isRunning}>
             {isRunning ? (
@@ -230,7 +230,7 @@ export function QueryPanel() {
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Run
+            {isRunning ? t.settings.running : t.settings.runQuery}
           </Button>
         </div>
 
@@ -250,7 +250,7 @@ export function QueryPanel() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
               <span>
-                {result.data.length} rows in {result.executionTime}ms
+                {result.data.length} rows · {t.settings.executionTime}: {result.executionTime}ms
               </span>
             </div>
             {result.data.length > 0 ? (
@@ -286,7 +286,7 @@ export function QueryPanel() {
               </div>
             ) : (
               <div className="rounded-md border bg-muted/50 p-3 text-sm text-muted-foreground">
-                No results
+                {t.settings.noResults}
               </div>
             )}
           </div>
