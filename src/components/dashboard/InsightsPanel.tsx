@@ -423,110 +423,227 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
 
       {/* Product Insight Detail Dialog */}
       <Dialog open={!!selectedInsight} onOpenChange={() => setSelectedInsight(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          {selectedInsight && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {(() => {
-                    const Icon = getIconForType(selectedInsight.type);
-                    return <Icon className={`h-5 w-5 ${getIconColor(selectedInsight.type)}`} />;
-                  })()}
-                  {selectedInsight.title}
-                </DialogTitle>
-                <DialogDescription className="text-base">
-                  {selectedInsight.detailedDescription}
-                </DialogDescription>
-              </DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto p-0">
+          {selectedInsight && (() => {
+            const Icon = getIconForType(selectedInsight.type);
+            const gradientClass = selectedInsight.type === "critical" 
+              ? "from-destructive/20 via-destructive/10 to-transparent" 
+              : selectedInsight.type === "warning" 
+                ? "from-warning/20 via-warning/10 to-transparent" 
+                : "from-info/20 via-info/10 to-transparent";
+            const borderClass = selectedInsight.type === "critical" 
+              ? "border-l-destructive" 
+              : selectedInsight.type === "warning" 
+                ? "border-l-warning" 
+                : "border-l-info";
+            
+            return (
+              <>
+                {/* Gradient Header */}
+                <div className={`bg-gradient-to-b ${gradientClass} px-6 pt-6 pb-4`}>
+                  <DialogHeader>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl ${getBgColor(selectedInsight.type)} border`}>
+                        <Icon className={`h-5 w-5 ${getIconColor(selectedInsight.type)}`} />
+                      </div>
+                      <div className="flex-1">
+                        <DialogTitle className="text-lg font-semibold text-foreground">
+                          {selectedInsight.title}
+                        </DialogTitle>
+                        <Badge 
+                          variant="outline" 
+                          className={`mt-1.5 ${getBgColor(selectedInsight.type)} border font-medium`}
+                        >
+                          {selectedInsight.type === "critical" ? "Kritik" : selectedInsight.type === "warning" ? "Uyarı" : "Bilgi"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                </div>
 
-              {selectedInsight.products.length > 0 && (
-                <div className="mt-4">
-                  <h4 className="font-medium text-foreground mb-3">İlgili Ürünler</h4>
-                  <div className="space-y-2">
-                    {selectedInsight.products.map((product, idx) => {
-                      if (!product.id) {
+                {/* Description Card */}
+                <div className="px-6 py-4">
+                  <DialogDescription asChild>
+                    <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
+                      <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                        {selectedInsight.detailedDescription}
+                      </p>
+                    </div>
+                  </DialogDescription>
+                </div>
+
+                {/* Products Section */}
+                {selectedInsight.products.length > 0 && (
+                  <div className="px-6 pb-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-px flex-1 bg-border" />
+                      <h4 className="text-sm font-medium text-muted-foreground px-2">İlgili Ürünler</h4>
+                      <div className="h-px flex-1 bg-border" />
+                    </div>
+                    <div className="space-y-2">
+                      {selectedInsight.products.map((product, idx) => {
+                        if (!product.id) {
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center justify-between p-3.5 rounded-xl border bg-card/50"
+                            >
+                              <p className="font-medium text-foreground">{product.name}</p>
+                            </div>
+                          );
+                        }
+                        
+                        const target = targets?.find((t) => t.product_id === product.id);
+                        const status = target ? calculateStatus(target) : "at_risk";
+                        const hgoValue = target ? Math.round((Number(target.stock_count_tar) + Number(target.stock_volume_tar) + Number(target.flow_count_tar) + Number(target.flow_volume_tar)) / 4) : 0;
+                        
                         return (
                           <div
-                            key={idx}
-                            className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                            key={product.id}
+                            className="group flex items-center justify-between p-3.5 rounded-xl border bg-card/50 hover:bg-card hover:shadow-md cursor-pointer transition-all duration-200"
+                            onClick={() => handleProductClick(product.id!)}
                           >
-                            <p className="font-medium text-foreground">{product.name}</p>
-                          </div>
-                        );
-                      }
-                      
-                      const target = targets?.find((t) => t.product_id === product.id);
-                      const status = target ? calculateStatus(target) : "at_risk";
-                      
-                      return (
-                        <div
-                          key={product.id}
-                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 cursor-pointer transition-colors"
-                          onClick={() => handleProductClick(product.id!)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div>
-                              <p className="font-medium text-foreground">{product.name}</p>
-                              {target && (
-                                <p className="text-sm text-muted-foreground">
-                                  Stock: {target.stock_count} • HGO: {Math.round((Number(target.stock_count_tar) + Number(target.stock_volume_tar) + Number(target.flow_count_tar) + Number(target.flow_volume_tar)) / 4)}%
-                                </p>
-                              )}
+                            <div className="flex items-center gap-3">
+                              <div className={`w-1.5 h-10 rounded-full ${
+                                status === "on_track" ? "bg-success" : 
+                                status === "critical" ? "bg-destructive" : 
+                                "bg-warning"
+                              }`} />
+                              <div>
+                                <p className="font-medium text-foreground">{product.name}</p>
+                                {target && (
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-xs text-muted-foreground">
+                                      Stock: {target.stock_count}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">•</span>
+                                    <span className={`text-xs font-medium ${
+                                      hgoValue >= 80 ? "text-success" : 
+                                      hgoValue >= 50 ? "text-warning" : 
+                                      "text-destructive"
+                                    }`}>
+                                      HGO: {hgoValue}%
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge className={`${statusColors[status]} text-xs`}>
+                                {statusLabels[status]}
+                              </Badge>
+                              <Button variant="ghost" size="sm" className="gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <ExternalLink className="h-3.5 w-3.5" />
+                                <span className="text-xs">Görüntüle</span>
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <Badge className={statusColors[status]}>
-                              {statusLabels[status]}
-                            </Badge>
-                            <Button variant="ghost" size="sm" className="gap-1">
-                              <ExternalLink className="h-4 w-4" />
-                              Müşterileri Gör
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
       {/* Action Insight Detail Dialog */}
       <Dialog open={!!selectedActionInsight} onOpenChange={() => setSelectedActionInsight(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          {selectedActionInsight && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {(() => {
-                    const Icon = getIconForType(selectedActionInsight.type);
-                    return <Icon className={`h-5 w-5 ${getIconColor(selectedActionInsight.type)}`} />;
-                  })()}
-                  {selectedActionInsight.title}
-                  <Badge variant="outline" className="text-xs gap-1 ml-2">
-                    {(() => {
-                      const CategoryIcon = categoryIcons[selectedActionInsight.category] || Target;
-                      return <CategoryIcon className="h-3 w-3" />;
-                    })()}
-                    {categoryLabels[selectedActionInsight.category] || selectedActionInsight.category}
-                  </Badge>
-                </DialogTitle>
-                <DialogDescription className="text-base whitespace-pre-wrap">
-                  {selectedActionInsight.detailedDescription}
-                </DialogDescription>
-              </DialogHeader>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto p-0">
+          {selectedActionInsight && (() => {
+            const Icon = getIconForType(selectedActionInsight.type);
+            const CategoryIcon = categoryIcons[selectedActionInsight.category] || Target;
+            const gradientClass = selectedActionInsight.type === "critical" 
+              ? "from-destructive/20 via-destructive/10 to-transparent" 
+              : selectedActionInsight.type === "warning" 
+                ? "from-warning/20 via-warning/10 to-transparent" 
+                : "from-info/20 via-info/10 to-transparent";
+            const borderClass = selectedActionInsight.type === "critical" 
+              ? "border-l-destructive" 
+              : selectedActionInsight.type === "warning" 
+                ? "border-l-warning" 
+                : "border-l-info";
+            const categoryDescriptions: Record<string, string> = {
+              sufficiency: "Planlanan aksiyonların hedeflere ulaşmak için yeterli olup olmadığını değerlendirir.",
+              alignment: "Aksiyonların kritik ürünlerle uyumunu analiz eder.",
+              balance: "Aksiyonların müşteri segmentleri arasındaki dağılımını inceler.",
+              quality: "Aksiyon planlamasının genel kalitesini değerlendirir.",
+            };
+            
+            return (
+              <>
+                {/* Gradient Header */}
+                <div className={`bg-gradient-to-b ${gradientClass} px-6 pt-6 pb-4`}>
+                  <DialogHeader>
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2.5 rounded-xl ${getBgColor(selectedActionInsight.type)} border`}>
+                        <Icon className={`h-5 w-5 ${getIconColor(selectedActionInsight.type)}`} />
+                      </div>
+                      <div className="flex-1">
+                        <DialogTitle className="text-lg font-semibold text-foreground">
+                          {selectedActionInsight.title}
+                        </DialogTitle>
+                        <div className="flex items-center gap-2 mt-1.5">
+                          <Badge 
+                            variant="outline" 
+                            className={`${getBgColor(selectedActionInsight.type)} border font-medium`}
+                          >
+                            {selectedActionInsight.type === "critical" ? "Kritik" : selectedActionInsight.type === "warning" ? "Uyarı" : "Bilgi"}
+                          </Badge>
+                          <Badge variant="secondary" className="gap-1">
+                            <CategoryIcon className="h-3 w-3" />
+                            {categoryLabels[selectedActionInsight.category] || selectedActionInsight.category}
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                </div>
 
-              <div className="mt-4 flex gap-2">
-                <Button variant="outline" onClick={() => navigate("/agenda")}>
-                  <ClipboardList className="h-4 w-4 mr-2" />
-                  Aksiyon Ajandası
-                </Button>
-              </div>
-            </>
-          )}
+                {/* Category Info Card */}
+                <div className="px-6 pt-4">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                    <div className="p-2 rounded-lg bg-primary/10">
+                      <CategoryIcon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        {categoryLabels[selectedActionInsight.category] || selectedActionInsight.category} Analizi
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {categoryDescriptions[selectedActionInsight.category] || "Aksiyon kalitesi değerlendirmesi."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Description Card */}
+                <div className="px-6 py-4">
+                  <DialogDescription asChild>
+                    <div className={`p-4 rounded-lg bg-muted/30 border-l-4 ${borderClass}`}>
+                      <p className="text-sm leading-relaxed text-foreground/90 whitespace-pre-wrap">
+                        {selectedActionInsight.detailedDescription}
+                      </p>
+                    </div>
+                  </DialogDescription>
+                </div>
+
+                {/* Action Button */}
+                <div className="px-6 pb-6">
+                  <div className="h-px bg-border mb-4" />
+                  <Button 
+                    onClick={() => navigate("/agenda")}
+                    className="w-full gap-2"
+                  >
+                    <ClipboardList className="h-4 w-4" />
+                    Aksiyon Ajandası'na Git
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </>
