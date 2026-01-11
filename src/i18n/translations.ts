@@ -344,6 +344,9 @@ export interface Translations {
     ourBankVolume: string;
     share: string;
     bankCount: string;
+    stateRestored: string;
+    stateRestoredDesc: string;
+    stop: string;
   };
 
   // Customer Detail
@@ -766,6 +769,9 @@ export const translations: Record<Language, Translations> = {
       ourBankVolume: "Bizim Hacim",
       share: "Pay",
       bankCount: "Banka Sayısı",
+      stateRestored: "Durum Geri Yüklendi",
+      stateRestoredDesc: "İlerleme geri yüklendi",
+      stop: "Durdur",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -1168,6 +1174,9 @@ export const translations: Record<Language, Translations> = {
       ourBankVolume: "Our Volume",
       share: "Share",
       bankCount: "Bank Count",
+      stateRestored: "State Restored",
+      stateRestoredDesc: "Progress restored",
+      stop: "Stop",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1570,6 +1579,9 @@ export const translations: Record<Language, Translations> = {
       ourBankVolume: "Nuestro Volumen",
       share: "Participación",
       bankCount: "Cantidad Bancos",
+      stateRestored: "Estado Restaurado",
+      stateRestoredDesc: "Progreso restaurado",
+      stop: "Detener",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",

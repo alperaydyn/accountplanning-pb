@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save, Square } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,9 @@ import { usePortfolioManager } from "@/hooks/usePortfolioManager";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { format } from "date-fns";
+
+// Storage key for persisting engine state
+const ENGINE_STATE_KEY = "primary_bank_engine_state";
 
 interface GeneratedData {
   loan_summary: any[];
@@ -53,6 +56,18 @@ const formatCurrency = (value: number | null | undefined): string => {
   return new Intl.NumberFormat("tr-TR", { style: "decimal", maximumFractionDigits: 0 }).format(value) + " TL";
 };
 
+// Interface for persisted engine state
+interface PersistedEngineState {
+  isRunning: boolean;
+  isPaused: boolean;
+  currentIndex: number;
+  results: CustomerResult[];
+  overwriteExisting: boolean;
+  recordMonth: string;
+  existingCustomerIds: string[];
+  timestamp: number;
+}
+
 export default function PrimaryBankEngine() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -70,14 +85,44 @@ export default function PrimaryBankEngine() {
   const [existingCustomerIds, setExistingCustomerIds] = useState<Set<string>>(new Set());
   const [isLoadingExisting, setIsLoadingExisting] = useState(true);
   const [isDeletingCustomer, setIsDeletingCustomer] = useState<string | null>(null);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
+
+  // Use ref to track pause state during async operations
+  const isPausedRef = useRef(isPaused);
+  const isStoppedRef = useRef(false);
 
   // Manual calculation state
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [isManualGenerating, setIsManualGenerating] = useState(false);
   const [manualResult, setManualResult] = useState<CustomerResult | null>(null);
 
+  // Keep isPausedRef in sync with isPaused
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+
+  // Persist state to localStorage
+  const persistState = useCallback((state: Partial<PersistedEngineState>) => {
+    try {
+      const currentState = JSON.parse(localStorage.getItem(ENGINE_STATE_KEY) || "{}");
+      const newState = {
+        ...currentState,
+        ...state,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(ENGINE_STATE_KEY, JSON.stringify(newState));
+    } catch (error) {
+      console.error("Error persisting engine state:", error);
+    }
+  }, []);
+
+  // Clear persisted state
+  const clearPersistedState = useCallback(() => {
+    localStorage.removeItem(ENGINE_STATE_KEY);
+  }, []);
+
   // Fetch existing customers with primary bank data
-  const fetchExistingCustomers = useCallback(async () => {
+  const fetchExistingCustomers = useCallback(async (skipResultsInit = false) => {
     setIsLoadingExisting(true);
     try {
       const { data } = await supabase
@@ -88,27 +133,88 @@ export default function PrimaryBankEngine() {
       const uniqueIds = new Set(data?.map(d => d.customer_id) || []);
       setExistingCustomerIds(uniqueIds);
       
-      // Initialize results with all customers
-      const initialResults: CustomerResult[] = customers.map(c => ({
-        customerId: c.id,
-        customerName: c.name,
-        segment: c.segment,
-        status: uniqueIds.has(c.id) ? "existing" as const : "pending" as const,
-        hasExistingData: uniqueIds.has(c.id)
-      }));
-      setResults(initialResults);
+      // Only initialize results if not restoring from persisted state
+      if (!skipResultsInit) {
+        const initialResults: CustomerResult[] = customers.map(c => ({
+          customerId: c.id,
+          customerName: c.name,
+          segment: c.segment,
+          status: uniqueIds.has(c.id) ? "existing" as const : "pending" as const,
+          hasExistingData: uniqueIds.has(c.id)
+        }));
+        setResults(initialResults);
+      }
+      
+      return uniqueIds;
     } catch (error) {
       console.error("Error fetching existing customers:", error);
+      return new Set<string>();
     } finally {
       setIsLoadingExisting(false);
     }
   }, [customers, recordMonth]);
 
+  // Restore state from localStorage on mount
   useEffect(() => {
-    if (customers.length > 0) {
+    if (customers.length > 0 && !hasRestoredState) {
+      try {
+        const savedState = localStorage.getItem(ENGINE_STATE_KEY);
+        if (savedState) {
+          const parsed: PersistedEngineState = JSON.parse(savedState);
+          
+          // Only restore if recordMonth matches and state is less than 24 hours old
+          const isRecent = Date.now() - parsed.timestamp < 24 * 60 * 60 * 1000;
+          const isSameMonth = parsed.recordMonth === recordMonth;
+          
+          if (isRecent && isSameMonth && (parsed.isRunning || parsed.isPaused)) {
+            // Restore state
+            setCurrentIndex(parsed.currentIndex);
+            setOverwriteExisting(parsed.overwriteExisting);
+            setExistingCustomerIds(new Set(parsed.existingCustomerIds));
+            
+            // Merge saved results with current customer data
+            const restoredResults: CustomerResult[] = customers.map(c => {
+              const savedResult = parsed.results.find(r => r.customerId === c.id);
+              if (savedResult) {
+                return {
+                  ...savedResult,
+                  customerName: c.name,
+                  segment: c.segment
+                };
+              }
+              return {
+                customerId: c.id,
+                customerName: c.name,
+                segment: c.segment,
+                status: parsed.existingCustomerIds.includes(c.id) ? "existing" as const : "pending" as const,
+                hasExistingData: parsed.existingCustomerIds.includes(c.id)
+              };
+            });
+            setResults(restoredResults);
+            
+            // Set as paused so user can resume
+            setIsPaused(true);
+            setIsRunning(false);
+            
+            toast({
+              title: t.primaryBankEngine.stateRestored || "State Restored",
+              description: t.primaryBankEngine.stateRestoredDesc || `Progress restored: ${parsed.currentIndex}/${customers.length} customers`,
+            });
+            
+            setHasRestoredState(true);
+            setIsLoadingExisting(false);
+            return;
+          }
+        }
+      } catch (error) {
+        console.error("Error restoring engine state:", error);
+      }
+      
+      // No valid saved state, fetch fresh
       fetchExistingCustomers();
+      setHasRestoredState(true);
     }
-  }, [customers, fetchExistingCustomers]);
+  }, [customers, recordMonth, hasRestoredState, fetchExistingCustomers, toast, t.primaryBankEngine]);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -273,26 +379,47 @@ export default function PrimaryBankEngine() {
     }
   };
 
-  const runEngine = useCallback(async () => {
+  const runEngine = useCallback(async (startFromIndex?: number) => {
     if (!customers.length) {
       toast({ title: "No customers", description: "No customers found in portfolio", variant: "destructive" });
       return;
     }
 
+    const startIndex = startFromIndex ?? currentIndex;
+    isStoppedRef.current = false;
     setIsRunning(true);
     setIsPaused(false);
+    isPausedRef.current = false;
 
-    for (let i = currentIndex; i < customers.length; i++) {
-      if (isPaused) break;
+    for (let i = startIndex; i < customers.length; i++) {
+      // Check for pause or stop
+      if (isPausedRef.current || isStoppedRef.current) {
+        if (!isStoppedRef.current) {
+          // Persist state when paused
+          persistState({
+            isRunning: false,
+            isPaused: true,
+            currentIndex: i,
+            results,
+            overwriteExisting,
+            recordMonth,
+            existingCustomerIds: Array.from(existingCustomerIds)
+          });
+        }
+        break;
+      }
 
       const customer = customers[i];
       const hasExistingData = existingCustomerIds.has(customer.id);
 
       // Skip customers with existing data if overwrite is disabled
       if (hasExistingData && !overwriteExisting) {
-        setResults(prev => prev.map((r, idx) => 
-          idx === i ? { ...r, status: "skipped" as const } : r
-        ));
+        setResults(prev => {
+          const newResults = prev.map((r, idx) => 
+            idx === i ? { ...r, status: "skipped" as const } : r
+          );
+          return newResults;
+        });
         setCurrentIndex(i + 1);
         continue;
       }
@@ -300,9 +427,22 @@ export default function PrimaryBankEngine() {
       setCurrentIndex(i);
       
       // Update status to processing
-      setResults(prev => prev.map((r, idx) => 
-        idx === i ? { ...r, status: "processing" as const } : r
-      ));
+      setResults(prev => {
+        const newResults = prev.map((r, idx) => 
+          idx === i ? { ...r, status: "processing" as const } : r
+        );
+        // Persist state periodically
+        persistState({
+          isRunning: true,
+          isPaused: false,
+          currentIndex: i,
+          results: newResults,
+          overwriteExisting,
+          recordMonth,
+          existingCustomerIds: Array.from(existingCustomerIds)
+        });
+        return newResults;
+      });
 
       try {
         const data = await generateForCustomer(customer);
@@ -324,42 +464,70 @@ export default function PrimaryBankEngine() {
         ));
       }
 
-      // Wait 2 seconds before next customer
-      if (i < customers.length - 1) {
+      // Wait 2 seconds before next customer (if not paused/stopped)
+      if (i < customers.length - 1 && !isPausedRef.current && !isStoppedRef.current) {
         await sleep(2000);
       }
     }
 
     setIsRunning(false);
-    toast({ title: "Engine Complete", description: `Processed ${customers.length} customers` });
-  }, [customers, currentIndex, generateForCustomer, isPaused, toast, existingCustomerIds, overwriteExisting]);
+    
+    // Clear persisted state on completion
+    if (!isPausedRef.current && !isStoppedRef.current) {
+      clearPersistedState();
+      toast({ title: "Engine Complete", description: `Processed ${customers.length} customers` });
+    }
+  }, [customers, currentIndex, generateForCustomer, toast, existingCustomerIds, overwriteExisting, recordMonth, persistState, clearPersistedState, results]);
 
   const handleStart = () => {
     if (isPaused) {
+      // Resume from current position
       setIsPaused(false);
-      runEngine();
+      isPausedRef.current = false;
+      runEngine(currentIndex);
     } else {
+      // Fresh start
       setCurrentIndex(0);
+      isStoppedRef.current = false;
       // Reset results to initial state (preserve existing status)
-      setResults(customers.map(c => ({
+      const newResults = customers.map(c => ({
         customerId: c.id,
         customerName: c.name,
         segment: c.segment,
         status: existingCustomerIds.has(c.id) ? "existing" as const : "pending" as const,
         hasExistingData: existingCustomerIds.has(c.id)
-      })));
-      runEngine();
+      }));
+      setResults(newResults);
+      runEngine(0);
     }
   };
 
   const handlePause = () => {
     setIsPaused(true);
+    isPausedRef.current = true;
+  };
+
+  const handleResume = () => {
+    setIsPaused(false);
+    isPausedRef.current = false;
+    runEngine(currentIndex);
+  };
+
+  const handleStop = () => {
+    isStoppedRef.current = true;
+    setIsRunning(false);
+    setIsPaused(false);
+    isPausedRef.current = false;
+    clearPersistedState();
   };
 
   const handleReset = () => {
+    isStoppedRef.current = true;
     setIsRunning(false);
     setIsPaused(false);
+    isPausedRef.current = false;
     setCurrentIndex(0);
+    clearPersistedState();
     fetchExistingCustomers();
   };
 
@@ -472,18 +640,29 @@ export default function PrimaryBankEngine() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
-                {!isRunning ? (
+                {!isRunning && !isPaused ? (
                   <Button onClick={handleStart} className="flex-1">
                     <Play className="mr-2 h-4 w-4" />
-                    {isPaused ? t.primaryBankEngine.resume : t.primaryBankEngine.start}
+                    {t.primaryBankEngine.start}
                   </Button>
-                ) : (
+                ) : isRunning ? (
                   <Button onClick={handlePause} variant="secondary" className="flex-1">
                     <Pause className="mr-2 h-4 w-4" />
                     {t.primaryBankEngine.pause}
                   </Button>
+                ) : (
+                  <>
+                    <Button onClick={handleResume} className="flex-1">
+                      <Play className="mr-2 h-4 w-4" />
+                      {t.primaryBankEngine.resume}
+                    </Button>
+                    <Button onClick={handleStop} variant="destructive" className="flex-1">
+                      <Square className="mr-2 h-4 w-4" />
+                      {t.primaryBankEngine.stop}
+                    </Button>
+                  </>
                 )}
-                <Button onClick={handleReset} variant="outline" disabled={isRunning && !isPaused}>
+                <Button onClick={handleReset} variant="outline" disabled={isRunning}>
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </div>
@@ -554,18 +733,18 @@ export default function PrimaryBankEngine() {
           </Card>
 
           {/* Customer Progress List */}
-          <Card className="md:col-span-2">
-            <CardHeader>
+          <Card className="md:col-span-2 flex flex-col min-h-[500px]">
+            <CardHeader className="flex-shrink-0">
               <CardTitle>{t.primaryBankEngine.customerProgress}</CardTitle>
               <CardDescription>{t.primaryBankEngine.customerProgressDesc}</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 min-h-0 overflow-hidden">
               {isLoadingExisting ? (
-                <div className="flex h-[400px] items-center justify-center">
+                <div className="flex h-full items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <ScrollArea className="h-[400px]">
+                <ScrollArea className="h-full pr-4">
                   <div className="space-y-2">
                     {results.map((result, idx) => (
                       <div 
@@ -675,7 +854,7 @@ export default function PrimaryBankEngine() {
                       </div>
                     ))}
                     {results.length === 0 && (
-                      <div className="flex h-[300px] items-center justify-center text-muted-foreground">
+                      <div className="flex h-full min-h-[200px] items-center justify-center text-muted-foreground">
                         {t.primaryBankEngine.clickStart}
                       </div>
                     )}
