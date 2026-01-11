@@ -24,6 +24,7 @@ interface UserSettings {
   elevenlabs_style: number | null;
   elevenlabs_speed: number | null;
   elevenlabs_speaker_boost: boolean | null;
+  elevenlabs_model: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -71,7 +72,7 @@ export function useUserSettings() {
   });
 
   const updateSettings = useMutation({
-    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view' | 'ai_provider' | 'ai_model' | 'ai_api_key_encrypted' | 'ai_base_url' | 'elevenlabs_voice_id' | 'elevenlabs_voice_name' | 'elevenlabs_stability' | 'elevenlabs_similarity_boost' | 'elevenlabs_style' | 'elevenlabs_speed' | 'elevenlabs_speaker_boost'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view' | 'ai_provider' | 'ai_model' | 'ai_api_key_encrypted' | 'ai_base_url' | 'elevenlabs_voice_id' | 'elevenlabs_voice_name' | 'elevenlabs_stability' | 'elevenlabs_similarity_boost' | 'elevenlabs_style' | 'elevenlabs_speed' | 'elevenlabs_speaker_boost' | 'elevenlabs_model'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase

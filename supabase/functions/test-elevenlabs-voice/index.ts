@@ -22,13 +22,15 @@ const DEFAULT_VOICE_SETTINGS = {
   speed: 1.1,
 };
 
+const DEFAULT_MODEL = "eleven_multilingual_v2";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { voiceId, language = "tr", voiceSettings } = await req.json();
+    const { voiceId, language = "tr", voiceSettings, model } = await req.json();
     const testText = TEST_TEXTS[language] || TEST_TEXTS.tr;
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
@@ -37,6 +39,7 @@ serve(async (req) => {
     }
 
     const selectedVoiceId = voiceId || DEFAULT_VOICE_ID;
+    const selectedModel = model || DEFAULT_MODEL;
     
     // Merge provided settings with defaults
     const finalVoiceSettings = {
@@ -44,7 +47,7 @@ serve(async (req) => {
       ...(voiceSettings || {}),
     };
 
-    console.log(`Testing voice: ${selectedVoiceId} with settings:`, finalVoiceSettings);
+    console.log(`Testing voice: ${selectedVoiceId}, model: ${selectedModel}, settings:`, finalVoiceSettings);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}?output_format=mp3_44100_128`,
@@ -56,7 +59,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text: testText,
-          model_id: "eleven_flash_v2_5",
+          model_id: selectedModel,
           voice_settings: finalVoiceSettings,
         }),
       }

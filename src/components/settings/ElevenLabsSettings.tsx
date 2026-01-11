@@ -44,6 +44,17 @@ const VOICE_PRESETS = [
   { id: "pqHfZKP75CvOlQylNhV4", name: "Bill" },
 ];
 
+// ElevenLabs model options
+const ELEVENLABS_MODELS = [
+  { id: "eleven_multilingual_v2", name: "Multilingual v2 (Önerilen)" },
+  { id: "eleven_turbo_v2_5", name: "Turbo v2.5 (Hızlı)" },
+  { id: "eleven_turbo_v2", name: "Turbo v2" },
+  { id: "eleven_multilingual_v1", name: "Multilingual v1" },
+  { id: "eleven_monolingual_v1", name: "English v1" },
+];
+
+const DEFAULT_MODEL = "eleven_multilingual_v2";
+
 // Default voice settings matching edge function
 const DEFAULT_VOICE_SETTINGS = {
   stability: 0.0,
@@ -72,6 +83,7 @@ export function ElevenLabsSettings() {
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState(DEFAULT_VOICE_SETTINGS);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
 
   // Load settings
   useEffect(() => {
@@ -87,6 +99,9 @@ export function ElevenLabsSettings() {
         use_speaker_boost: settings.elevenlabs_speaker_boost ?? DEFAULT_VOICE_SETTINGS.use_speaker_boost,
         speed: settings.elevenlabs_speed ?? DEFAULT_VOICE_SETTINGS.speed,
       });
+      
+      // Load model from database
+      setSelectedModel(settings.elevenlabs_model || DEFAULT_MODEL);
     }
   }, [settings]);
 
@@ -125,6 +140,7 @@ export function ElevenLabsSettings() {
             voiceId: idToTest, 
             language,
             voiceSettings,
+            model: selectedModel,
           }),
         }
       );
@@ -264,6 +280,7 @@ export function ElevenLabsSettings() {
         elevenlabs_style: voiceSettings.style,
         elevenlabs_speed: voiceSettings.speed,
         elevenlabs_speaker_boost: voiceSettings.use_speaker_boost,
+        elevenlabs_model: selectedModel,
       });
 
       toast({
@@ -422,6 +439,24 @@ export function ElevenLabsSettings() {
         {/* Voice Settings */}
         <div className="space-y-4 pt-4 border-t">
           <Label className="text-base font-medium">Ses Ayarları (API)</Label>
+          
+          {/* Model Selection */}
+          <div className="space-y-1.5">
+            <Label className="text-sm">Model</Label>
+            <Select value={selectedModel} onValueChange={setSelectedModel}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Model seçin..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-[100]">
+                {ELEVENLABS_MODELS.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Stability */}
             <div className="space-y-2">

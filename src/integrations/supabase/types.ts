@@ -1080,6 +1080,7 @@ export type Database = {
           ai_model: string | null
           ai_provider: string | null
           created_at: string
+          elevenlabs_model: string | null
           elevenlabs_similarity_boost: number | null
           elevenlabs_speaker_boost: boolean | null
           elevenlabs_speed: number | null
@@ -1101,6 +1102,7 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           created_at?: string
+          elevenlabs_model?: string | null
           elevenlabs_similarity_boost?: number | null
           elevenlabs_speaker_boost?: boolean | null
           elevenlabs_speed?: number | null
@@ -1122,6 +1124,7 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           created_at?: string
+          elevenlabs_model?: string | null
           elevenlabs_similarity_boost?: number | null
           elevenlabs_speaker_boost?: boolean | null
           elevenlabs_speed?: number | null
