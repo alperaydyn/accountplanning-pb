@@ -1050,6 +1050,8 @@ export type Database = {
           ai_model: string | null
           ai_provider: string | null
           created_at: string
+          elevenlabs_voice_id: string | null
+          elevenlabs_voice_name: string | null
           id: string
           language: string
           notifications_enabled: boolean
@@ -1064,6 +1066,8 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           created_at?: string
+          elevenlabs_voice_id?: string | null
+          elevenlabs_voice_name?: string | null
           id?: string
           language?: string
           notifications_enabled?: boolean
@@ -1078,6 +1082,8 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           created_at?: string
+          elevenlabs_voice_id?: string | null
+          elevenlabs_voice_name?: string | null
           id?: string
           language?: string
           notifications_enabled?: boolean
