@@ -665,14 +665,14 @@ export default function PrimaryBankEngine() {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-3 md:grid-rows-[auto] md:items-start">
           {/* Control Panel */}
-          <Card>
+          <Card className="flex flex-col md:max-h-[calc(100vh-320px)] md:min-h-[300px]">
             <CardHeader>
               <CardTitle>{t.primaryBankEngine.controls}</CardTitle>
               <CardDescription>{t.primaryBankEngine.controlsDesc}</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 flex-1 overflow-auto">
               <div className="flex gap-2">
                 {!isRunning && !isPaused && !isPauseRequested ? (
                   <Button onClick={handleStart} className="flex-1">
@@ -773,7 +773,7 @@ export default function PrimaryBankEngine() {
           </Card>
 
           {/* Customer Progress List */}
-          <Card className="md:col-span-2 flex flex-col max-h-[calc(100vh-320px)] min-h-[300px]">
+          <Card className="md:col-span-2 flex flex-col md:max-h-[calc(100vh-320px)] md:min-h-[300px]">
             <CardHeader className="flex-shrink-0">
               <CardTitle>{t.primaryBankEngine.customerProgress}</CardTitle>
               <CardDescription>{t.primaryBankEngine.customerProgressDesc}</CardDescription>
