@@ -275,7 +275,7 @@ export const dashboardDemoScript: DemoScript = {
       highlightType: "spotlight",
       position: "top",
       duration: 10000,
-      actions: [{ type: "scroll", delay: 500, scrollAmount: 100 }],
+      actions: [{ type: "scroll", delay: 500, scrollAmount: 50 }],
       content: {
         tr: {
           shortText: "Ürün Performans Tablosu",
