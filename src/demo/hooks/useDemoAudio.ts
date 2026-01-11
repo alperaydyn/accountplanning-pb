@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+// Global request tracking to prevent duplicate calls
+const pendingRequests = new Map<string, Promise<string | null>>();
+
 export function useDemoAudio() {
   const { state, currentStep, nextStep } = useDemo();
   const { language } = useLanguage();
@@ -12,6 +15,7 @@ export function useDemoAudio() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioCache = useRef<Map<string, string>>(new Map());
   const isMountedRef = useRef(true);
+  const currentRequestId = useRef<string | null>(null);
 
   // Track mounted state
   useEffect(() => {
@@ -21,7 +25,7 @@ export function useDemoAudio() {
     };
   }, []);
 
-  // Generate audio from text using ElevenLabs
+  // Generate audio from text using ElevenLabs with deduplication
   const generateAudio = useCallback(async (text: string, stepId: string): Promise<string | null> => {
     const cacheKey = `${language}-${stepId}`;
     
@@ -30,33 +34,48 @@ export function useDemoAudio() {
       return audioCache.current.get(cacheKey)!;
     }
 
-    // Generate audio via edge function
-    try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-demo-audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text, language, stepId }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to generate audio: ${response.status}`);
-      }
-
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      audioCache.current.set(cacheKey, audioUrl);
-      return audioUrl;
-    } catch (err) {
-      console.error('Error generating audio:', err);
-      return null;
+    // Check if request is already in progress
+    if (pendingRequests.has(cacheKey)) {
+      return pendingRequests.get(cacheKey)!;
     }
+
+    // Create new request promise
+    const requestPromise = (async (): Promise<string | null> => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-demo-audio`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ text, language, stepId }),
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Audio generation failed:', errorText);
+          return null;
+        }
+
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioCache.current.set(cacheKey, audioUrl);
+        return audioUrl;
+      } catch (err) {
+        console.error('Error generating audio:', err);
+        return null;
+      } finally {
+        // Clean up pending request
+        pendingRequests.delete(cacheKey);
+      }
+    })();
+
+    pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }, [language]);
 
   // Cleanup function
@@ -109,34 +128,43 @@ export function useDemoAudio() {
     timerRef.current = setTimeout(updateProgress, progressInterval);
   }, [nextStep]);
 
-  // Handle step changes
+  // Handle step changes - debounced with request ID tracking
   useEffect(() => {
-    // Early exit if not active
     if (!state.isActive || !state.isPlaying || !currentStep) {
       return;
     }
 
     const stepContent = currentStep.content[language];
     const narrative = stepContent?.narrative;
+    const requestId = `${language}-${currentStep.id}-${Date.now()}`;
+    currentRequestId.current = requestId;
 
     // Cleanup previous
     cleanup();
     setAudioProgress(0);
     setError(null);
 
-    // Generate and play audio
-    const playAudio = async () => {
+    // Small delay to debounce rapid calls
+    const debounceTimer = setTimeout(async () => {
+      // Check if this request is still current
+      if (currentRequestId.current !== requestId || !isMountedRef.current) {
+        return;
+      }
+
       if (!narrative) {
         startTimerProgression(currentStep.duration, state.speed);
         return;
       }
 
-      if (!isMountedRef.current) return;
       setIsLoading(true);
       
       const audioUrl = await generateAudio(narrative, currentStep.id);
       
-      if (!isMountedRef.current) return;
+      // Check again if still current after async operation
+      if (currentRequestId.current !== requestId || !isMountedRef.current) {
+        return;
+      }
+      
       setIsLoading(false);
 
       if (!audioUrl) {
@@ -173,14 +201,14 @@ export function useDemoAudio() {
 
       audio.play().catch(() => {
         if (!isMountedRef.current) return;
-        setError("Failed to play audio");
         startTimerProgression(currentStep.duration, state.speed);
       });
+    }, 100); // 100ms debounce
+
+    return () => {
+      clearTimeout(debounceTimer);
+      cleanup();
     };
-
-    playAudio();
-
-    return cleanup;
   }, [
     state.isActive,
     state.isPlaying,
