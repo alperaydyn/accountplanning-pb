@@ -269,9 +269,10 @@ export interface Translations {
     sector: string;
     allSegments: string;
     allSectors: string;
-    primaryBankPercent: string;
     principalityScore: string;
     avgScoreDescription: string;
+    externalDataTitle: string;
+    internalDataTitle: string;
     scoreExplanation: string;
     loansTitle: string;
     loansDescription: string;
@@ -695,16 +696,17 @@ export const translations: Record<Language, Translations> = {
       chatWindowTitle: "AI Aksiyon Asistanı",
     },
     primaryBank: {
-      pageTitle: "Ana Banka Skoru",
+      pageTitle: "Ana Banka",
       pageSubtitle: "Portföy Genel Bakış",
       segment: "Segment",
       sector: "Sektör",
       allSegments: "Tüm Segmentler",
       allSectors: "Tüm Sektörler",
-      primaryBankPercent: "Ana Banka %",
-      principalityScore: "Prensiplik Skoru",
-      avgScoreDescription: "seçili segment/sektör genelinde ortalama prensiplik skoru.",
-      scoreExplanation: "Prensiplik Skoru, bankacılık ilişkisinin ne kadarının bankamızda yoğunlaştığını dört eksen üzerinden performans ölçerek sayısallaştıran bir metriktir.",
+      principalityScore: "Ana Banka Skoru",
+      avgScoreDescription: "seçili segment/sektör genelinde ortalama ana banka skoru.",
+      externalDataTitle: "Banka Dışı Veriler",
+      internalDataTitle: "Banka İçi Veriler",
+      scoreExplanation: "Ana Banka Skoru, bankacılık ilişkisinin ne kadarının bankamızda yoğunlaştığını dört eksen üzerinden performans ölçerek sayısallaştıran bir metriktir.",
       loansTitle: "Kredi",
       loansDescription: "Eşik üzerindeki krediler",
       posTitle: "Üye İşyeri",
@@ -721,7 +723,7 @@ export const translations: Record<Language, Translations> = {
       liabilitiesAxisDescription: "Mevduat ve diğer yükümlülükler payı",
       assetsAxis: "Varlıklar / Cüzdan Payı",
       assetsAxisDescription: "Kısa ve uzun vadeli borç payı",
-      bottomExplanation: "Dört eksen (Ürünler, İşlem Hizmetleri, Yükümlülükler ve Varlıklar), portföyün finansal aktivitesinin ne kadarının bankamız tarafından yakalandığını ölçer. Prensiplik Skoru, bankamızın ana banka olarak ne kadar merkezi olduğunu belirlemek için bu eksenleri birleştirerek, kurumumuzdaki bankacılık ilişkisinin yoğunluğunu gösteren 0-100 arasında bir skor sağlar.",
+      bottomExplanation: "Dört eksen (Ürünler, İşlem Hizmetleri, Yükümlülükler ve Varlıklar), portföyün finansal aktivitesinin ne kadarının bankamız tarafından yakalandığını ölçer. Ana Banka Skoru, bankamızın ana banka olarak ne kadar merkezi olduğunu belirlemek için bu eksenleri birleştirerek, kurumumuzdaki bankacılık ilişkisinin yoğunluğunu gösteren 0-100 arasında bir skor sağlar.",
       current: "Güncel",
       title: "Ana Banka",
     },
@@ -1105,16 +1107,17 @@ export const translations: Record<Language, Translations> = {
       chatWindowTitle: "AI Action Assistant",
     },
     primaryBank: {
-      pageTitle: "Primary Bank Score",
+      pageTitle: "Primary Bank",
       pageSubtitle: "Portfolio Overview",
       segment: "Segment",
       sector: "Sector",
       allSegments: "All Segments",
       allSectors: "All Sectors",
-      primaryBankPercent: "Primary Bank %",
-      principalityScore: "Principality Score",
-      avgScoreDescription: "Average principality score across the selected segment/sector.",
-      scoreExplanation: "Principality Score is a metric that quantifies how much of the banking relationship is concentrated at our bank by measuring performance across four axes.",
+      principalityScore: "Primary Bank Score",
+      avgScoreDescription: "Average primary bank score across the selected segment/sector.",
+      externalDataTitle: "External Data",
+      internalDataTitle: "Internal Data",
+      scoreExplanation: "Primary Bank Score is a metric that quantifies how much of the banking relationship is concentrated at our bank by measuring performance across four axes.",
       loansTitle: "Loans",
       loansDescription: "Loans over threshold",
       posTitle: "POS Merchant",
@@ -1131,7 +1134,7 @@ export const translations: Record<Language, Translations> = {
       liabilitiesAxisDescription: "Share of deposits and other liabilities",
       assetsAxis: "Assets / Share of Wallet",
       assetsAxisDescription: "Share of drawn short and long term debt",
-      bottomExplanation: "The four axes (Products, Transactional Services, Liabilities, and Assets) measure how much of the portfolio's financial activity is captured by our bank. The Principality Score aggregates these axes to determine how central our bank is as the main bank, providing a score from 0-100 that indicates the extent of the banking relationship concentrated at our institution.",
+      bottomExplanation: "The four axes (Products, Transactional Services, Liabilities, and Assets) measure how much of the portfolio's financial activity is captured by our bank. The Primary Bank Score aggregates these axes to determine how central our bank is as the main bank, providing a score from 0-100 that indicates the extent of the banking relationship concentrated at our institution.",
       current: "Current",
       title: "Primary Bank",
     },
@@ -1515,16 +1518,17 @@ export const translations: Record<Language, Translations> = {
       chatWindowTitle: "Asistente de Acciones AI",
     },
     primaryBank: {
-      pageTitle: "Puntuación de Banco Principal",
+      pageTitle: "Banco Principal",
       pageSubtitle: "Resumen de Cartera",
       segment: "Segmento",
       sector: "Sector",
       allSegments: "Todos los Segmentos",
       allSectors: "Todos los Sectores",
-      primaryBankPercent: "Banco Principal %",
-      principalityScore: "Puntuación de Principalidad",
-      avgScoreDescription: "Puntuación promedio de principalidad en el segmento/sector seleccionado.",
-      scoreExplanation: "La Puntuación de Principalidad es una métrica que cuantifica cuánto de la relación bancaria está concentrada en nuestro banco midiendo el rendimiento en cuatro ejes.",
+      principalityScore: "Puntuación de Banco Principal",
+      avgScoreDescription: "Puntuación promedio de banco principal en el segmento/sector seleccionado.",
+      externalDataTitle: "Datos Externos",
+      internalDataTitle: "Datos Internos",
+      scoreExplanation: "La Puntuación de Banco Principal es una métrica que cuantifica cuánto de la relación bancaria está concentrada en nuestro banco midiendo el rendimiento en cuatro ejes.",
       loansTitle: "Créditos",
       loansDescription: "Préstamos sobre umbral",
       posTitle: "Comercio POS",
@@ -1541,7 +1545,7 @@ export const translations: Record<Language, Translations> = {
       liabilitiesAxisDescription: "Participación de depósitos y otros pasivos",
       assetsAxis: "Activos / Cuota de Cartera",
       assetsAxisDescription: "Participación de deuda a corto y largo plazo",
-      bottomExplanation: "Los cuatro ejes (Productos, Servicios Transaccionales, Pasivos y Activos) miden cuánto de la actividad financiera de la cartera es capturada por nuestro banco. La Puntuación de Principalidad agrega estos ejes para determinar qué tan central es nuestro banco como banco principal, proporcionando una puntuación de 0-100 que indica el grado de la relación bancaria concentrada en nuestra institución.",
+      bottomExplanation: "Los cuatro ejes (Productos, Servicios Transaccionales, Pasivos y Activos) miden cuánto de la actividad financiera de la cartera es capturada por nuestro banco. La Puntuación de Banco Principal agrega estos ejes para determinar qué tan central es nuestro banco como banco principal, proporcionando una puntuación de 0-100 que indica el grado de la relación bancaria concentrada en nuestra institución.",
       current: "Actual",
       title: "Banco Principal",
     },
