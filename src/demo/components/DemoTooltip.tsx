@@ -6,11 +6,13 @@ import { X, Volume2 } from "lucide-react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDemoAudio } from "../hooks/useDemoAudio";
+import { useDemoActions } from "../hooks/useDemoActions";
 
 export function DemoTooltip() {
   const { state, currentStep, stopDemo, progress } = useDemo();
   const { language, t } = useLanguage();
   const { audioProgress, isLoading } = useDemoAudio();
+  useDemoActions();
   const [position, setPosition] = useState({ top: 0, left: 0 });
 
   const isActive = state.isActive;
