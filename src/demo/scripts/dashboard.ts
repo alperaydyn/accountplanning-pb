@@ -192,6 +192,7 @@ export const dashboardDemoScript: DemoScript = {
       highlightType: "spotlight",
       position: "left",
       duration: 10000,
+      waitForElement: true,
       content: {
         tr: {
           shortText: "Ürün Analiz Modalı",
@@ -241,6 +242,7 @@ export const dashboardDemoScript: DemoScript = {
       highlightType: "spotlight",
       position: "right",
       duration: 10000,
+      waitForElement: true,
       content: {
         tr: {
           shortText: "Aksiyon Analiz Modalı",
