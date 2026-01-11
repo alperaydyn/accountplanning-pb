@@ -134,6 +134,8 @@ export function useDemoAudio() {
       return;
     }
 
+    let cancelled = false;
+
     const stepContent = currentStep.content[language];
     const narrative = stepContent?.narrative;
     const requestId = `${language}-${currentStep.id}-${Date.now()}`;
@@ -144,68 +146,89 @@ export function useDemoAudio() {
     setAudioProgress(0);
     setError(null);
 
-    // Small delay to debounce rapid calls
-    const debounceTimer = setTimeout(async () => {
-      // Check if this request is still current
-      if (currentRequestId.current !== requestId || !isMountedRef.current) {
-        return;
-      }
-
-      if (!narrative) {
-        startTimerProgression(currentStep.duration, state.speed);
-        return;
-      }
-
-      setIsLoading(true);
-      
-      const audioUrl = await generateAudio(narrative, currentStep.id);
-      
-      // Check again if still current after async operation
-      if (currentRequestId.current !== requestId || !isMountedRef.current) {
-        return;
-      }
-      
-      setIsLoading(false);
-
-      if (!audioUrl) {
-        startTimerProgression(currentStep.duration, state.speed);
-        return;
-      }
-
-      const audio = new Audio(audioUrl);
-      audio.volume = state.volume;
-      audio.playbackRate = state.speed;
-      audioRef.current = audio;
-
-      audio.ontimeupdate = () => {
-        if (audio.duration && isMountedRef.current) {
-          setAudioProgress((audio.currentTime / audio.duration) * 100);
+    const run = async () => {
+      try {
+        // Check if this request is still current
+        if (
+          cancelled ||
+          currentRequestId.current !== requestId ||
+          !isMountedRef.current
+        ) {
+          return;
         }
-      };
 
-      audio.onended = () => {
-        if (!isMountedRef.current) return;
-        setAudioProgress(100);
-        timerRef.current = setTimeout(() => {
-          if (isMountedRef.current) {
-            nextStep();
+        if (!narrative) {
+          startTimerProgression(currentStep.duration, state.speed);
+          return;
+        }
+
+        setIsLoading(true);
+
+        const audioUrl = await generateAudio(narrative, currentStep.id);
+
+        if (
+          cancelled ||
+          currentRequestId.current !== requestId ||
+          !isMountedRef.current
+        ) {
+          return;
+        }
+
+        setIsLoading(false);
+
+        if (!audioUrl) {
+          startTimerProgression(currentStep.duration, state.speed);
+          return;
+        }
+
+        const audio = new Audio(audioUrl);
+        audio.volume = state.volume;
+        audio.playbackRate = state.speed;
+        audioRef.current = audio;
+
+        audio.ontimeupdate = () => {
+          if (cancelled || !isMountedRef.current) return;
+          if (audio.duration) {
+            setAudioProgress((audio.currentTime / audio.duration) * 100);
           }
-        }, 800);
-      };
+        };
 
-      audio.onerror = () => {
-        if (!isMountedRef.current) return;
-        setError("Failed to play audio");
-        startTimerProgression(currentStep.duration, state.speed);
-      };
+        audio.onended = () => {
+          if (cancelled || !isMountedRef.current) return;
+          setAudioProgress(100);
+          timerRef.current = setTimeout(() => {
+            if (!cancelled && isMountedRef.current) {
+              nextStep();
+            }
+          }, 800);
+        };
 
-      audio.play().catch(() => {
-        if (!isMountedRef.current) return;
+        audio.onerror = () => {
+          if (cancelled || !isMountedRef.current) return;
+          setError("Failed to play audio");
+          startTimerProgression(currentStep.duration, state.speed);
+        };
+
+        audio.play().catch(() => {
+          if (cancelled || !isMountedRef.current) return;
+          startTimerProgression(currentStep.duration, state.speed);
+        });
+      } catch (err) {
+        // IMPORTANT: never let async errors escape (prevents UNHANDLED_PROMISE_REJECTION)
+        console.error("Demo audio run() failed:", err);
+        if (cancelled || !isMountedRef.current) return;
+        setIsLoading(false);
         startTimerProgression(currentStep.duration, state.speed);
-      });
-    }, 100); // 100ms debounce
+      }
+    };
+
+    // 100ms debounce, but do NOT use async directly inside setTimeout
+    const debounceTimer = setTimeout(() => {
+      void run();
+    }, 100);
 
     return () => {
+      cancelled = true;
       clearTimeout(debounceTimer);
       cleanup();
     };
