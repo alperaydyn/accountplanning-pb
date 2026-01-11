@@ -7,9 +7,7 @@ import { AppLayout } from "@/components/layout/AppLayout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useCustomers, SEGMENTS, SECTORS } from "@/hooks/useCustomers";
-import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
-import { useProducts } from "@/hooks/useProducts";
-import { useProductThresholds } from "@/hooks/useProductThresholds";
+import { usePrimaryBankData } from "@/hooks/usePrimaryBankData";
 import {
   Select,
   SelectContent,
@@ -44,10 +42,13 @@ const PrimaryBank = () => {
     sector: selectedSector === "all" ? undefined : selectedSector as any,
   });
 
-  // Fetch products, thresholds, and customer products for product metrics
-  const { data: products = [] } = useProducts();
-  const { data: thresholds = [] } = useProductThresholds({});
-  const { data: allCustomerProducts = [] } = useAllCustomerProducts();
+  // Get customer IDs for primary bank data query
+  const customerIds = useMemo(() => customers.map(c => c.id), [customers]);
+
+  // Fetch primary bank data for share of wallet calculations
+  const { data: primaryBankData, isLoading: isPrimaryBankLoading } = usePrimaryBankData({ 
+    customerIds 
+  });
 
   // Calculate metrics
   const metrics = useMemo(() => {
@@ -56,56 +57,17 @@ const PrimaryBank = () => {
     const primaryBankPercentage = totalCustomers > 0 
       ? Math.round((primaryBankCustomers / totalCustomers) * 100) 
       : 0;
-    const avgPrincipalityScore = totalCustomers > 0
-      ? Math.round(customers.reduce((sum, c) => sum + (c.principality_score || 0), 0) / totalCustomers)
-      : 0;
 
     return {
       totalCustomers,
       primaryBankCustomers,
       primaryBankPercentage,
-      avgPrincipalityScore,
     };
   }, [customers]);
 
-  // Calculate product metrics (over threshold ratios)
-  const productMetrics = useMemo(() => {
-    const customerIds = new Set(customers.map(c => c.id));
-    const filteredCustomerProducts = allCustomerProducts.filter(cp => customerIds.has(cp.customer_id));
-    
-    // Helper to calculate ratio over threshold for a category
-    const calculateCategoryRatio = (category: string) => {
-      const categoryProducts = products.filter(p => p.category === category);
-      const productIds = new Set(categoryProducts.map(p => p.id));
-      
-      let totalOverThreshold = 0;
-      let totalCount = 0;
-      
-      filteredCustomerProducts.forEach(cp => {
-        if (!productIds.has(cp.product_id)) return;
-        
-        // Find threshold for this product (use first matching threshold or 0)
-        const threshold = thresholds.find(t => t.product_id === cp.product_id)?.threshold_value || 0;
-        totalCount++;
-        if (cp.current_value >= Number(threshold)) {
-          totalOverThreshold++;
-        }
-      });
-      
-      return totalCount > 0 ? Math.round((totalOverThreshold / totalCount) * 100) : 0;
-    };
-
-    return {
-      loans: calculateCategoryRatio("Kredi"),
-      posGiro: calculateCategoryRatio("Ödeme"),
-      cheque: calculateCategoryRatio("Tahsilat"),
-      collaterals: calculateCategoryRatio("Sigorta"),
-    };
-  }, [customers, products, thresholds, allCustomerProducts]);
-
   // Generate score axes with translations
   const axes = useMemo(() => {
-    const baseScore = metrics.avgPrincipalityScore;
+    const baseScore = primaryBankData?.overallScore || 0;
     const variance = 15;
     
     const productsScore = Math.min(100, Math.max(0, baseScore + Math.floor(Math.random() * variance * 2) - variance));
@@ -139,7 +101,7 @@ const PrimaryBank = () => {
         description: t.primaryBank.assetsAxisDescription,
       },
     ];
-  }, [metrics.avgPrincipalityScore, t]);
+  }, [primaryBankData?.overallScore, t]);
 
   const segmentLabel = selectedSegment === "all" ? t.primaryBank.allSegments : selectedSegment;
   const sectorLabel = selectedSector === "all" ? t.primaryBank.allSectors : selectedSector;
@@ -223,7 +185,7 @@ const PrimaryBank = () => {
           <CardContent>
             <div className="flex items-baseline gap-4 mb-4">
               <span className="text-5xl font-bold text-primary">
-                {isLoading ? "..." : `${metrics.avgPrincipalityScore}%`}
+                {isLoading || isPrimaryBankLoading ? "..." : `${primaryBankData?.overallScore || 0}%`}
               </span>
               <span className="text-muted-foreground">
                 {segmentLabel} / {sectorLabel} {t.primaryBank.avgScoreDescription}
@@ -247,11 +209,11 @@ const PrimaryBank = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.loans}%`}</p>
+              <p className="text-3xl font-bold">{isLoading || isPrimaryBankLoading ? "..." : `${primaryBankData?.loanShare || 0}%`}</p>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.loans)}`}
-                  style={{ width: `${productMetrics.loans}%` }}
+                  className={`h-full rounded-full transition-all ${getProgressColor(primaryBankData?.loanShare || 0)}`}
+                  style={{ width: `${primaryBankData?.loanShare || 0}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.loansDescription}</p>
@@ -265,11 +227,11 @@ const PrimaryBank = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.posGiro}%`}</p>
+              <p className="text-3xl font-bold">{isLoading || isPrimaryBankLoading ? "..." : `${primaryBankData?.posShare || 0}%`}</p>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.posGiro)}`}
-                  style={{ width: `${productMetrics.posGiro}%` }}
+                  className={`h-full rounded-full transition-all ${getProgressColor(primaryBankData?.posShare || 0)}`}
+                  style={{ width: `${primaryBankData?.posShare || 0}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.posDescription}</p>
@@ -283,11 +245,11 @@ const PrimaryBank = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.cheque}%`}</p>
+              <p className="text-3xl font-bold">{isLoading || isPrimaryBankLoading ? "..." : `${primaryBankData?.chequeShare || 0}%`}</p>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.cheque)}`}
-                  style={{ width: `${productMetrics.cheque}%` }}
+                  className={`h-full rounded-full transition-all ${getProgressColor(primaryBankData?.chequeShare || 0)}`}
+                  style={{ width: `${primaryBankData?.chequeShare || 0}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.chequeDescription}</p>
@@ -301,11 +263,11 @@ const PrimaryBank = () => {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p className="text-3xl font-bold">{isLoading ? "..." : `${productMetrics.collaterals}%`}</p>
+              <p className="text-3xl font-bold">{isLoading || isPrimaryBankLoading ? "..." : `${primaryBankData?.collateralShare || 0}%`}</p>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div 
-                  className={`h-full rounded-full transition-all ${getProgressColor(productMetrics.collaterals)}`}
-                  style={{ width: `${productMetrics.collaterals}%` }}
+                  className={`h-full rounded-full transition-all ${getProgressColor(primaryBankData?.collateralShare || 0)}`}
+                  style={{ width: `${primaryBankData?.collateralShare || 0}%` }}
                 />
               </div>
               <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.collateralsDescription}</p>
