@@ -85,7 +85,12 @@ export function useDemoActions() {
         case "scroll": {
           const el = document.querySelector(selector);
           if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            if (action.scrollAmount !== undefined) {
+              // Scroll by a specific amount within the element
+              el.scrollBy({ top: action.scrollAmount, behavior: "smooth" });
+            } else {
+              el.scrollIntoView({ behavior: "smooth", block: "center" });
+            }
           }
           return;
         }

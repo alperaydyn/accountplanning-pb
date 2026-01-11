@@ -8,6 +8,7 @@ export interface DemoAction {
   type: DemoActionType;
   target?: string;
   delay?: number;
+  scrollAmount?: number; // pixels to scroll (for scroll action)
   value?: string;
 }
 
