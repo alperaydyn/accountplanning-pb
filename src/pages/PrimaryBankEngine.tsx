@@ -165,6 +165,24 @@ export default function PrimaryBankEngine() {
     });
   };
 
+  // Pre-calculate product generation flags based on probability distribution
+  // This ensures deterministic data generation rather than relying on AI randomness
+  const calculateGenerationFlags = useCallback((customerId: string) => {
+    // Use customerId hash to get consistent but distributed results
+    const hash = customerId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const rand = (hash % 100) / 100; // Pseudo-random 0-1 based on customer ID
+    
+    // Probability distribution as specified:
+    // 90% have loan_summary, 50% have loan_detail, 33% have pos, 25% have cheque, 40% have collaterals
+    return {
+      shouldGenerateLoanSummary: rand < 0.90,  // 90%
+      shouldGenerateLoanDetail: rand < 0.50,   // 50%
+      shouldGeneratePos: rand < 0.33,          // 33%
+      shouldGenerateCheque: rand < 0.25,       // 25%
+      shouldGenerateCollateral: rand < 0.40,   // 40%
+    };
+  }, []);
+
   const generateForCustomer = useCallback(async (customer: any): Promise<GeneratedData | null> => {
     const customerProducts = await fetchCustomerProducts(customer.id);
     const productIds = customerProducts.map(p => p.id);
@@ -178,6 +196,9 @@ export default function PrimaryBankEngine() {
     const hasPosProduct = productIds.includes(POS_PRODUCT_ID);
     const hasChequeProduct = productIds.includes(CHEQUE_PRODUCT_ID);
     const hasCollateralProduct = COLLATERAL_PRODUCT_IDS.some(id => productIds.includes(id));
+
+    // Pre-calculate which data types to generate based on probability distribution
+    const generationFlags = calculateGenerationFlags(customer.id);
 
     // Get session for auth token
     const { data: { session } } = await supabase.auth.getSession();
@@ -193,7 +214,13 @@ export default function PrimaryBankEngine() {
           loanProducts,
           hasPosProduct,
           hasChequeProduct,
-          hasCollateralProduct
+          hasCollateralProduct,
+          // Pass pre-calculated flags to the model
+          shouldGenerateLoanSummary: generationFlags.shouldGenerateLoanSummary,
+          shouldGenerateLoanDetail: generationFlags.shouldGenerateLoanDetail,
+          shouldGeneratePos: generationFlags.shouldGeneratePos,
+          shouldGenerateCheque: generationFlags.shouldGenerateCheque,
+          shouldGenerateCollateral: generationFlags.shouldGenerateCollateral,
         },
         recordMonth
       },
@@ -202,7 +229,7 @@ export default function PrimaryBankEngine() {
 
     if (error) throw error;
     return data;
-  }, [recordMonth]);
+  }, [recordMonth, calculateGenerationFlags]);
 
   const saveGeneratedData = async (data: GeneratedData) => {
     // Save loan summary
