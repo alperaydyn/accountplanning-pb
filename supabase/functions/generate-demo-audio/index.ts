@@ -7,8 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Default Voice ID
+// Default Voice ID and settings
 const DEFAULT_VOICE_ID = 'S85IPTaQ0TGGMhJkucvb';
+const DEFAULT_MODEL = 'eleven_flash_v2_5';
 
 interface GenerateAudioRequest {
   text: string;
@@ -29,6 +30,10 @@ serve(async (req) => {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
     const { text, language, stepId } = await req.json() as GenerateAudioRequest;
 
     if (!text || !language) {
@@ -38,32 +43,81 @@ serve(async (req) => {
       );
     }
 
+    // Generate cache key based on language and stepId
+    const cacheFileName = stepId 
+      ? `${language}/${stepId}.mp3`
+      : `${language}/${crypto.randomUUID()}.mp3`;
+
+    // Check if audio file already exists in storage
+    if (stepId) {
+      const { data: existingFile } = await supabase.storage
+        .from('demo-audio')
+        .download(cacheFileName);
+
+      if (existingFile) {
+        console.log(`Cache hit: ${cacheFileName}`);
+        const arrayBuffer = await existingFile.arrayBuffer();
+        return new Response(arrayBuffer, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'audio/mpeg',
+            'Content-Length': arrayBuffer.byteLength.toString(),
+            'X-Cache': 'HIT',
+          },
+        });
+      }
+    }
+
     // Get user's voice settings from database
     let voiceId = DEFAULT_VOICE_ID;
+    let modelId = DEFAULT_MODEL;
+    let voiceSettings = {
+      stability: 0.0,
+      similarity_boost: 1,
+      style: 0.0,
+      use_speaker_boost: false,
+      speed: 1.1,
+    };
     
     const authHeader = req.headers.get('Authorization');
     if (authHeader) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
       const token = authHeader.replace('Bearer ', '');
       const { data: { user } } = await supabase.auth.getUser(token);
       
       if (user) {
         const { data: settings } = await supabase
           .from('user_settings')
-          .select('elevenlabs_voice_id')
+          .select('elevenlabs_voice_id, elevenlabs_model, elevenlabs_stability, elevenlabs_similarity_boost, elevenlabs_style, elevenlabs_speed, elevenlabs_speaker_boost')
           .eq('user_id', user.id)
           .maybeSingle();
         
-        if (settings?.elevenlabs_voice_id) {
-          voiceId = settings.elevenlabs_voice_id;
+        if (settings) {
+          if (settings.elevenlabs_voice_id) {
+            voiceId = settings.elevenlabs_voice_id;
+          }
+          if (settings.elevenlabs_model) {
+            modelId = settings.elevenlabs_model;
+          }
+          if (settings.elevenlabs_stability !== null) {
+            voiceSettings.stability = settings.elevenlabs_stability;
+          }
+          if (settings.elevenlabs_similarity_boost !== null) {
+            voiceSettings.similarity_boost = settings.elevenlabs_similarity_boost;
+          }
+          if (settings.elevenlabs_style !== null) {
+            voiceSettings.style = settings.elevenlabs_style;
+          }
+          if (settings.elevenlabs_speed !== null) {
+            voiceSettings.speed = settings.elevenlabs_speed;
+          }
+          if (settings.elevenlabs_speaker_boost !== null) {
+            voiceSettings.use_speaker_boost = settings.elevenlabs_speaker_boost;
+          }
         }
       }
     }
 
-    console.log(`Generating audio for step: ${stepId || 'unknown'}, language: ${language}, voice: ${voiceId}`);
+    console.log(`Generating audio for step: ${stepId || 'unknown'}, language: ${language}, voice: ${voiceId}, model: ${modelId}`);
 
     // Call ElevenLabs TTS API with specified settings
     const response = await fetch(
@@ -76,14 +130,8 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_flash_v2_5',
-          voice_settings: {
-            stability: 0.0,
-            similarity_boost: 1,
-            style: 0.0,
-            use_speaker_boost: false,
-            speed: 1.1,
-          },
+          model_id: modelId,
+          voice_settings: voiceSettings,
         }),
       }
     );
@@ -94,16 +142,34 @@ serve(async (req) => {
       throw new Error(`ElevenLabs API error: ${response.status} - ${errorText}`);
     }
 
-    // Return audio as binary
+    // Get audio as binary
     const audioBuffer = await response.arrayBuffer();
     
     console.log(`Successfully generated audio: ${audioBuffer.byteLength} bytes`);
+
+    // Save to storage cache (fire and forget for performance)
+    if (stepId) {
+      supabase.storage
+        .from('demo-audio')
+        .upload(cacheFileName, new Uint8Array(audioBuffer), {
+          contentType: 'audio/mpeg',
+          upsert: true,
+        })
+        .then(({ error }) => {
+          if (error) {
+            console.error('Failed to cache audio:', error);
+          } else {
+            console.log(`Cached audio: ${cacheFileName}`);
+          }
+        });
+    }
 
     return new Response(audioBuffer, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'audio/mpeg',
         'Content-Length': audioBuffer.byteLength.toString(),
+        'X-Cache': 'MISS',
       },
     });
 

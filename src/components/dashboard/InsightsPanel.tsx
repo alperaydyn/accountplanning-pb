@@ -309,7 +309,7 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-card border-border flex-1">
+          <Card data-demo-id="product-insights-panel" className="bg-card border-border flex-1">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
@@ -334,6 +334,7 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
                 return (
                   <div
                     key={index}
+                    data-demo-id="insight-item"
                     className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
                     onClick={() => setSelectedInsight(insight)}
                   >
@@ -370,7 +371,7 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
             </CardContent>
           </Card>
         ) : (
-          <Card className="bg-card border-border flex-1">
+          <Card data-demo-id="action-insights-panel" className="bg-card border-border flex-1">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-lg font-semibold text-card-foreground flex items-center gap-2">
@@ -396,6 +397,7 @@ export function InsightsPanel({ recordDate }: InsightsPanelProps) {
                 return (
                   <div
                     key={index}
+                    data-demo-id="action-insight-item"
                     className={`p-4 rounded-lg border ${getBgColor(insight.type)} cursor-pointer transition-all hover:scale-[1.01] hover:shadow-md`}
                     onClick={() => setSelectedActionInsight(insight)}
                   >
