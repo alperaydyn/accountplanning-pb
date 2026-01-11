@@ -162,27 +162,100 @@ export const dashboardDemoScript: DemoScript = {
       },
     },
     {
-      id: "insight-item",
-      elementSelector: "[data-demo-id='insights-panel'] .space-y-3 > div:first-child",
+      id: "product-insight-item",
+      elementSelector: "[data-demo-id='product-insights-panel'] [data-demo-id='insight-item']:first-child",
       highlightType: "pulse",
       position: "right",
       duration: 8000,
       actions: [{ type: "click", delay: 2500 }],
       content: {
         tr: {
-          shortText: "İçgörü Detayları",
+          shortText: "Ürün Performansı Detayları",
           narrative:
-            "Her içgörüye tıklayarak detaylı analiz ve önerilere ulaşabilirsiniz. Modal pencerede ürün bazlı performans verileri, önerilen aksiyonlar ve ilgili müşteri listesi görüntülenir.",
+            "Sol panelde ürün performansı içgörüleri yer alır. Herhangi bir içgörüye tıklayarak detaylı analiz ve önerilere ulaşabilirsiniz. Modal pencerede ürün bazlı performans verileri ve önerilen aksiyonlar görüntülenir.",
         },
         en: {
-          shortText: "Insight Details",
+          shortText: "Product Performance Details",
           narrative:
-            "Click on any insight to view detailed analysis and recommendations. The modal window shows product-based performance data, suggested actions, and related customer list.",
+            "The left panel contains product performance insights. Click on any insight to view detailed analysis and recommendations. The modal window shows product-based performance data and suggested actions.",
         },
         es: {
-          shortText: "Detalles de Perspectivas",
+          shortText: "Detalles de Rendimiento de Productos",
           narrative:
-            "Haga clic en cualquier perspectiva para ver análisis detallados y recomendaciones. La ventana modal muestra datos de rendimiento basados en productos, acciones sugeridas y lista de clientes relacionados.",
+            "El panel izquierdo contiene perspectivas de rendimiento de productos. Haga clic en cualquier perspectiva para ver análisis detallados y recomendaciones. La ventana modal muestra datos de rendimiento basados en productos y acciones sugeridas.",
+        },
+      },
+    },
+    {
+      id: "product-insight-modal",
+      elementSelector: "[role='dialog']",
+      highlightType: "spotlight",
+      position: "left",
+      duration: 10000,
+      content: {
+        tr: {
+          shortText: "Ürün Analiz Modalı",
+          narrative:
+            "Bu modal pencere seçilen ürün içgörüsünün detaylarını gösterir. Durum Analizi bölümünde mevcut performans değerlendirmesi, Önerilen Aksiyonlar bölümünde ise yapılması gereken adımlar listelenir. İlgili müşterilere doğrudan bu ekrandan ulaşabilirsiniz.",
+        },
+        en: {
+          shortText: "Product Analysis Modal",
+          narrative:
+            "This modal window shows details of the selected product insight. The Status Analysis section contains the current performance assessment, while the Recommended Actions section lists the steps to be taken. You can access related customers directly from this screen.",
+        },
+        es: {
+          shortText: "Modal de Análisis de Productos",
+          narrative:
+            "Esta ventana modal muestra los detalles de la perspectiva de producto seleccionada. La sección de Análisis de Estado contiene la evaluación del rendimiento actual, mientras que la sección de Acciones Recomendadas enumera los pasos a seguir. Puede acceder a los clientes relacionados directamente desde esta pantalla.",
+        },
+      },
+    },
+    {
+      id: "action-insight-item",
+      elementSelector: "[data-demo-id='action-insights-panel'] [data-demo-id='action-insight-item']:first-child",
+      highlightType: "pulse",
+      position: "left",
+      duration: 8000,
+      actions: [{ type: "click", delay: 2500 }],
+      content: {
+        tr: {
+          shortText: "Aksiyon Kalitesi Detayları",
+          narrative:
+            "Sağ panelde aksiyon kalitesi içgörüleri yer alır. Bu panel planlanan aksiyonlarınızın yeterliliğini, hizalamasını ve dengesini analiz eder. Detaylı değerlendirme için herhangi bir kategoriye tıklayın.",
+        },
+        en: {
+          shortText: "Action Quality Details",
+          narrative:
+            "The right panel contains action quality insights. This panel analyzes the sufficiency, alignment, and balance of your planned actions. Click on any category for a detailed assessment.",
+        },
+        es: {
+          shortText: "Detalles de Calidad de Acciones",
+          narrative:
+            "El panel derecho contiene perspectivas de calidad de acciones. Este panel analiza la suficiencia, alineación y equilibrio de sus acciones planificadas. Haga clic en cualquier categoría para una evaluación detallada.",
+        },
+      },
+    },
+    {
+      id: "action-insight-modal",
+      elementSelector: "[role='dialog']",
+      highlightType: "spotlight",
+      position: "right",
+      duration: 10000,
+      content: {
+        tr: {
+          shortText: "Aksiyon Analiz Modalı",
+          narrative:
+            "Bu modal, aksiyon planlamanızın detaylı analizini sunar. Yeterlilik, toplam aksiyon sayınızın hedeflerle uyumunu gösterir. Hizalama, kritik ürünlere odaklanma düzeyinizi ölçer. Denge ise ana banka olmayan müşterilere verilen önceliği değerlendirir.",
+        },
+        en: {
+          shortText: "Action Analysis Modal",
+          narrative:
+            "This modal presents a detailed analysis of your action planning. Sufficiency shows how your total action count aligns with targets. Alignment measures your focus on critical products. Balance evaluates the priority given to non-primary bank customers.",
+        },
+        es: {
+          shortText: "Modal de Análisis de Acciones",
+          narrative:
+            "Este modal presenta un análisis detallado de su planificación de acciones. La suficiencia muestra cómo su recuento total de acciones se alinea con los objetivos. La alineación mide su enfoque en productos críticos. El equilibrio evalúa la prioridad dada a los clientes que no son de banco principal.",
         },
       },
     },
