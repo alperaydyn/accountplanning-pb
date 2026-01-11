@@ -167,7 +167,7 @@ export const dashboardDemoScript: DemoScript = {
       highlightType: "pulse",
       position: "right",
       duration: 8000,
-      actions: [{ type: "click", delay: 2500 }],
+      actions: [], // Click will be triggered by next step's waitForElement
       content: {
         tr: {
           shortText: "Ürün Performansı Detayları",
@@ -193,6 +193,7 @@ export const dashboardDemoScript: DemoScript = {
       position: "left",
       duration: 10000,
       waitForElement: true,
+      actions: [{ type: "click", target: "[data-demo-id='product-insights-panel'] [data-demo-id='insight-item']:first-child", delay: 0 }],
       content: {
         tr: {
           shortText: "Ürün Analiz Modalı",
@@ -217,7 +218,7 @@ export const dashboardDemoScript: DemoScript = {
       highlightType: "pulse",
       position: "left",
       duration: 8000,
-      actions: [{ type: "click", delay: 2500 }],
+      actions: [], // Click will be triggered by next step's waitForElement
       content: {
         tr: {
           shortText: "Aksiyon Kalitesi Detayları",
@@ -243,6 +244,7 @@ export const dashboardDemoScript: DemoScript = {
       position: "right",
       duration: 10000,
       waitForElement: true,
+      actions: [{ type: "click", target: "[data-demo-id='action-insights-panel'] [data-demo-id='action-insight-item']:first-child", delay: 0 }],
       content: {
         tr: {
           shortText: "Aksiyon Analiz Modalı",
