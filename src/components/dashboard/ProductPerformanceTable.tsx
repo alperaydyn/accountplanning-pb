@@ -162,7 +162,6 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
             {t.dashboard.noDataAvailable}
           </div>
         ) : (
-          <div className="overflow-auto max-h-[400px]">
           <Table>
             <TableHeader>
               <TableRow className="border-border border-b-0">
@@ -285,7 +284,6 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
               })}
             </TableBody>
           </Table>
-          </div>
         )}
       </CardContent>
     </Card>
