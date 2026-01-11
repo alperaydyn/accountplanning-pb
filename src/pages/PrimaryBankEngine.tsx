@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save, Square, Settings } from "lucide-react";
+import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save, Square, Settings, Sparkles } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { Button } from "@/components/ui/button";
@@ -751,17 +751,15 @@ export default function PrimaryBankEngine() {
               </div>
 
               {/* AI Model with Settings Link */}
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium">{t.primaryBankEngine.aiModel}:</span>
-                  <span className="truncate max-w-[120px]">{currentModel || "Default"}</span>
-                </div>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
+                <span className="min-w-0">{currentModel || "Default"}</span>
                 <Link 
                   to="/settings" 
-                  className="flex items-center gap-1 text-primary hover:underline"
+                  className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
+                  title={t.primaryBankEngine.changeModel}
                 >
-                  <Settings className="h-3 w-3" />
-                  <span>{t.primaryBankEngine.changeModel}</span>
+                  <Settings className="h-3.5 w-3.5" />
                 </Link>
               </div>
 
