@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Sparkles, CalendarCheck } from "lucide-react";
+import { TrendingUp, AlertCircle, Plus, Bot, ArrowUpDown, ArrowUp, ArrowDown, Loader2, Sparkles, CalendarCheck, Building2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
@@ -23,8 +23,10 @@ import { AddActionModal } from "@/components/actions/AddActionModal";
 import { AICustomerSummary } from "@/components/customer/AICustomerSummary";
 import { PrincipalityScoreModal } from "@/components/customer/PrincipalityScoreModal";
 import { AutoPilotPanel } from "@/components/customer/AutoPilotPanel";
+import { PrimaryBankPanel } from "@/components/customer/PrimaryBankPanel";
 import { cn } from "@/lib/utils";
 import { Database } from "@/integrations/supabase/types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type DBCustomerStatus = Database['public']['Enums']['customer_status'];
 type DBActionStatus = Database['public']['Enums']['action_status'];
@@ -48,17 +50,18 @@ const getStatusBadgeClass = (status: DBCustomerStatus): string => {
   }
 };
 
-type ViewMode = "products" | "actions" | "autopilot";
+type ViewMode = "primaryBank" | "products" | "actions" | "autopilot";
 
 const CustomerDetail = () => {
   const { customerId } = useParams();
   const [searchParams] = useSearchParams();
   const actionParam = searchParams.get("action");
+  const { t } = useLanguage();
 
   const [selectedActionIds, setSelectedActionIds] = useState<string[]>([]);
   const [initialActionId, setInitialActionId] = useState<string | undefined>(undefined);
   const [handledActionParam, setHandledActionParam] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("products");
+  const [viewMode, setViewMode] = useState<ViewMode>("primaryBank");
   const [priorityFilter, setPriorityFilter] = useState<DBActionPriority | "all">("all");
   const [statusFilter, setStatusFilter] = useState<DBActionStatus | "all">("all");
   const [showPrincipalityModal, setShowPrincipalityModal] = useState(false);
@@ -338,12 +341,23 @@ const CustomerDetail = () => {
           <div className="flex items-center gap-4 mb-4">
             <h2 
               className={cn(
+                "text-lg font-semibold cursor-pointer transition-colors flex items-center gap-1.5",
+                viewMode === "primaryBank" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+              onClick={() => setViewMode("primaryBank")}
+            >
+              <Building2 className="h-4 w-4" />
+              {t.customerDetail.primaryBank}
+            </h2>
+            <span className="text-muted-foreground">|</span>
+            <h2 
+              className={cn(
                 "text-lg font-semibold cursor-pointer transition-colors",
                 viewMode === "products" ? "text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
               onClick={() => setViewMode("products")}
             >
-              Products
+              {t.customerDetail.products}
             </h2>
             <span className="text-muted-foreground">|</span>
             <h2 
@@ -353,7 +367,7 @@ const CustomerDetail = () => {
               )}
               onClick={() => setViewMode("actions")}
             >
-              Actions
+              {t.customerDetail.actions}
             </h2>
             <span className="text-muted-foreground">|</span>
             <h2 
@@ -364,11 +378,13 @@ const CustomerDetail = () => {
               onClick={() => setViewMode("autopilot")}
             >
               <Bot className="h-4 w-4" />
-              AutoPilot
+              {t.customerDetail.autopilot}
             </h2>
           </div>
 
-          {viewMode === "products" ? (
+          {viewMode === "primaryBank" ? (
+            <PrimaryBankPanel customerId={customerId || ""} />
+          ) : viewMode === "products" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {(() => {
                 // Get all unique product IDs from customer products and actions

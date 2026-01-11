@@ -374,6 +374,13 @@ export interface Translations {
     high: string;
     medium: string;
     low: string;
+    primaryBank: string;
+    primaryBankScore: string;
+    primaryBankNoData: string;
+    primaryBankScoreFormula: string;
+    products: string;
+    actions: string;
+    autopilot: string;
   };
 
   // NotFound
@@ -803,6 +810,13 @@ export const translations: Record<Language, Translations> = {
       high: "Yüksek",
       medium: "Orta",
       low: "Düşük",
+      primaryBank: "Ana Banka",
+      primaryBankScore: "Ana Banka Skoru",
+      primaryBankNoData: "Bu müşteri için ana banka verisi bulunamadı",
+      primaryBankScoreFormula: "Skor = Kredi×0.4 + POS×0.3 + Çek×0.2 + Teminat×0.1",
+      products: "Ürünler",
+      actions: "Aksiyonlar",
+      autopilot: "AutoPilot",
     },
     notFound: {
       title: "404",
@@ -1214,6 +1228,13 @@ export const translations: Record<Language, Translations> = {
       high: "High",
       medium: "Medium",
       low: "Low",
+      primaryBank: "Primary Bank",
+      primaryBankScore: "Primary Bank Score",
+      primaryBankNoData: "No primary bank data found for this customer",
+      primaryBankScoreFormula: "Score = Loan×0.4 + POS×0.3 + Cheque×0.2 + Collateral×0.1",
+      products: "Products",
+      actions: "Actions",
+      autopilot: "AutoPilot",
     },
     notFound: {
       title: "404",
@@ -1625,6 +1646,13 @@ export const translations: Record<Language, Translations> = {
       high: "Alta",
       medium: "Media",
       low: "Baja",
+      primaryBank: "Banco Principal",
+      primaryBankScore: "Puntuación Banco Principal",
+      primaryBankNoData: "No se encontraron datos de banco principal para este cliente",
+      primaryBankScoreFormula: "Puntuación = Crédito×0.4 + POS×0.3 + Cheque×0.2 + Garantía×0.1",
+      products: "Productos",
+      actions: "Acciones",
+      autopilot: "AutoPilot",
     },
     notFound: {
       title: "404",
