@@ -7,7 +7,12 @@ const corsHeaders = {
 };
 
 const DEFAULT_VOICE_ID = "S85IPTaQ0TGGMhJkucvb";
-const TEST_TEXT = "Hello! This is a test of the selected voice. How does it sound?";
+
+const TEST_TEXTS: Record<string, string> = {
+  tr: "Merhaba! Bu seçilen sesin bir testidir. Nasıl duyuluyor?",
+  en: "Hello! This is a test of the selected voice. How does it sound?",
+  es: "¡Hola! Esta es una prueba de la voz seleccionada. ¿Cómo suena?",
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -15,7 +20,8 @@ serve(async (req) => {
   }
 
   try {
-    const { voiceId } = await req.json();
+    const { voiceId, language = "tr" } = await req.json();
+    const testText = TEST_TEXTS[language] || TEST_TEXTS.tr;
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
     if (!ELEVENLABS_API_KEY) {
@@ -35,7 +41,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          text: TEST_TEXT,
+          text: testText,
           model_id: "eleven_flash_v2_5",
           voice_settings: {
             stability: 0.0,
