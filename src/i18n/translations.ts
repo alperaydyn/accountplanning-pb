@@ -347,6 +347,7 @@ export interface Translations {
     stateRestored: string;
     stateRestoredDesc: string;
     stop: string;
+    pausing: string;
   };
 
   // Customer Detail
@@ -772,6 +773,7 @@ export const translations: Record<Language, Translations> = {
       stateRestored: "Durum Geri Yüklendi",
       stateRestoredDesc: "İlerleme geri yüklendi",
       stop: "Durdur",
+      pausing: "Duraklatılıyor...",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -1177,6 +1179,7 @@ export const translations: Record<Language, Translations> = {
       stateRestored: "State Restored",
       stateRestoredDesc: "Progress restored",
       stop: "Stop",
+      pausing: "Pausing...",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1582,6 +1585,7 @@ export const translations: Record<Language, Translations> = {
       stateRestored: "Estado Restaurado",
       stateRestoredDesc: "Progreso restaurado",
       stop: "Detener",
+      pausing: "Pausando...",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",

@@ -78,6 +78,7 @@ export default function PrimaryBankEngine() {
 
   const [isRunning, setIsRunning] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isPauseRequested, setIsPauseRequested] = useState(false); // New: shows "pausing" state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<CustomerResult[]>([]);
   const [recordMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -86,6 +87,7 @@ export default function PrimaryBankEngine() {
   const [isLoadingExisting, setIsLoadingExisting] = useState(true);
   const [isDeletingCustomer, setIsDeletingCustomer] = useState<string | null>(null);
   const [hasRestoredState, setHasRestoredState] = useState(false);
+  const [shouldAutoResume, setShouldAutoResume] = useState(false); // New: auto-resume after restore
 
   // Use ref to track pause state during async operations
   const isPausedRef = useRef(isPaused);
@@ -99,6 +101,10 @@ export default function PrimaryBankEngine() {
   // Keep isPausedRef in sync with isPaused
   useEffect(() => {
     isPausedRef.current = isPaused;
+    // Clear pause requested when actually paused
+    if (isPaused) {
+      setIsPauseRequested(false);
+    }
   }, [isPaused]);
 
   // Persist state to localStorage
@@ -192,9 +198,13 @@ export default function PrimaryBankEngine() {
             });
             setResults(restoredResults);
             
-            // Set as paused so user can resume
-            setIsPaused(true);
-            setIsRunning(false);
+            // If the engine was running when the page was closed, set up for auto-resume
+            if (parsed.isRunning) {
+              setShouldAutoResume(true);
+            } else {
+              // Was paused, just show paused state
+              setIsPaused(true);
+            }
             
             toast({
               title: t.primaryBankEngine.stateRestored || "State Restored",
@@ -215,6 +225,17 @@ export default function PrimaryBankEngine() {
       setHasRestoredState(true);
     }
   }, [customers, recordMonth, hasRestoredState, fetchExistingCustomers, toast, t.primaryBankEngine]);
+
+  // Auto-resume ref to track if we should resume after runEngine is defined
+  const autoResumeIndexRef = useRef<number | null>(null);
+  
+  // Mark for auto-resume when state is restored with isRunning=true
+  useEffect(() => {
+    if (shouldAutoResume && hasRestoredState && results.length > 0) {
+      setShouldAutoResume(false);
+      autoResumeIndexRef.current = currentIndex;
+    }
+  }, [shouldAutoResume, hasRestoredState, results.length, currentIndex]);
 
   const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -479,6 +500,18 @@ export default function PrimaryBankEngine() {
     }
   }, [customers, currentIndex, generateForCustomer, toast, existingCustomerIds, overwriteExisting, recordMonth, persistState, clearPersistedState, results]);
 
+  // Effect to trigger auto-resume after runEngine is available
+  useEffect(() => {
+    if (autoResumeIndexRef.current !== null) {
+      const resumeIndex = autoResumeIndexRef.current;
+      autoResumeIndexRef.current = null;
+      // Small delay to ensure UI is ready
+      setTimeout(() => {
+        runEngine(resumeIndex);
+      }, 500);
+    }
+  }, [runEngine]);
+
   const handleStart = () => {
     if (isPaused) {
       // Resume from current position
@@ -503,6 +536,7 @@ export default function PrimaryBankEngine() {
   };
 
   const handlePause = () => {
+    setIsPauseRequested(true); // Show "pausing" indicator immediately
     setIsPaused(true);
     isPausedRef.current = true;
   };
@@ -640,10 +674,16 @@ export default function PrimaryBankEngine() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-2">
-                {!isRunning && !isPaused ? (
+                {!isRunning && !isPaused && !isPauseRequested ? (
                   <Button onClick={handleStart} className="flex-1">
                     <Play className="mr-2 h-4 w-4" />
                     {t.primaryBankEngine.start}
+                  </Button>
+                ) : isRunning && isPauseRequested ? (
+                  // Pause has been requested, waiting for current calculation to finish
+                  <Button variant="secondary" className="flex-1" disabled>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {t.primaryBankEngine.pausing}
                   </Button>
                 ) : isRunning ? (
                   <Button onClick={handlePause} variant="secondary" className="flex-1">
@@ -733,7 +773,7 @@ export default function PrimaryBankEngine() {
           </Card>
 
           {/* Customer Progress List */}
-          <Card className="md:col-span-2 flex flex-col min-h-[500px]">
+          <Card className="md:col-span-2 flex flex-col max-h-[calc(100vh-320px)] min-h-[300px]">
             <CardHeader className="flex-shrink-0">
               <CardTitle>{t.primaryBankEngine.customerProgress}</CardTitle>
               <CardDescription>{t.primaryBankEngine.customerProgressDesc}</CardDescription>
