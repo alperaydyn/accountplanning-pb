@@ -325,8 +325,7 @@ const CustomerDetail = () => {
             className="text-right cursor-pointer hover:opacity-80 transition-opacity"
             onClick={() => setShowPrincipalityModal(true)}
           >
-            <div className="text-sm text-muted-foreground">Principality Score</div>
-            <div className="text-2xl font-bold text-primary underline decoration-dotted underline-offset-4">{customer.principality_score || 0}%</div>
+            <div className="text-sm text-muted-foreground">{customer.sector} · {customer.segment}</div>
           </div>
         </div>
 
