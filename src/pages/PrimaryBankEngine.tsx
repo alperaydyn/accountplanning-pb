@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save, Square } from "lucide-react";
 import { AppLayout } from "@/components/layout";
@@ -19,6 +19,7 @@ import { usePortfolioManager } from "@/hooks/usePortfolioManager";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Storage key for persisting engine state
 const ENGINE_STATE_KEY = "primary_bank_engine_state";
@@ -81,7 +82,41 @@ export default function PrimaryBankEngine() {
   const [isPauseRequested, setIsPauseRequested] = useState(false); // New: shows "pausing" state
   const [currentIndex, setCurrentIndex] = useState(0);
   const [results, setResults] = useState<CustomerResult[]>([]);
-  const [recordMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [recordMonth, setRecordMonth] = useState(format(new Date(), "yyyy-MM"));
+  
+  // Generate date options similar to Dashboard
+  const dateOptions = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const dateSet = new Set<string>();
+    const options: { value: string; label: string }[] = [];
+    
+    const addDate = (year: number, month: number, labelSuffix?: string) => {
+      const value = `${year}-${String(month).padStart(2, '0')}`;
+      if (!dateSet.has(value)) {
+        dateSet.add(value);
+        const label = labelSuffix ? `${value} ${labelSuffix}` : value;
+        options.push({ value, label });
+      }
+    };
+    
+    addDate(currentYear, currentMonth, `(${t.primaryBank.current})`);
+    for (let i = 1; i <= 3; i++) {
+      const date = new Date(currentYear, currentMonth - 1 - i, 1);
+      addDate(date.getFullYear(), date.getMonth() + 1);
+    }
+    const currentQuarter = Math.ceil(currentMonth / 3);
+    for (let i = 1; i <= 4; i++) {
+      let q = currentQuarter - i;
+      let year = currentYear;
+      while (q <= 0) { q += 4; year -= 1; }
+      addDate(year, q * 3);
+    }
+    addDate(currentYear - 1, 12);
+    addDate(currentYear - 2, 12);
+    return options;
+  }, [t.primaryBank.current]);
   const [overwriteExisting, setOverwriteExisting] = useState(false);
   const [existingCustomerIds, setExistingCustomerIds] = useState<Set<string>>(new Set());
   const [isLoadingExisting, setIsLoadingExisting] = useState(true);
@@ -496,7 +531,8 @@ export default function PrimaryBankEngine() {
     // Clear persisted state on completion
     if (!isPausedRef.current && !isStoppedRef.current) {
       clearPersistedState();
-      toast({ title: "Engine Complete", description: `Processed ${customers.length} customers` });
+      const completedCount = results.filter(r => r.status === "success" || r.status === "error").length + 1; // +1 for current
+      toast({ title: "Engine Complete", description: `Completed ${completedCount} customers` });
     }
   }, [customers, currentIndex, generateForCustomer, toast, existingCustomerIds, overwriteExisting, recordMonth, persistState, clearPersistedState, results]);
 
@@ -655,203 +691,202 @@ export default function PrimaryBankEngine() {
           ]} 
         />
 
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/primary-bank")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{t.primaryBankEngine.title}</h1>
-            <p className="text-muted-foreground">{t.primaryBankEngine.subtitle}</p>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate("/primary-bank")}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">{t.primaryBankEngine.title}</h1>
+              <p className="text-muted-foreground">{t.primaryBankEngine.subtitle}</p>
+            </div>
           </div>
+          {/* Record Month Selector */}
+          <Select value={recordMonth} onValueChange={setRecordMonth} disabled={isRunning}>
+            <SelectTrigger className="w-[140px] h-8 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {dateOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="text-xs">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3 md:grid-rows-[auto] md:items-start">
+        <div className="grid gap-4 md:grid-cols-3 md:items-stretch" style={{ height: 'calc(100vh - 300px)', minHeight: '320px' }}>
           {/* Control Panel */}
-          <Card className="flex flex-col md:max-h-[calc(100vh-320px)] md:min-h-[300px]">
-            <CardHeader>
-              <CardTitle>{t.primaryBankEngine.controls}</CardTitle>
-              <CardDescription>{t.primaryBankEngine.controlsDesc}</CardDescription>
+          <Card className="flex flex-col overflow-hidden">
+            <CardHeader className="py-3 flex-shrink-0">
+              <CardTitle className="text-base">{t.primaryBankEngine.controls}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 flex-1 overflow-auto">
+            <CardContent className="space-y-3 flex-1 overflow-auto py-2">
+              {/* Action Buttons */}
               <div className="flex gap-2">
                 {!isRunning && !isPaused && !isPauseRequested ? (
-                  <Button onClick={handleStart} className="flex-1">
+                  <Button onClick={handleStart} className="flex-1" size="sm">
                     <Play className="mr-2 h-4 w-4" />
                     {t.primaryBankEngine.start}
                   </Button>
                 ) : isRunning && isPauseRequested ? (
-                  // Pause has been requested, waiting for current calculation to finish
-                  <Button variant="secondary" className="flex-1" disabled>
+                  <Button variant="secondary" className="flex-1" size="sm" disabled>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {t.primaryBankEngine.pausing}
                   </Button>
                 ) : isRunning ? (
-                  <Button onClick={handlePause} variant="secondary" className="flex-1">
+                  <Button onClick={handlePause} variant="secondary" className="flex-1" size="sm">
                     <Pause className="mr-2 h-4 w-4" />
                     {t.primaryBankEngine.pause}
                   </Button>
                 ) : (
                   <>
-                    <Button onClick={handleResume} className="flex-1">
+                    <Button onClick={handleResume} className="flex-1" size="sm">
                       <Play className="mr-2 h-4 w-4" />
                       {t.primaryBankEngine.resume}
                     </Button>
-                    <Button onClick={handleStop} variant="destructive" className="flex-1">
+                    <Button onClick={handleStop} variant="destructive" className="flex-1" size="sm">
                       <Square className="mr-2 h-4 w-4" />
                       {t.primaryBankEngine.stop}
                     </Button>
                   </>
                 )}
-                <Button onClick={handleReset} variant="outline" disabled={isRunning}>
+                <Button onClick={handleReset} variant="outline" size="sm" disabled={isRunning}>
                   <RotateCcw className="h-4 w-4" />
                 </Button>
               </div>
 
-              <Separator />
-
-              {/* AI Model Info */}
-              <div className="rounded-lg bg-muted/50 p-3 text-xs">
-                <div className="font-medium mb-1">AI Model</div>
-                <div className="text-muted-foreground">
+              {/* Compact AI Model & Overwrite */}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground rounded-lg bg-muted/50 p-2">
+                <span className="truncate flex-1">
                   {currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1)}: {currentModel || "Default"}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* Overwrite checkbox */}
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="overwrite" 
-                  checked={overwriteExisting}
-                  onCheckedChange={(checked) => setOverwriteExisting(checked === true)}
-                  disabled={isRunning}
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <Label htmlFor="overwrite" className="text-sm font-medium cursor-pointer">
+                </span>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <Checkbox 
+                    id="overwrite" 
+                    checked={overwriteExisting}
+                    onCheckedChange={(checked) => setOverwriteExisting(checked === true)}
+                    disabled={isRunning}
+                    className="h-3.5 w-3.5"
+                  />
+                  <Label htmlFor="overwrite" className="text-xs cursor-pointer whitespace-nowrap">
                     {t.primaryBankEngine.overwriteExisting}
                   </Label>
-                  <p className="text-xs text-muted-foreground">
-                    {t.primaryBankEngine.overwriteExistingDesc}
-                  </p>
                 </div>
               </div>
 
-              <Separator />
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
+              {/* Progress */}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
                   <span>{t.primaryBankEngine.progress}</span>
                   <span>{currentIndex}/{customers.length}</span>
                 </div>
-                <Progress value={progress} />
+                <Progress value={progress} className="h-2" />
               </div>
 
-              <div className="grid grid-cols-2 gap-2 text-center">
-                <div className="rounded-lg bg-muted p-2">
-                  <div className="text-lg font-bold">{customers.length}</div>
-                  <div className="text-xs text-muted-foreground">{t.primaryBankEngine.total}</div>
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 gap-1.5 text-center">
+                <div className="rounded-lg bg-muted p-1.5">
+                  <div className="text-base font-bold">{customers.length}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.primaryBankEngine.total}</div>
                 </div>
-                <div className="rounded-lg bg-blue-500/10 p-2">
-                  <div className="text-lg font-bold text-blue-600">{existingCount}</div>
-                  <div className="text-xs text-muted-foreground">{t.primaryBankEngine.hasData}</div>
+                <div className="rounded-lg bg-blue-500/10 p-1.5">
+                  <div className="text-base font-bold text-blue-600">{existingCount}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.primaryBankEngine.hasData}</div>
                 </div>
-                <div className="rounded-lg bg-green-500/10 p-2">
-                  <div className="text-lg font-bold text-green-600">{successCount}</div>
-                  <div className="text-xs text-muted-foreground">{t.primaryBankEngine.success}</div>
+                <div className="rounded-lg bg-green-500/10 p-1.5">
+                  <div className="text-base font-bold text-green-600">{successCount}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.primaryBankEngine.success}</div>
                 </div>
-                <div className="rounded-lg bg-red-500/10 p-2">
-                  <div className="text-lg font-bold text-red-600">{errorCount}</div>
-                  <div className="text-xs text-muted-foreground">{t.primaryBankEngine.errors}</div>
+                <div className="rounded-lg bg-red-500/10 p-1.5">
+                  <div className="text-base font-bold text-red-600">{errorCount}</div>
+                  <div className="text-[10px] text-muted-foreground">{t.primaryBankEngine.errors}</div>
                 </div>
-              </div>
-
-              <div className="text-xs text-muted-foreground">
-                {t.primaryBankEngine.recordMonth}: <Badge variant="outline">{recordMonth}</Badge>
               </div>
             </CardContent>
           </Card>
 
           {/* Customer Progress List */}
-          <Card className="md:col-span-2 flex flex-col md:max-h-[calc(100vh-320px)] md:min-h-[300px]">
-            <CardHeader className="flex-shrink-0">
-              <CardTitle>{t.primaryBankEngine.customerProgress}</CardTitle>
-              <CardDescription>{t.primaryBankEngine.customerProgressDesc}</CardDescription>
+          <Card className="md:col-span-2 flex flex-col overflow-hidden">
+            <CardHeader className="py-3 flex-shrink-0">
+              <CardTitle className="text-base">{t.primaryBankEngine.customerProgress}</CardTitle>
+              <CardDescription className="text-xs">{t.primaryBankEngine.customerProgressDesc}</CardDescription>
             </CardHeader>
-            <CardContent className="flex-1 min-h-0 overflow-hidden">
+            <CardContent className="flex-1 min-h-0 p-0">
               {isLoadingExisting ? (
                 <div className="flex h-full items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               ) : (
-                <ScrollArea className="h-full pr-4">
-                  <div className="space-y-2">
+                <ScrollArea className="h-full">
+                  <div className="space-y-1.5 px-6 pb-4">
                     {results.map((result, idx) => (
                       <div 
                         key={result.customerId}
-                        className={`flex items-center justify-between rounded-lg border p-3 ${
+                        className={`flex items-center justify-between rounded-lg border p-2 ${
                           result.status === "processing" ? "border-primary bg-primary/5" : ""
                         } ${result.hasExistingData ? "bg-blue-500/5" : ""} ${
                           selectedCustomerId === result.customerId ? "ring-2 ring-primary" : ""
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
+                        <div className="flex items-center gap-2">
+                          <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium ${
                             result.hasExistingData ? "bg-blue-500/20 text-blue-600" : "bg-muted"
                           }`}>
-                            {result.hasExistingData ? <Database className="h-4 w-4" /> : idx + 1}
+                            {result.hasExistingData ? <Database className="h-3 w-3" /> : idx + 1}
                           </div>
                           <div>
-                            <div className="font-medium">{result.customerName}</div>
+                            <div className="text-sm font-medium">{result.customerName}</div>
                             {result.segment && (
-                              <div className="text-xs text-muted-foreground">{result.segment}</div>
+                              <div className="text-[10px] text-muted-foreground">{result.segment}</div>
                             )}
                             {result.status === "success" && result.data && (
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-[10px] text-muted-foreground">
                                 {result.data.loan_summary?.length || 0} banks, {" "}
                                 {result.data.loan_detail?.length || 0} loans
                                 {result.data.pos_data ? ", POS" : ""}
                                 {result.data.cheque_data ? ", Cheque" : ""}
-                                {result.data.collateral_data?.length ? `, ${result.data.collateral_data.length} collaterals` : ""}
+                                {result.data.collateral_data?.length ? `, ${result.data.collateral_data.length} coll` : ""}
                               </div>
                             )}
                             {result.status === "error" && (
-                              <div className="text-xs text-red-500">{result.error}</div>
+                              <div className="text-[10px] text-red-500 truncate max-w-[200px]">{result.error}</div>
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
                           {result.status === "pending" && (
-                            <Badge variant="outline" className="text-muted-foreground">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
                               {t.primaryBankEngine.pending}
                             </Badge>
                           )}
                           {result.status === "existing" && (
-                            <Badge variant="secondary" className="bg-blue-500/10 text-blue-600">
-                              <Database className="mr-1 h-3 w-3" />
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-blue-500/10 text-blue-600">
+                              <Database className="mr-1 h-2.5 w-2.5" />
                               {t.primaryBankEngine.existing}
                             </Badge>
                           )}
                           {result.status === "skipped" && (
-                            <Badge variant="outline" className="text-muted-foreground">
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
                               {t.primaryBankEngine.skipped}
                             </Badge>
                           )}
                           {result.status === "processing" && (
-                            <Badge variant="secondary" className="animate-pulse">
-                              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 animate-pulse">
+                              <Loader2 className="mr-1 h-2.5 w-2.5 animate-spin" />
                               {t.primaryBankEngine.generating}
                             </Badge>
                           )}
                           {result.status === "success" && (
-                            <Badge className="bg-green-500">
-                              <Check className="mr-1 h-3 w-3" />
+                            <Badge className="text-[10px] px-1.5 py-0 bg-green-500">
+                              <Check className="mr-1 h-2.5 w-2.5" />
                               {t.primaryBankEngine.done}
                             </Badge>
                           )}
                           {result.status === "error" && (
-                            <Badge variant="destructive">
-                              <AlertCircle className="mr-1 h-3 w-3" />
+                            <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                              <AlertCircle className="mr-1 h-2.5 w-2.5" />
                               {t.primaryBankEngine.failed}
                             </Badge>
                           )}
@@ -861,15 +896,15 @@ export default function PrimaryBankEngine() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              className="h-6 w-6 text-muted-foreground hover:text-primary"
                               onClick={() => handleManualCalculation(result.customerId)}
                               disabled={isManualGenerating && selectedCustomerId === result.customerId}
                               title={t.primaryBankEngine.calculate}
                             >
                               {isManualGenerating && selectedCustomerId === result.customerId ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                <Calculator className="h-4 w-4" />
+                                <Calculator className="h-3 w-3" />
                               )}
                             </Button>
                           )}
@@ -879,14 +914,14 @@ export default function PrimaryBankEngine() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
                               onClick={() => deleteCustomerData(result.customerId)}
                               disabled={isDeletingCustomer === result.customerId}
                             >
                               {isDeletingCustomer === result.customerId ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-3 w-3 animate-spin" />
                               ) : (
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3 w-3" />
                               )}
                             </Button>
                           )}
@@ -905,19 +940,14 @@ export default function PrimaryBankEngine() {
           </Card>
         </div>
 
-        {/* Current Customer Detail */}
+        {/* Current Customer Detail - Compact */}
         {results[currentIndex]?.status === "processing" && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                {t.primaryBankEngine.currentlyProcessing}: {results[currentIndex]?.customerName}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-sm text-muted-foreground">
-                {t.primaryBankEngine.processingDesc}
-              </div>
+          <Card className="mt-4">
+            <CardContent className="py-3 flex items-center gap-3">
+              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+              <span className="text-sm font-medium">{t.primaryBankEngine.currentlyProcessing}:</span>
+              <span className="text-sm">{results[currentIndex]?.customerName}</span>
+              <span className="text-xs text-muted-foreground ml-auto">{t.primaryBankEngine.processingDesc}</span>
             </CardContent>
           </Card>
         )}
