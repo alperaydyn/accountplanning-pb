@@ -348,6 +348,10 @@ export interface Translations {
     stateRestoredDesc: string;
     stop: string;
     pausing: string;
+    runDate: string;
+    aiModel: string;
+    changeModel: string;
+    existingDataTypes: string;
   };
 
   // Customer Detail
@@ -774,6 +778,10 @@ export const translations: Record<Language, Translations> = {
       stateRestoredDesc: "İlerleme geri yüklendi",
       stop: "Durdur",
       pausing: "Duraklatılıyor...",
+      runDate: "Çalışma Tarihi",
+      aiModel: "AI Modeli",
+      changeModel: "Modeli değiştir",
+      existingDataTypes: "Mevcut",
     },
     customerDetail: {
       principalityScore: "Prensiplik Skoru",
@@ -1180,6 +1188,10 @@ export const translations: Record<Language, Translations> = {
       stateRestoredDesc: "Progress restored",
       stop: "Stop",
       pausing: "Pausing...",
+      runDate: "Run Date",
+      aiModel: "AI Model",
+      changeModel: "Change model",
+      existingDataTypes: "Existing",
     },
     customerDetail: {
       principalityScore: "Principality Score",
@@ -1586,6 +1598,10 @@ export const translations: Record<Language, Translations> = {
       stateRestoredDesc: "Progreso restaurado",
       stop: "Detener",
       pausing: "Pausando...",
+      runDate: "Fecha de Ejecución",
+      aiModel: "Modelo AI",
+      changeModel: "Cambiar modelo",
+      existingDataTypes: "Existente",
     },
     customerDetail: {
       principalityScore: "Puntuación de Principalidad",

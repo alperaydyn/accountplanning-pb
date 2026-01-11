@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save, Square } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Play, Pause, RotateCcw, Check, Loader2, AlertCircle, Trash2, Database, Calculator, X, Save, Square, Settings } from "lucide-react";
 import { AppLayout } from "@/components/layout";
 import { PageBreadcrumb } from "@/components/layout/PageBreadcrumb";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,13 @@ interface CustomerResult {
   data?: GeneratedData;
   error?: string;
   hasExistingData?: boolean;
+  existingDataInfo?: {
+    hasSummary: boolean;
+    hasDetail: boolean;
+    hasPos: boolean;
+    hasCheque: boolean;
+    hasCollateral: boolean;
+  };
 }
 
 const LOAN_CATEGORY = "Kredi" as const;
@@ -162,17 +169,28 @@ export default function PrimaryBankEngine() {
     localStorage.removeItem(ENGINE_STATE_KEY);
   }, []);
 
-  // Fetch existing customers with primary bank data
+  // Fetch existing customers with primary bank data (including data types)
   const fetchExistingCustomers = useCallback(async (skipResultsInit = false) => {
     setIsLoadingExisting(true);
     try {
-      const { data } = await supabase
-        .from("primary_bank_loan_summary")
-        .select("customer_id")
-        .eq("record_month", recordMonth);
-      
-      const uniqueIds = new Set(data?.map(d => d.customer_id) || []);
-      setExistingCustomerIds(uniqueIds);
+      // Fetch all data types in parallel
+      const [summaryData, detailData, posData, chequeData, collateralData] = await Promise.all([
+        supabase.from("primary_bank_loan_summary").select("customer_id").eq("record_month", recordMonth),
+        supabase.from("primary_bank_loan_detail").select("customer_id").eq("record_month", recordMonth),
+        supabase.from("primary_bank_pos").select("customer_id").eq("record_month", recordMonth),
+        supabase.from("primary_bank_cheque").select("customer_id").eq("record_month", recordMonth),
+        supabase.from("primary_bank_collateral").select("customer_id").eq("record_month", recordMonth),
+      ]);
+
+      const summaryIds = new Set(summaryData.data?.map(d => d.customer_id) || []);
+      const detailIds = new Set(detailData.data?.map(d => d.customer_id) || []);
+      const posIds = new Set(posData.data?.map(d => d.customer_id) || []);
+      const chequeIds = new Set(chequeData.data?.map(d => d.customer_id) || []);
+      const collateralIds = new Set(collateralData.data?.map(d => d.customer_id) || []);
+
+      // Combined set for any existing data
+      const allExistingIds = new Set([...summaryIds, ...detailIds, ...posIds, ...chequeIds, ...collateralIds]);
+      setExistingCustomerIds(allExistingIds);
       
       // Only initialize results if not restoring from persisted state
       if (!skipResultsInit) {
@@ -180,13 +198,20 @@ export default function PrimaryBankEngine() {
           customerId: c.id,
           customerName: c.name,
           segment: c.segment,
-          status: uniqueIds.has(c.id) ? "existing" as const : "pending" as const,
-          hasExistingData: uniqueIds.has(c.id)
+          status: allExistingIds.has(c.id) ? "existing" as const : "pending" as const,
+          hasExistingData: allExistingIds.has(c.id),
+          existingDataInfo: allExistingIds.has(c.id) ? {
+            hasSummary: summaryIds.has(c.id),
+            hasDetail: detailIds.has(c.id),
+            hasPos: posIds.has(c.id),
+            hasCheque: chequeIds.has(c.id),
+            hasCollateral: collateralIds.has(c.id),
+          } : undefined
         }));
         setResults(initialResults);
       }
       
-      return uniqueIds;
+      return allExistingIds;
     } catch (error) {
       console.error("Error fetching existing customers:", error);
       return new Set<string>();
@@ -691,29 +716,14 @@ export default function PrimaryBankEngine() {
           ]} 
         />
 
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate("/primary-bank")}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-2xl font-bold">{t.primaryBankEngine.title}</h1>
-              <p className="text-muted-foreground">{t.primaryBankEngine.subtitle}</p>
-            </div>
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/primary-bank")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">{t.primaryBankEngine.title}</h1>
+            <p className="text-muted-foreground">{t.primaryBankEngine.subtitle}</p>
           </div>
-          {/* Record Month Selector */}
-          <Select value={recordMonth} onValueChange={setRecordMonth} disabled={isRunning}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {dateOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value} className="text-xs">
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3 md:items-stretch" style={{ height: 'calc(100vh - 300px)', minHeight: '320px' }}>
@@ -723,6 +733,38 @@ export default function PrimaryBankEngine() {
               <CardTitle className="text-base">{t.primaryBankEngine.controls}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 flex-1 overflow-auto py-2">
+              {/* Run Date Dropdown */}
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">{t.primaryBankEngine.runDate}</Label>
+                <Select value={recordMonth} onValueChange={setRecordMonth} disabled={isRunning}>
+                  <SelectTrigger className="w-full h-8 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dateOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value} className="text-xs">
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* AI Model with Settings Link */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium">{t.primaryBankEngine.aiModel}:</span>
+                  <span className="truncate max-w-[120px]">{currentModel || "Default"}</span>
+                </div>
+                <Link 
+                  to="/settings" 
+                  className="flex items-center gap-1 text-primary hover:underline"
+                >
+                  <Settings className="h-3 w-3" />
+                  <span>{t.primaryBankEngine.changeModel}</span>
+                </Link>
+              </div>
+
               {/* Action Buttons */}
               <div className="flex gap-2">
                 {!isRunning && !isPaused && !isPauseRequested ? (
@@ -757,23 +799,18 @@ export default function PrimaryBankEngine() {
                 </Button>
               </div>
 
-              {/* Compact AI Model & Overwrite */}
-              <div className="flex items-center gap-3 text-xs text-muted-foreground rounded-lg bg-muted/50 p-2">
-                <span className="truncate flex-1">
-                  {currentProvider.charAt(0).toUpperCase() + currentProvider.slice(1)}: {currentModel || "Default"}
-                </span>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  <Checkbox 
-                    id="overwrite" 
-                    checked={overwriteExisting}
-                    onCheckedChange={(checked) => setOverwriteExisting(checked === true)}
-                    disabled={isRunning}
-                    className="h-3.5 w-3.5"
-                  />
-                  <Label htmlFor="overwrite" className="text-xs cursor-pointer whitespace-nowrap">
-                    {t.primaryBankEngine.overwriteExisting}
-                  </Label>
-                </div>
+              {/* Overwrite Checkbox */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <Checkbox 
+                  id="overwrite" 
+                  checked={overwriteExisting}
+                  onCheckedChange={(checked) => setOverwriteExisting(checked === true)}
+                  disabled={isRunning}
+                  className="h-3.5 w-3.5"
+                />
+                <Label htmlFor="overwrite" className="text-xs cursor-pointer text-muted-foreground">
+                  {t.primaryBankEngine.overwriteExisting}
+                </Label>
               </div>
 
               {/* Progress */}
@@ -840,6 +877,18 @@ export default function PrimaryBankEngine() {
                             <div className="text-sm font-medium">{result.customerName}</div>
                             {result.segment && (
                               <div className="text-[10px] text-muted-foreground">{result.segment}</div>
+                            )}
+                            {/* Show existing data types for customers with data */}
+                            {result.existingDataInfo && (
+                              <div className="text-[10px] text-blue-600">
+                                {t.primaryBankEngine.existingDataTypes}: {[
+                                  result.existingDataInfo.hasSummary && "Summary",
+                                  result.existingDataInfo.hasDetail && "Detail",
+                                  result.existingDataInfo.hasPos && "POS",
+                                  result.existingDataInfo.hasCheque && "Cheque",
+                                  result.existingDataInfo.hasCollateral && "Collateral"
+                                ].filter(Boolean).join(", ")}
+                              </div>
                             )}
                             {result.status === "success" && result.data && (
                               <div className="text-[10px] text-muted-foreground">
