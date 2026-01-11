@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { Volume2, Play, Loader2, Check, Trash2 } from "lucide-react";
+import { Volume2, Play, Loader2, Check, Trash2, Save } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useVoiceHistory } from "@/hooks/useVoiceHistory";
@@ -42,6 +44,15 @@ const VOICE_PRESETS = [
   { id: "pqHfZKP75CvOlQylNhV4", name: "Bill" },
 ];
 
+// Default voice settings matching edge function
+const DEFAULT_VOICE_SETTINGS = {
+  stability: 0.0,
+  similarity_boost: 1.0,
+  style: 0.0,
+  use_speaker_boost: false,
+  speed: 1.1,
+};
+
 export function ElevenLabsSettings() {
   const { toast } = useToast();
   const { language } = useLanguage();
@@ -54,6 +65,10 @@ export function ElevenLabsSettings() {
   const [isTesting, setIsTesting] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [selectedHistoryVoice, setSelectedHistoryVoice] = useState<string>("");
+  const [selectedPreset, setSelectedPreset] = useState<string>("");
+  
+  // Voice settings state
+  const [voiceSettings, setVoiceSettings] = useState(DEFAULT_VOICE_SETTINGS);
 
   // Load settings
   useEffect(() => {
@@ -93,7 +108,11 @@ export function ElevenLabsSettings() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ voiceId: idToTest, language }),
+          body: JSON.stringify({ 
+            voiceId: idToTest, 
+            language,
+            voiceSettings,
+          }),
         }
       );
 
@@ -166,11 +185,48 @@ export function ElevenLabsSettings() {
   };
 
   const handleSelectPreset = (presetId: string) => {
+    setSelectedPreset(presetId);
     const preset = VOICE_PRESETS.find(v => v.id === presetId);
     if (preset) {
       setVoiceId(preset.id);
       setVoiceName(preset.name);
       setHasUnsavedChanges(true);
+    }
+  };
+
+  const handleSavePresetAsActive = async () => {
+    if (!selectedPreset) return;
+    
+    const preset = VOICE_PRESETS.find(v => v.id === selectedPreset);
+    if (!preset) return;
+
+    try {
+      // Update user settings
+      await updateSettingsAsync({
+        elevenlabs_voice_id: preset.id,
+        elevenlabs_voice_name: preset.name,
+      });
+
+      // Save to voice history with active flag
+      await saveVoiceAsync({
+        voiceId: preset.id,
+        voiceName: preset.name,
+        setActive: true,
+      });
+
+      toast({
+        title: "Ses Kaydedildi",
+        description: `${preset.name} aktif ses olarak ayarlandı.`,
+      });
+      
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Save preset error:', error);
+      toast({
+        title: "Hata",
+        description: "Ses kaydedilemedi.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -272,7 +328,7 @@ export function ElevenLabsSettings() {
         <div className="flex flex-col md:flex-row gap-3 items-end pt-4 border-t">
           <div className="flex-1 space-y-1.5">
             <Label>Hazır Sesler</Label>
-            <Select onValueChange={handleSelectPreset}>
+            <Select value={selectedPreset} onValueChange={handleSelectPreset}>
               <SelectTrigger className="bg-background">
                 <SelectValue placeholder="Bir ses seçin..." />
               </SelectTrigger>
@@ -287,13 +343,8 @@ export function ElevenLabsSettings() {
           </div>
           <Button
             variant="outline"
-            onClick={() => {
-              const currentPreset = VOICE_PRESETS.find(p => p.id === voiceId);
-              if (currentPreset) {
-                handleTestVoice(currentPreset.id);
-              }
-            }}
-            disabled={isTesting || !VOICE_PRESETS.find(p => p.id === voiceId)}
+            onClick={() => handleTestVoice(selectedPreset)}
+            disabled={isTesting || !selectedPreset}
             className="shrink-0"
           >
             {isTesting ? (
@@ -303,6 +354,89 @@ export function ElevenLabsSettings() {
             )}
             Dinle
           </Button>
+          <Button
+            onClick={handleSavePresetAsActive}
+            disabled={isUpdating || isSaving || !selectedPreset}
+            className="shrink-0"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Aktif Yap
+          </Button>
+        </div>
+
+        {/* Voice Settings */}
+        <div className="space-y-4 pt-4 border-t">
+          <Label className="text-base font-medium">Ses Ayarları (API)</Label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Stability */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-sm">Stability</Label>
+                <span className="text-sm text-muted-foreground">{voiceSettings.stability.toFixed(2)}</span>
+              </div>
+              <Slider
+                value={[voiceSettings.stability]}
+                onValueChange={([value]) => setVoiceSettings(prev => ({ ...prev, stability: value }))}
+                min={0}
+                max={1}
+                step={0.05}
+              />
+            </div>
+
+            {/* Similarity Boost */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-sm">Similarity Boost</Label>
+                <span className="text-sm text-muted-foreground">{voiceSettings.similarity_boost.toFixed(2)}</span>
+              </div>
+              <Slider
+                value={[voiceSettings.similarity_boost]}
+                onValueChange={([value]) => setVoiceSettings(prev => ({ ...prev, similarity_boost: value }))}
+                min={0}
+                max={1}
+                step={0.05}
+              />
+            </div>
+
+            {/* Style */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-sm">Style</Label>
+                <span className="text-sm text-muted-foreground">{voiceSettings.style.toFixed(2)}</span>
+              </div>
+              <Slider
+                value={[voiceSettings.style]}
+                onValueChange={([value]) => setVoiceSettings(prev => ({ ...prev, style: value }))}
+                min={0}
+                max={1}
+                step={0.05}
+              />
+            </div>
+
+            {/* Speed */}
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <Label className="text-sm">Speed</Label>
+                <span className="text-sm text-muted-foreground">{voiceSettings.speed.toFixed(2)}</span>
+              </div>
+              <Slider
+                value={[voiceSettings.speed]}
+                onValueChange={([value]) => setVoiceSettings(prev => ({ ...prev, speed: value }))}
+                min={0.7}
+                max={1.2}
+                step={0.05}
+              />
+            </div>
+          </div>
+
+          {/* Speaker Boost Switch */}
+          <div className="flex items-center justify-between">
+            <Label className="text-sm">Speaker Boost</Label>
+            <Switch
+              checked={voiceSettings.use_speaker_boost}
+              onCheckedChange={(checked) => setVoiceSettings(prev => ({ ...prev, use_speaker_boost: checked }))}
+            />
+          </div>
         </div>
 
         {/* Saved Voices Dropdown */}

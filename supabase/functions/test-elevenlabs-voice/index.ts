@@ -14,13 +14,21 @@ const TEST_TEXTS: Record<string, string> = {
   es: "¡Hola! Esta es una prueba de la voz seleccionada. ¿Cómo suena?",
 };
 
+const DEFAULT_VOICE_SETTINGS = {
+  stability: 0.0,
+  similarity_boost: 1,
+  style: 0.0,
+  use_speaker_boost: false,
+  speed: 1.1,
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { voiceId, language = "tr" } = await req.json();
+    const { voiceId, language = "tr", voiceSettings } = await req.json();
     const testText = TEST_TEXTS[language] || TEST_TEXTS.tr;
     const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
@@ -29,8 +37,14 @@ serve(async (req) => {
     }
 
     const selectedVoiceId = voiceId || DEFAULT_VOICE_ID;
+    
+    // Merge provided settings with defaults
+    const finalVoiceSettings = {
+      ...DEFAULT_VOICE_SETTINGS,
+      ...(voiceSettings || {}),
+    };
 
-    console.log(`Testing voice: ${selectedVoiceId}`);
+    console.log(`Testing voice: ${selectedVoiceId} with settings:`, finalVoiceSettings);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/text-to-speech/${selectedVoiceId}?output_format=mp3_44100_128`,
@@ -43,13 +57,7 @@ serve(async (req) => {
         body: JSON.stringify({
           text: testText,
           model_id: "eleven_flash_v2_5",
-          voice_settings: {
-            stability: 0.0,
-            similarity_boost: 1,
-            style: 0.0,
-            use_speaker_boost: false,
-            speed: 1.1,
-          },
+          voice_settings: finalVoiceSettings,
         }),
       }
     );
