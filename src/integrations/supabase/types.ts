@@ -563,6 +563,36 @@ export type Database = {
           },
         ]
       }
+      elevenlabs_voice_history: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          last_used_at: string
+          user_id: string
+          voice_id: string
+          voice_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string
+          user_id: string
+          voice_id: string
+          voice_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_used_at?: string
+          user_id?: string
+          voice_id?: string
+          voice_name?: string
+        }
+        Relationships: []
+      }
       portfolio_managers: {
         Row: {
           created_at: string
