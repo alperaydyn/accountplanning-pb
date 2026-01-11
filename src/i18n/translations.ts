@@ -457,6 +457,19 @@ export interface Translations {
     sat: string;
     sun: string;
   };
+
+  // Demo Mode
+  demo: {
+    startTour: string;
+    guidedTour: string;
+    exitDemo: string;
+    pause: string;
+    resume: string;
+    speed: string;
+    volume: string;
+    step: string;
+    of: string;
+  };
 }
 
 export const translations: Record<Language, Translations> = {
@@ -879,6 +892,17 @@ export const translations: Record<Language, Translations> = {
       sat: "Cmt",
       sun: "Paz",
     },
+    demo: {
+      startTour: "Rehberli Tur Başlat",
+      guidedTour: "Rehberli Tur",
+      exitDemo: "Demo'dan Çık",
+      pause: "Duraklat",
+      resume: "Devam Et",
+      speed: "Hız",
+      volume: "Ses",
+      step: "Adım",
+      of: "/",
+    },
   },
   en: {
     common: {
@@ -1299,6 +1323,17 @@ export const translations: Record<Language, Translations> = {
       sat: "Sat",
       sun: "Sun",
     },
+    demo: {
+      startTour: "Start Guided Tour",
+      guidedTour: "Guided Tour",
+      exitDemo: "Exit Demo",
+      pause: "Pause",
+      resume: "Resume",
+      speed: "Speed",
+      volume: "Volume",
+      step: "Step",
+      of: "of",
+    },
   },
   es: {
     common: {
@@ -1718,6 +1753,17 @@ export const translations: Record<Language, Translations> = {
       fri: "Vie",
       sat: "Sáb",
       sun: "Dom",
+    },
+    demo: {
+      startTour: "Iniciar Tour Guiado",
+      guidedTour: "Tour Guiado",
+      exitDemo: "Salir del Demo",
+      pause: "Pausar",
+      resume: "Reanudar",
+      speed: "Velocidad",
+      volume: "Volumen",
+      step: "Paso",
+      of: "de",
     },
   },
 };
