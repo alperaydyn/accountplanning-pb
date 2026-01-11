@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useDemoAudio() {
   const { state, currentStep, nextStep } = useDemo();
@@ -10,6 +11,60 @@ export function useDemoAudio() {
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioCache = useRef<Map<string, string>>(new Map());
+
+  // Generate audio from text using ElevenLabs
+  const generateAudio = useCallback(async (text: string, stepId: string): Promise<string | null> => {
+    const cacheKey = `${language}-${stepId}`;
+    
+    // Check cache first
+    if (audioCache.current.has(cacheKey)) {
+      return audioCache.current.get(cacheKey)!;
+    }
+
+    try {
+      const { data: { publicUrl } } = supabase.storage
+        .from('demo-audio')
+        .getPublicUrl(`${language}/${stepId}.mp3`);
+
+      // Check if pre-generated audio exists in storage
+      const storageResponse = await fetch(publicUrl, { method: 'HEAD' });
+      if (storageResponse.ok) {
+        audioCache.current.set(cacheKey, publicUrl);
+        return publicUrl;
+      }
+    } catch {
+      // Storage file doesn't exist, generate on-the-fly
+    }
+
+    // Generate audio via edge function
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-demo-audio`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text, language, stepId }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to generate audio: ${response.status}`);
+      }
+
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      audioCache.current.set(cacheKey, audioUrl);
+      return audioUrl;
+    } catch (err) {
+      console.error('Error generating audio:', err);
+      return null;
+    }
+  }, [language]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -21,6 +76,12 @@ export function useDemoAudio() {
       if (timerRef.current) {
         clearTimeout(timerRef.current);
       }
+      // Revoke object URLs
+      audioCache.current.forEach((url) => {
+        if (url.startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+        }
+      });
     };
   }, []);
 
@@ -31,7 +92,7 @@ export function useDemoAudio() {
     }
 
     const stepContent = currentStep.content[language];
-    const audioUrl = stepContent?.audioUrl;
+    const narrative = stepContent?.narrative;
 
     // Clear previous timer
     if (timerRef.current) {
@@ -47,17 +108,28 @@ export function useDemoAudio() {
     setAudioProgress(0);
     setError(null);
 
-    if (audioUrl) {
-      // Play audio file
+    // Generate and play audio
+    const playAudio = async () => {
+      if (!narrative) {
+        // No narrative - use timer-based progression
+        startTimerProgression();
+        return;
+      }
+
       setIsLoading(true);
+      const audioUrl = await generateAudio(narrative, currentStep.id);
+      setIsLoading(false);
+
+      if (!audioUrl) {
+        // Failed to generate - use timer fallback
+        startTimerProgression();
+        return;
+      }
+
       const audio = new Audio(audioUrl);
       audio.volume = state.volume;
       audio.playbackRate = state.speed;
       audioRef.current = audio;
-
-      audio.onloadeddata = () => {
-        setIsLoading(false);
-      };
 
       audio.ontimeupdate = () => {
         if (audio.duration) {
@@ -70,29 +142,23 @@ export function useDemoAudio() {
         // Wait a bit then go to next step
         timerRef.current = setTimeout(() => {
           nextStep();
-        }, 1000);
+        }, 800);
       };
 
       audio.onerror = () => {
-        setIsLoading(false);
-        setError("Failed to load audio");
-        // Fallback to timer-based progression
-        timerRef.current = setTimeout(() => {
-          nextStep();
-        }, currentStep.duration / state.speed);
+        setError("Failed to play audio");
+        startTimerProgression();
       };
 
       audio.play().catch(() => {
         setError("Failed to play audio");
-        // Fallback to timer-based progression
-        timerRef.current = setTimeout(() => {
-          nextStep();
-        }, currentStep.duration / state.speed);
+        startTimerProgression();
       });
-    } else {
-      // No audio - use timer-based progression
+    };
+
+    const startTimerProgression = () => {
       const stepDuration = currentStep.duration / state.speed;
-      const progressInterval = 100; // Update progress every 100ms
+      const progressInterval = 100;
       let elapsed = 0;
 
       const updateProgress = () => {
@@ -107,7 +173,9 @@ export function useDemoAudio() {
       };
 
       timerRef.current = setTimeout(updateProgress, progressInterval);
-    }
+    };
+
+    playAudio();
 
     return () => {
       if (timerRef.current) {
@@ -123,6 +191,7 @@ export function useDemoAudio() {
     state.volume,
     state.speed,
     nextStep,
+    generateAudio,
   ]);
 
   // Handle pause/resume
