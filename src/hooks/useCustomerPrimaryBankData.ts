@@ -42,6 +42,10 @@ interface CustomerPrimaryBankData {
     chequeActive: boolean;
     collateralShare: number;
     overallScore: number;
+    hasLoanData: boolean;
+    hasPosData: boolean;
+    hasChequeData: boolean;
+    hasCollateralData: boolean;
   };
   hasData: boolean;
 }
@@ -62,6 +66,10 @@ export const useCustomerPrimaryBankData = (customerId: string | undefined, recor
             chequeActive: false,
             collateralShare: 0,
             overallScore: 0,
+            hasLoanData: false,
+            hasPosData: false,
+            hasChequeData: false,
+            hasCollateralData: false,
           },
           hasData: false,
         };
@@ -128,14 +136,38 @@ export const useCustomerPrimaryBankData = (customerId: string | undefined, recor
       });
       const collateralShare = totalCollateral > 0 ? Math.round((ourBankCollateral / totalCollateral) * 100) : 0;
 
-      // Overall score: loan*0.4 + pos*0.30 + cheque*0.20 + collateral*0.10
+      // Track which data categories exist
+      const hasLoanData = totalLoan > 0;
+      const hasPosData = posData !== null && Number(posData.total_pos_volume || 0) > 0;
+      const hasChequeData = chequeData !== null;
+      const hasCollateralData = totalCollateral > 0;
+
+      // Overall score: only include categories that have data in the weighted average
+      // Weights: loan=0.4, pos=0.30, cheque=0.20, collateral=0.10
       const chequeScore = chequeActive ? 100 : 0;
-      const overallScore = Math.round(
-        loanShare * 0.4 +
-        posShare * 0.3 +
-        chequeScore * 0.2 +
-        collateralShare * 0.1
-      );
+      
+      let totalWeight = 0;
+      let weightedSum = 0;
+      
+      if (hasLoanData) {
+        weightedSum += loanShare * 0.4;
+        totalWeight += 0.4;
+      }
+      if (hasPosData) {
+        weightedSum += posShare * 0.3;
+        totalWeight += 0.3;
+      }
+      if (hasChequeData) {
+        weightedSum += chequeScore * 0.2;
+        totalWeight += 0.2;
+      }
+      if (hasCollateralData) {
+        weightedSum += collateralShare * 0.1;
+        totalWeight += 0.1;
+      }
+      
+      const overallScore = totalWeight > 0 ? Math.round(weightedSum / totalWeight * 100) / 100 : 0;
+      const normalizedScore = Math.round(overallScore);
 
       const hasData = (loanData?.length || 0) > 0 || posData !== null || chequeData !== null || (collateralData?.length || 0) > 0;
 
@@ -171,7 +203,11 @@ export const useCustomerPrimaryBankData = (customerId: string | undefined, recor
           posShare,
           chequeActive,
           collateralShare,
-          overallScore,
+          overallScore: normalizedScore,
+          hasLoanData,
+          hasPosData,
+          hasChequeData,
+          hasCollateralData,
         },
         hasData,
       };

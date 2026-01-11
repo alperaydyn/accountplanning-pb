@@ -381,6 +381,8 @@ export interface Translations {
     products: string;
     actions: string;
     autopilot: string;
+    otherBanks: string;
+    noActivity: string;
   };
 
   // NotFound
@@ -817,6 +819,8 @@ export const translations: Record<Language, Translations> = {
       products: "Ürünler",
       actions: "Aksiyonlar",
       autopilot: "AutoPilot",
+      otherBanks: "Diğer Bankalar",
+      noActivity: "Aktivite Yok",
     },
     notFound: {
       title: "404",
@@ -1235,6 +1239,8 @@ export const translations: Record<Language, Translations> = {
       products: "Products",
       actions: "Actions",
       autopilot: "AutoPilot",
+      otherBanks: "Other Banks",
+      noActivity: "No Activity",
     },
     notFound: {
       title: "404",
@@ -1653,6 +1659,8 @@ export const translations: Record<Language, Translations> = {
       products: "Productos",
       actions: "Acciones",
       autopilot: "AutoPilot",
+      otherBanks: "Otros Bancos",
+      noActivity: "Sin Actividad",
     },
     notFound: {
       title: "404",
