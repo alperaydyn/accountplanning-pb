@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useUserSettings } from "@/hooks/useUserSettings";
 import { useVoiceHistory } from "@/hooks/useVoiceHistory";
-import { supabase } from "@/integrations/supabase/client";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
 
 const DEFAULT_VOICE_ID = "S85IPTaQ0TGGMhJkucvb";
@@ -15,6 +15,7 @@ const DEFAULT_VOICE_NAME = "Thomas";
 
 export function ElevenLabsSettings() {
   const { toast } = useToast();
+  const { language } = useLanguage();
   const { settings, updateSettingsAsync, isUpdating } = useUserSettings();
   const { voiceHistory, activeVoice, saveVoiceAsync, setActiveVoice, deleteVoice, isSaving } = useVoiceHistory();
   
@@ -59,7 +60,7 @@ export function ElevenLabsSettings() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ voiceId: voiceId || DEFAULT_VOICE_ID }),
+          body: JSON.stringify({ voiceId: voiceId || DEFAULT_VOICE_ID, language }),
         }
       );
 
