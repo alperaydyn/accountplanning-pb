@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Volume2, Play, Loader2, Check, Trash2, Save } from "lucide-react";
+import { Volume2, Play, Loader2, Check, Trash2, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,8 @@ const DEFAULT_VOICE_SETTINGS = {
   speed: 1.1,
 };
 
+const ADD_NEW_VALUE = "__add_new__";
+
 export function ElevenLabsSettings() {
   const { toast } = useToast();
   const { language } = useLanguage();
@@ -61,11 +63,12 @@ export function ElevenLabsSettings() {
   
   const [voiceId, setVoiceId] = useState(DEFAULT_VOICE_ID);
   const [voiceName, setVoiceName] = useState(DEFAULT_VOICE_NAME);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isTestingHistory, setIsTestingHistory] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
   const [selectedHistoryVoice, setSelectedHistoryVoice] = useState<string>("");
   const [selectedPreset, setSelectedPreset] = useState<string>("");
+  const [isAddingNew, setIsAddingNew] = useState(false);
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState(DEFAULT_VOICE_SETTINGS);
@@ -75,6 +78,15 @@ export function ElevenLabsSettings() {
     if (settings) {
       setVoiceId(settings.elevenlabs_voice_id || DEFAULT_VOICE_ID);
       setVoiceName(settings.elevenlabs_voice_name || DEFAULT_VOICE_NAME);
+      
+      // Load voice settings from database
+      setVoiceSettings({
+        stability: settings.elevenlabs_stability ?? DEFAULT_VOICE_SETTINGS.stability,
+        similarity_boost: settings.elevenlabs_similarity_boost ?? DEFAULT_VOICE_SETTINGS.similarity_boost,
+        style: settings.elevenlabs_style ?? DEFAULT_VOICE_SETTINGS.style,
+        use_speaker_boost: settings.elevenlabs_speaker_boost ?? DEFAULT_VOICE_SETTINGS.use_speaker_boost,
+        speed: settings.elevenlabs_speed ?? DEFAULT_VOICE_SETTINGS.speed,
+      });
     }
   }, [settings]);
 
@@ -87,8 +99,9 @@ export function ElevenLabsSettings() {
     }
   }, [activeVoice]);
 
-  const handleTestVoice = async (testVoiceId?: string) => {
+  const handleTestVoice = async (testVoiceId?: string, setTestingState?: (v: boolean) => void) => {
     const idToTest = testVoiceId || voiceId || DEFAULT_VOICE_ID;
+    const setTesting = setTestingState || setIsTesting;
     
     // Stop any currently playing audio
     if (currentAudio) {
@@ -97,7 +110,7 @@ export function ElevenLabsSettings() {
       setCurrentAudio(null);
     }
 
-    setIsTesting(true);
+    setTesting(true);
     try {
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/test-elevenlabs-voice`,
@@ -149,84 +162,61 @@ export function ElevenLabsSettings() {
         variant: "destructive",
       });
     } finally {
-      setIsTesting(false);
+      setTesting(false);
     }
   };
 
-  const handleSave = async () => {
-    try {
-      // Update user settings
-      await updateSettingsAsync({
-        elevenlabs_voice_id: voiceId || DEFAULT_VOICE_ID,
-        elevenlabs_voice_name: voiceName || DEFAULT_VOICE_NAME,
-      });
-
-      // Save to voice history with active flag
-      await saveVoiceAsync({
-        voiceId: voiceId || DEFAULT_VOICE_ID,
-        voiceName: voiceName || DEFAULT_VOICE_NAME,
-        setActive: true,
-      });
-
-      toast({
-        title: "Ayarlar Kaydedildi",
-        description: "ElevenLabs ses ayarlarınız güncellendi.",
-      });
-      
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      console.error('Save settings error:', error);
-      toast({
-        title: "Hata",
-        description: "Ayarlar kaydedilemedi.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleSelectPreset = (presetId: string) => {
-    setSelectedPreset(presetId);
-    const preset = VOICE_PRESETS.find(v => v.id === presetId);
-    if (preset) {
-      setVoiceId(preset.id);
-      setVoiceName(preset.name);
-      setHasUnsavedChanges(true);
-    }
-  };
-
-  const handleSavePresetAsActive = async () => {
-    if (!selectedPreset) return;
+  const handleSaveToHistory = async () => {
+    if (!voiceId || !voiceName) return;
     
-    const preset = VOICE_PRESETS.find(v => v.id === selectedPreset);
-    if (!preset) return;
-
     try {
-      // Update user settings
-      await updateSettingsAsync({
-        elevenlabs_voice_id: preset.id,
-        elevenlabs_voice_name: preset.name,
-      });
-
       // Save to voice history with active flag
       await saveVoiceAsync({
-        voiceId: preset.id,
-        voiceName: preset.name,
+        voiceId: voiceId,
+        voiceName: voiceName,
         setActive: true,
+      });
+
+      // Update user settings
+      await updateSettingsAsync({
+        elevenlabs_voice_id: voiceId,
+        elevenlabs_voice_name: voiceName,
       });
 
       toast({
         title: "Ses Kaydedildi",
-        description: `${preset.name} aktif ses olarak ayarlandı.`,
+        description: `${voiceName} kayıtlı seslere eklendi.`,
       });
       
-      setHasUnsavedChanges(false);
+      // Reset add new mode
+      setIsAddingNew(false);
+      setSelectedPreset("");
     } catch (error) {
-      console.error('Save preset error:', error);
+      console.error('Save settings error:', error);
       toast({
         title: "Hata",
         description: "Ses kaydedilemedi.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePresetChange = (value: string) => {
+    setSelectedPreset(value);
+    
+    if (value === ADD_NEW_VALUE) {
+      setIsAddingNew(true);
+      setVoiceId("");
+      setVoiceName("");
+    } else if (value) {
+      setIsAddingNew(false);
+      const preset = VOICE_PRESETS.find(v => v.id === value);
+      if (preset) {
+        setVoiceId(preset.id);
+        setVoiceName(preset.name);
+      }
+    } else {
+      setIsAddingNew(false);
     }
   };
 
@@ -266,6 +256,30 @@ export function ElevenLabsSettings() {
     });
   };
 
+  const handleSaveVoiceSettings = async () => {
+    try {
+      await updateSettingsAsync({
+        elevenlabs_stability: voiceSettings.stability,
+        elevenlabs_similarity_boost: voiceSettings.similarity_boost,
+        elevenlabs_style: voiceSettings.style,
+        elevenlabs_speed: voiceSettings.speed,
+        elevenlabs_speaker_boost: voiceSettings.use_speaker_boost,
+      });
+
+      toast({
+        title: "Ses Ayarları Kaydedildi",
+        description: "Ses ayarları başarıyla güncellendi.",
+      });
+    } catch (error) {
+      console.error('Save voice settings error:', error);
+      toast({
+        title: "Hata",
+        description: "Ses ayarları kaydedilemedi.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -278,61 +292,77 @@ export function ElevenLabsSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Voice ID, Name, Test and Save in one row */}
+        {/* Saved Voices Dropdown - Always visible */}
         <div className="flex flex-col md:flex-row gap-3 items-end">
           <div className="flex-1 space-y-1.5">
-            <Label>Ses ID</Label>
-            <Input
-              placeholder="örn: S85IPTaQ0TGGMhJkucvb"
-              value={voiceId}
-              onChange={(e) => {
-                setVoiceId(e.target.value);
-                setHasUnsavedChanges(true);
-              }}
-            />
-          </div>
-          <div className="flex-1 space-y-1.5">
-            <Label>Ses Adı</Label>
-            <Input
-              placeholder="örn: Thomas"
-              value={voiceName}
-              onChange={(e) => {
-                setVoiceName(e.target.value);
-                setHasUnsavedChanges(true);
-              }}
-            />
+            <Label>Kayıtlı Sesler</Label>
+            <Select value={selectedHistoryVoice} onValueChange={setSelectedHistoryVoice}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Ses seçin..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-[100]">
+                {voiceHistory.map((entry) => (
+                  <SelectItem key={entry.id} value={entry.voice_id}>
+                    <div className="flex items-center gap-2">
+                      {entry.is_active && <Check className="h-3 w-3 text-primary" />}
+                      <span>{entry.voice_name}</span>
+                      <span className="text-muted-foreground text-xs">
+                        • {format(new Date(entry.last_used_at), 'dd.MM.yy HH:mm')}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <Button
             variant="outline"
-            onClick={() => handleTestVoice()}
-            disabled={isTesting || !voiceId}
+            onClick={() => handleTestVoice(selectedHistoryVoice, setIsTestingHistory)}
+            disabled={isTestingHistory || !selectedHistoryVoice}
             className="shrink-0"
           >
-            {isTesting ? (
+            {isTestingHistory ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Test
+            Dinle
           </Button>
           <Button
-            onClick={handleSave}
-            disabled={isUpdating || isSaving || !hasUnsavedChanges}
+            variant="outline"
+            onClick={handleSetActiveFromDropdown}
+            disabled={!selectedHistoryVoice || voiceHistory.find(v => v.voice_id === selectedHistoryVoice)?.is_active}
             className="shrink-0"
           >
-            Kaydet
+            <Check className="h-4 w-4 mr-2" />
+            Aktif Yap
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => selectedHistoryVoice && handleDeleteFromHistory(selectedHistoryVoice)}
+            disabled={!selectedHistoryVoice}
+            className="shrink-0"
+          >
+            <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
           </Button>
         </div>
 
-        {/* Voice Presets */}
+        {/* Voice Presets with Add New option */}
         <div className="flex flex-col md:flex-row gap-3 items-end pt-4 border-t">
           <div className="flex-1 space-y-1.5">
             <Label>Hazır Sesler</Label>
-            <Select value={selectedPreset} onValueChange={handleSelectPreset}>
+            <Select value={selectedPreset} onValueChange={handlePresetChange}>
               <SelectTrigger className="bg-background">
-                <SelectValue placeholder="Bir ses seçin..." />
+                <SelectValue placeholder="Seçiniz" />
               </SelectTrigger>
               <SelectContent className="bg-popover z-[100]">
+                <SelectItem value={ADD_NEW_VALUE}>
+                  <div className="flex items-center gap-2">
+                    <Plus className="h-3 w-3" />
+                    <span>Yeni Ekle</span>
+                  </div>
+                </SelectItem>
                 {VOICE_PRESETS.map((preset) => (
                   <SelectItem key={preset.id} value={preset.id}>
                     {preset.name}
@@ -343,8 +373,8 @@ export function ElevenLabsSettings() {
           </div>
           <Button
             variant="outline"
-            onClick={() => handleTestVoice(selectedPreset)}
-            disabled={isTesting || !selectedPreset}
+            onClick={() => handleTestVoice(selectedPreset === ADD_NEW_VALUE ? voiceId : selectedPreset)}
+            disabled={isTesting || (!selectedPreset && !isAddingNew) || (isAddingNew && !voiceId)}
             className="shrink-0"
           >
             {isTesting ? (
@@ -354,15 +384,40 @@ export function ElevenLabsSettings() {
             )}
             Dinle
           </Button>
-          <Button
-            onClick={handleSavePresetAsActive}
-            disabled={isUpdating || isSaving || !selectedPreset}
-            className="shrink-0"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Aktif Yap
-          </Button>
         </div>
+
+        {/* Voice ID and Name - Only visible when Add New is selected */}
+        {isAddingNew && (
+          <div className="flex flex-col md:flex-row gap-3 items-end">
+            <div className="flex-1 space-y-1.5">
+              <Label>Ses ID</Label>
+              <Input
+                placeholder="örn: S85IPTaQ0TGGMhJkucvb"
+                value={voiceId}
+                onChange={(e) => setVoiceId(e.target.value)}
+              />
+            </div>
+            <div className="flex-1 space-y-1.5">
+              <Label>Ses Adı</Label>
+              <Input
+                placeholder="örn: Thomas"
+                value={voiceName}
+                onChange={(e) => setVoiceName(e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Save to History Button - Shows when preset selected or adding new */}
+        {(selectedPreset || isAddingNew) && (
+          <Button
+            onClick={handleSaveToHistory}
+            disabled={isUpdating || isSaving || !voiceId || !voiceName}
+            className="w-full md:w-auto"
+          >
+            Kayıtlı Seslere Ekle
+          </Button>
+        )}
 
         {/* Voice Settings */}
         <div className="space-y-4 pt-4 border-t">
@@ -437,52 +492,16 @@ export function ElevenLabsSettings() {
               onCheckedChange={(checked) => setVoiceSettings(prev => ({ ...prev, use_speaker_boost: checked }))}
             />
           </div>
-        </div>
 
-        {/* Saved Voices Dropdown */}
-        {voiceHistory.length > 0 && (
-          <div className="flex flex-col md:flex-row gap-3 items-end pt-4 border-t">
-            <div className="flex-1 space-y-1.5">
-              <Label>Kayıtlı Sesler</Label>
-              <Select value={selectedHistoryVoice} onValueChange={setSelectedHistoryVoice}>
-                <SelectTrigger className="bg-background">
-                  <SelectValue placeholder="Ses seçin..." />
-                </SelectTrigger>
-                <SelectContent className="bg-popover z-[100]">
-                  {voiceHistory.map((entry) => (
-                    <SelectItem key={entry.id} value={entry.voice_id}>
-                      <div className="flex items-center gap-2">
-                        {entry.is_active && <Check className="h-3 w-3 text-primary" />}
-                        <span>{entry.voice_name}</span>
-                        <span className="text-muted-foreground text-xs">
-                          • {format(new Date(entry.last_used_at), 'dd.MM.yy HH:mm')}
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              variant="outline"
-              onClick={handleSetActiveFromDropdown}
-              disabled={!selectedHistoryVoice || voiceHistory.find(v => v.voice_id === selectedHistoryVoice)?.is_active}
-              className="shrink-0"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Aktif Yap
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => selectedHistoryVoice && handleDeleteFromHistory(selectedHistoryVoice)}
-              disabled={!selectedHistoryVoice}
-              className="shrink-0"
-            >
-              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-            </Button>
-          </div>
-        )}
+          {/* Save Voice Settings Button */}
+          <Button
+            onClick={handleSaveVoiceSettings}
+            disabled={isUpdating}
+            className="w-full md:w-auto"
+          >
+            Ses Ayarlarını Kaydet
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

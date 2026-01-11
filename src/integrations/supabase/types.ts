@@ -1080,6 +1080,11 @@ export type Database = {
           ai_model: string | null
           ai_provider: string | null
           created_at: string
+          elevenlabs_similarity_boost: number | null
+          elevenlabs_speaker_boost: boolean | null
+          elevenlabs_speed: number | null
+          elevenlabs_stability: number | null
+          elevenlabs_style: number | null
           elevenlabs_voice_id: string | null
           elevenlabs_voice_name: string | null
           id: string
@@ -1096,6 +1101,11 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           created_at?: string
+          elevenlabs_similarity_boost?: number | null
+          elevenlabs_speaker_boost?: boolean | null
+          elevenlabs_speed?: number | null
+          elevenlabs_stability?: number | null
+          elevenlabs_style?: number | null
           elevenlabs_voice_id?: string | null
           elevenlabs_voice_name?: string | null
           id?: string
@@ -1112,6 +1122,11 @@ export type Database = {
           ai_model?: string | null
           ai_provider?: string | null
           created_at?: string
+          elevenlabs_similarity_boost?: number | null
+          elevenlabs_speaker_boost?: boolean | null
+          elevenlabs_speed?: number | null
+          elevenlabs_stability?: number | null
+          elevenlabs_style?: number | null
           elevenlabs_voice_id?: string | null
           elevenlabs_voice_name?: string | null
           id?: string
