@@ -162,6 +162,31 @@ export const dashboardDemoScript: DemoScript = {
       },
     },
     {
+      id: "insight-item",
+      elementSelector: "[data-demo-id='insights-panel'] .space-y-3 > div:first-child",
+      highlightType: "pulse",
+      position: "right",
+      duration: 8000,
+      actions: [{ type: "click", delay: 2500 }],
+      content: {
+        tr: {
+          shortText: "İçgörü Detayları",
+          narrative:
+            "Her içgörüye tıklayarak detaylı analiz ve önerilere ulaşabilirsiniz. Modal pencerede ürün bazlı performans verileri, önerilen aksiyonlar ve ilgili müşteri listesi görüntülenir.",
+        },
+        en: {
+          shortText: "Insight Details",
+          narrative:
+            "Click on any insight to view detailed analysis and recommendations. The modal window shows product-based performance data, suggested actions, and related customer list.",
+        },
+        es: {
+          shortText: "Detalles de Perspectivas",
+          narrative:
+            "Haga clic en cualquier perspectiva para ver análisis detallados y recomendaciones. La ventana modal muestra datos de rendimiento basados en productos, acciones sugeridas y lista de clientes relacionados.",
+        },
+      },
+    },
+    {
       id: "product-table",
       elementSelector: "[data-demo-id='product-table']",
       highlightType: "spotlight",
@@ -188,7 +213,7 @@ export const dashboardDemoScript: DemoScript = {
     },
     {
       id: "status-indicators",
-      elementSelector: "[data-demo-id='product-table'] tbody tr:first-child",
+      elementSelector: "[data-demo-id='product-table'] .overflow-auto table tbody tr:first-child",
       highlightType: "pulse",
       position: "top",
       duration: 8000,

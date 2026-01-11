@@ -99,8 +99,7 @@ export function DemoOverlay() {
           y="0"
           width="100%"
           height="100%"
-          fill="hsl(var(--background))"
-          fillOpacity="0.75"
+          fill="rgba(0, 0, 0, 0.85)"
           mask="url(#spotlight-mask)"
           className="transition-all duration-300"
         />

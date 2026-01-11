@@ -2,13 +2,13 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { ChevronLeft, ChevronRight, X, Volume2 } from "lucide-react";
+import { X, Volume2 } from "lucide-react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useDemoAudio } from "../hooks/useDemoAudio";
 
 export function DemoTooltip() {
-  const { state, currentStep, nextStep, previousStep, stopDemo, progress } = useDemo();
+  const { state, currentStep, stopDemo, progress } = useDemo();
   const { language, t } = useLanguage();
   const { audioProgress, isLoading } = useDemoAudio();
   const [position, setPosition] = useState({ top: 0, left: 0 });
@@ -148,28 +148,9 @@ export function DemoTooltip() {
         {/* Progress bar */}
         <Progress value={audioProgress} className="h-1" />
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousStep}
-            disabled={currentStepIndex === 0}
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            {t.common.previous}
-          </Button>
-
-          <div className="flex-1 mx-2">
-            <Progress value={progress} className="h-1.5" />
-          </div>
-
-          <Button variant="default" size="sm" onClick={nextStep}>
-            {currentStepNum === totalSteps ? t.common.close : t.common.next}
-            {currentStepNum < totalSteps && (
-              <ChevronRight className="h-4 w-4 ml-1" />
-            )}
-          </Button>
+        {/* Progress bar */}
+        <div className="pt-1">
+          <Progress value={progress} className="h-1.5" />
         </div>
       </CardContent>
     </Card>
