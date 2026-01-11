@@ -86,6 +86,36 @@ export function useDemoAudio() {
     return requestPromise;
   }, [language]);
 
+  // Wait for element to appear in DOM (with timeout)
+  const waitForElement = useCallback(async (selector: string, maxWait: number = 5000): Promise<boolean> => {
+    const startTime = Date.now();
+    
+    return new Promise((resolve) => {
+      const check = () => {
+        if (!isMountedRef.current) {
+          resolve(false);
+          return;
+        }
+        
+        const element = document.querySelector(selector);
+        if (element) {
+          resolve(true);
+          return;
+        }
+        
+        if (Date.now() - startTime >= maxWait) {
+          console.warn(`Element ${selector} not found within ${maxWait}ms`);
+          resolve(false);
+          return;
+        }
+        
+        setTimeout(check, 100);
+      };
+      
+      check();
+    });
+  }, []);
+
   // Preload upcoming steps audio (call this when demo starts)
   const preloadAudio = useCallback(async () => {
     if (!state.currentScript) return;
@@ -184,6 +214,16 @@ export function useDemoAudio() {
           return;
         }
 
+        // Wait for element if step requires it
+        if (currentStep.waitForElement) {
+          const elementFound = await waitForElement(currentStep.elementSelector, 5000);
+          if (!elementFound || cancelled || !isMountedRef.current) {
+            console.warn(`Skipping step ${currentStep.id}: element not found`);
+            startTimerProgression(2000, state.speed); // Brief wait then proceed
+            return;
+          }
+        }
+
         if (!narrative) {
           startTimerProgression(currentStep.duration, state.speed);
           return;
@@ -271,6 +311,7 @@ export function useDemoAudio() {
     generateAudio,
     cleanup,
     startTimerProgression,
+    waitForElement,
   ]);
 
   // Handle pause/resume

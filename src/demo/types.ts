@@ -25,6 +25,7 @@ export interface DemoStep {
   actions?: DemoAction[];
   duration: number;
   position?: "top" | "bottom" | "left" | "right" | "auto";
+  waitForElement?: boolean; // Wait for element to appear before starting step
 }
 
 export interface DemoScript {
