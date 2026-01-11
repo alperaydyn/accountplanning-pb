@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Play, HelpCircle } from "lucide-react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { dashboardDemoScript } from "../scripts/dashboard";
@@ -13,12 +14,18 @@ import { dashboardDemoScript } from "../scripts/dashboard";
 export function DemoTrigger() {
   const { startDemo, state } = useDemo();
   const { t } = useLanguage();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   if (state.isActive) {
     return null;
   }
 
   const handleStartDashboardDemo = () => {
+    // Navigate to the script's page if not already there
+    if (location.pathname !== dashboardDemoScript.page) {
+      navigate(dashboardDemoScript.page);
+    }
     startDemo(dashboardDemoScript);
   };
 

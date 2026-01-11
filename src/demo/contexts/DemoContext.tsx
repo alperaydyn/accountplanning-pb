@@ -6,9 +6,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
 import { DemoState, DemoContextType, DemoScript, DemoStep } from "../types";
-import { useLanguage } from "@/contexts/LanguageContext";
 
 const initialState: DemoState = {
   isActive: false,
@@ -43,10 +41,6 @@ export function DemoProvider({ children }: { children: ReactNode }) {
     return initialState;
   });
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { language } = useLanguage();
-
   // Save preferences
   useEffect(() => {
     localStorage.setItem(
@@ -60,11 +54,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
 
   const startDemo = useCallback(
     (script: DemoScript) => {
-      // Navigate to the script's page if not already there
-      if (location.pathname !== script.page) {
-        navigate(script.page);
-      }
-
+      // Navigation is handled by the component that calls startDemo
       setState((prev) => ({
         ...prev,
         isActive: true,
@@ -74,7 +64,7 @@ export function DemoProvider({ children }: { children: ReactNode }) {
         isPaused: false,
       }));
     },
-    [location.pathname, navigate]
+    []
   );
 
   const stopDemo = useCallback(() => {
