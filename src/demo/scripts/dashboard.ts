@@ -275,7 +275,7 @@ export const dashboardDemoScript: DemoScript = {
       highlightType: "spotlight",
       position: "top",
       duration: 10000,
-      actions: [{ type: "scroll", delay: 500 }],
+      actions: [],
       content: {
         tr: {
           shortText: "Ürün Performans Tablosu",
@@ -296,7 +296,7 @@ export const dashboardDemoScript: DemoScript = {
     },
     {
       id: "status-indicators",
-      elementSelector: "[data-demo-id='product-table'] .overflow-auto table tbody tr:nth-child(-n+2)",
+      elementSelector: "[data-demo-id='product-table'] .overflow-auto table tbody tr:nth-child(1), [data-demo-id='product-table'] .overflow-auto table tbody tr:nth-child(2)",
       highlightType: "pulse",
       position: "top",
       duration: 8000,
