@@ -16,6 +16,12 @@ interface CustomerInput {
   hasPosProduct: boolean;
   hasChequeProduct: boolean;
   hasCollateralProduct: boolean;
+  // Pre-calculated flags based on probability distribution
+  shouldGenerateLoanSummary: boolean;
+  shouldGenerateLoanDetail: boolean;
+  shouldGeneratePos: boolean;
+  shouldGenerateCheque: boolean;
+  shouldGenerateCollateral: boolean;
 }
 
 interface LoanSummary {
@@ -166,34 +172,35 @@ serve(async (req) => {
 
     const systemPrompt = `You are a Turkish banking data generator. Generate realistic primary bank data for corporate banking customers.
 
-CRITICAL RULES FOR CASH LOANS:
-1. If "Has Kredi Account" is true, the customer MUST have cash loans (cash_loan > 0) from at least one bank
-2. Our bank (code "A") is MANDATORY and should ALWAYS have cash_loan > 0 when customer has Kredi account
-3. Other banks may or may not have cash loans - vary it realistically
+CRITICAL: You MUST generate data ONLY for the data types marked as TRUE below. Do NOT generate data for types marked as FALSE.
 
-LOAN AMOUNT RULES (based on segment):
-- MİKRO: 50K - 500K TL per bank
-- Kİ (Küçük İşletme): 200K - 2M TL per bank  
-- OBİ: 1M - 20M TL per bank
-- TİCARİ: 5M - 100M TL per bank
+LOAN SUMMARY RULES (when Generate Loan Summary = true):
+1. Generate 1-5 bank entries (bank codes A-Z, our bank is ALWAYS "A")
+2. Our bank (code "A") is MANDATORY and MUST have cash_loan > 0 when customer has Kredi account
+3. Amounts based on segment: MİKRO: 50K-500K, Kİ: 200K-2M, OBİ: 1M-20M, TİCARİ: 5M-100M
+4. Non-cash loans are rare (20-30% of entries), set to 0 for most banks
+5. last_approval_date: only 40-60% should have it, others null
 
-NON-CASH LOAN RULES:
-- Non-cash loans (guarantees, letters of credit) are RARE - only 20-30% of customers have them
-- Most banks should have non_cash_loan = 0
-- When present, amounts are typically smaller than cash loans
-
-APPROVAL DATE RULES:
-- NOT all banks have last_approval_date - only 40-60% should have it
-- Set last_approval_date to null for banks without recent approvals
-- When present, dates should be within last 2 years
-
-GENERAL RULES:
-1. Each customer works with 1-5 banks (bank codes A-Z, our bank is always "A")
+LOAN DETAIL RULES (when Generate Loan Detail = true):
+1. Generate 2-8 individual loan accounts
 2. Loan types: "Nakit Kredi", "Rotatif", "Spot", "İhracat Kredisi", "İthalat Kredisi", "Yatırım Kredisi"
 3. Loan statuses: "Aktif", "Kapalı", "Takipte"
-4. Collateral groups: Group1=Cash/Deposit, Group2=Real Estate, Group3=Receivables, Group4=Other
-5. Our bank (code "A") should have 20-60% market share
-6. Generate realistic variety - not all banks should have same values`;
+4. If FALSE, return empty array []
+
+POS DATA RULES (when Generate POS = true):
+1. Generate total_pos_volume, our_bank_pos_volume, number_of_banks (1-5), pos_share (20-60%)
+2. Our bank share should be realistic based on segment
+3. If FALSE, return null
+
+CHEQUE DATA RULES (when Generate Cheque = true):
+1. Generate cheque volumes for 1m, 3m, 12m periods
+2. 12m > 3m > 1m volumes (cumulative periods)
+3. If FALSE, return null
+
+COLLATERAL DATA RULES (when Generate Collateral = true):
+1. Generate 1-4 bank entries with collateral groups
+2. Group1=Cash/Deposit, Group2=Real Estate, Group3=Receivables, Group4=Other
+3. If FALSE, return empty array []`;
 
     const userPrompt = `Generate primary bank data for this customer:
 - Name: ${customer.customerName}
@@ -201,11 +208,15 @@ GENERAL RULES:
 - Sector: ${customer.sector}
 - Has Kredi Account: ${customer.hasKrediAccount}
 - Loan Products: ${customer.loanProducts.join(", ") || "None"}
-- Has POS Product: ${customer.hasPosProduct}
-- Has Cheque Product: ${customer.hasChequeProduct}
-- Has Collateral Product: ${customer.hasCollateralProduct}
 
-Generate appropriate banking data based on the customer profile.`;
+DATA GENERATION FLAGS (MUST follow these exactly):
+- Generate Loan Summary: ${customer.shouldGenerateLoanSummary}
+- Generate Loan Detail: ${customer.shouldGenerateLoanDetail}
+- Generate POS: ${customer.shouldGeneratePos}
+- Generate Cheque: ${customer.shouldGenerateCheque}
+- Generate Collateral: ${customer.shouldGenerateCollateral}
+
+IMPORTANT: Only generate data for flags that are TRUE. Return empty array [] or null for FALSE flags.`;
 
     const tools = [
       {
