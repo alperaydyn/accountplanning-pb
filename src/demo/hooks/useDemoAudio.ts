@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 
 // Global request tracking and persistent cache
 const pendingRequests = new Map<string, Promise<string | null>>();
@@ -42,6 +43,10 @@ export function useDemoAudio() {
     // Create new request promise
     const requestPromise = (async (): Promise<string | null> => {
       try {
+        // Get user session for authentication
+        const { data: { session } } = await supabase.auth.getSession();
+        const accessToken = session?.access_token;
+
         const response = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-demo-audio`,
           {
@@ -49,7 +54,9 @@ export function useDemoAudio() {
             headers: {
               'Content-Type': 'application/json',
               'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              'Authorization': accessToken 
+                ? `Bearer ${accessToken}` 
+                : `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
             },
             body: JSON.stringify({ text, language, stepId }),
           }
