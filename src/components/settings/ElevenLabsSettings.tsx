@@ -20,6 +20,28 @@ import {
 const DEFAULT_VOICE_ID = "S85IPTaQ0TGGMhJkucvb";
 const DEFAULT_VOICE_NAME = "Thomas";
 
+// Popular ElevenLabs voice presets
+const VOICE_PRESETS = [
+  { id: "CwhRBWXzGAHq8TQ4Fs17", name: "Roger" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah" },
+  { id: "FGY2WhTYpPnrIDTdsKH5", name: "Laura" },
+  { id: "IKne3meq5aSn9XLyUdCD", name: "Charlie" },
+  { id: "JBFqnCBsd6RMkjVDRZzb", name: "George" },
+  { id: "N2lVS1w4EtoT3dr4eOWO", name: "Callum" },
+  { id: "SAz9YHcvj6GT2YYXdXww", name: "River" },
+  { id: "TX3LPaxmHKxFdv7VOQHJ", name: "Liam" },
+  { id: "Xb7hH8MSUJpSbSDYk0k2", name: "Alice" },
+  { id: "XrExE9yKIg1WjnnlVkGX", name: "Matilda" },
+  { id: "bIHbv24MWmeRgasZH58o", name: "Will" },
+  { id: "cgSgspJ2msm6clMCkdW9", name: "Jessica" },
+  { id: "cjVigY5qzO86Huf0OWal", name: "Eric" },
+  { id: "iP95p4xoKVk53GoZ742B", name: "Chris" },
+  { id: "nPczCjzI2devNBz1zQrb", name: "Brian" },
+  { id: "onwK4e9ZLuTAKqWW03F9", name: "Daniel" },
+  { id: "pFZP5JQG7iQjIQuC4Bku", name: "Lily" },
+  { id: "pqHfZKP75CvOlQylNhV4", name: "Bill" },
+];
+
 export function ElevenLabsSettings() {
   const { toast } = useToast();
   const { language } = useLanguage();
@@ -50,7 +72,9 @@ export function ElevenLabsSettings() {
     }
   }, [activeVoice]);
 
-  const handleTestVoice = async () => {
+  const handleTestVoice = async (testVoiceId?: string) => {
+    const idToTest = testVoiceId || voiceId || DEFAULT_VOICE_ID;
+    
     // Stop any currently playing audio
     if (currentAudio) {
       currentAudio.pause();
@@ -69,7 +93,7 @@ export function ElevenLabsSettings() {
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
-          body: JSON.stringify({ voiceId: voiceId || DEFAULT_VOICE_ID, language }),
+          body: JSON.stringify({ voiceId: idToTest, language }),
         }
       );
 
@@ -138,6 +162,15 @@ export function ElevenLabsSettings() {
         description: "Ayarlar kaydedilemedi.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSelectPreset = (presetId: string) => {
+    const preset = VOICE_PRESETS.find(v => v.id === presetId);
+    if (preset) {
+      setVoiceId(preset.id);
+      setVoiceName(preset.name);
+      setHasUnsavedChanges(true);
     }
   };
 
@@ -215,7 +248,7 @@ export function ElevenLabsSettings() {
           </div>
           <Button
             variant="outline"
-            onClick={handleTestVoice}
+            onClick={() => handleTestVoice()}
             disabled={isTesting || !voiceId}
             className="shrink-0"
           >
@@ -235,16 +268,53 @@ export function ElevenLabsSettings() {
           </Button>
         </div>
 
+        {/* Voice Presets */}
+        <div className="flex flex-col md:flex-row gap-3 items-end pt-4 border-t">
+          <div className="flex-1 space-y-1.5">
+            <Label>Hazır Sesler</Label>
+            <Select onValueChange={handleSelectPreset}>
+              <SelectTrigger className="bg-background">
+                <SelectValue placeholder="Bir ses seçin..." />
+              </SelectTrigger>
+              <SelectContent className="bg-popover z-[100]">
+                {VOICE_PRESETS.map((preset) => (
+                  <SelectItem key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button
+            variant="outline"
+            onClick={() => {
+              const currentPreset = VOICE_PRESETS.find(p => p.id === voiceId);
+              if (currentPreset) {
+                handleTestVoice(currentPreset.id);
+              }
+            }}
+            disabled={isTesting || !VOICE_PRESETS.find(p => p.id === voiceId)}
+            className="shrink-0"
+          >
+            {isTesting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Play className="h-4 w-4 mr-2" />
+            )}
+            Dinle
+          </Button>
+        </div>
+
         {/* Saved Voices Dropdown */}
         {voiceHistory.length > 0 && (
           <div className="flex flex-col md:flex-row gap-3 items-end pt-4 border-t">
             <div className="flex-1 space-y-1.5">
               <Label>Kayıtlı Sesler</Label>
               <Select value={selectedHistoryVoice} onValueChange={setSelectedHistoryVoice}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue placeholder="Ses seçin..." />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover z-[100]">
                   {voiceHistory.map((entry) => (
                     <SelectItem key={entry.id} value={entry.voice_id}>
                       <div className="flex items-center gap-2">
