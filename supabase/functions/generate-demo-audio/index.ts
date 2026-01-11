@@ -6,12 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Voice IDs for different languages - using Brian for all (clear, professional)
-const VOICE_CONFIG = {
-  tr: { voiceId: 'nPczCjzI2devNBz1zQrb', name: 'Brian' }, // Brian - clear English, works well for Turkish
-  en: { voiceId: 'nPczCjzI2devNBz1zQrb', name: 'Brian' }, // Brian - professional English
-  es: { voiceId: 'nPczCjzI2devNBz1zQrb', name: 'Brian' }, // Brian - also good for Spanish
-};
+// Voice ID for all languages - using S85IPTaQ0TGGMhJkucvb (Turkish native voice)
+const VOICE_ID = 'S85IPTaQ0TGGMhJkucvb';
 
 interface GenerateAudioRequest {
   text: string;
@@ -41,13 +37,11 @@ serve(async (req) => {
       );
     }
 
-    const voiceConfig = VOICE_CONFIG[language] || VOICE_CONFIG.en;
-    
-    console.log(`Generating audio for step: ${stepId || 'unknown'}, language: ${language}, voice: ${voiceConfig.name}`);
+    console.log(`Generating audio for step: ${stepId || 'unknown'}, language: ${language}`);
 
-    // Call ElevenLabs TTS API
+    // Call ElevenLabs TTS API with specified settings
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceConfig.voiceId}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
       {
         method: 'POST',
         headers: {
@@ -56,13 +50,13 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text,
-          model_id: 'eleven_multilingual_v2', // Supports all three languages
+          model_id: 'eleven_flash_v2_5',
           voice_settings: {
-            stability: 0.6,
-            similarity_boost: 0.75,
-            style: 0.3,
-            use_speaker_boost: true,
-            speed: 0.95, // Slightly slower for clarity
+            stability: 0.0,
+            similarity_boost: 1,
+            style: 0.0,
+            use_speaker_boost: false,
+            speed: 1.1,
           },
         }),
       }

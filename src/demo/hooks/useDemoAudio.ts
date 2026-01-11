@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-// Global request tracking to prevent duplicate calls
+// Global request tracking and persistent cache
 const pendingRequests = new Map<string, Promise<string | null>>();
+const globalAudioCache = new Map<string, string>();
 
 export function useDemoAudio() {
   const { state, currentStep, nextStep } = useDemo();
@@ -13,7 +14,6 @@ export function useDemoAudio() {
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const audioCache = useRef<Map<string, string>>(new Map());
   const isMountedRef = useRef(true);
   const currentRequestId = useRef<string | null>(null);
 
@@ -25,13 +25,13 @@ export function useDemoAudio() {
     };
   }, []);
 
-  // Generate audio from text using ElevenLabs with deduplication
+  // Generate audio from text using ElevenLabs with deduplication and global caching
   const generateAudio = useCallback(async (text: string, stepId: string): Promise<string | null> => {
     const cacheKey = `${language}-${stepId}`;
     
-    // Check cache first
-    if (audioCache.current.has(cacheKey)) {
-      return audioCache.current.get(cacheKey)!;
+    // Check global cache first
+    if (globalAudioCache.has(cacheKey)) {
+      return globalAudioCache.get(cacheKey)!;
     }
 
     // Check if request is already in progress
@@ -63,7 +63,8 @@ export function useDemoAudio() {
 
         const audioBlob = await response.blob();
         const audioUrl = URL.createObjectURL(audioBlob);
-        audioCache.current.set(cacheKey, audioUrl);
+        // Store in global cache (persists across re-renders)
+        globalAudioCache.set(cacheKey, audioUrl);
         return audioUrl;
       } catch (err) {
         console.error('Error generating audio:', err);
@@ -77,6 +78,31 @@ export function useDemoAudio() {
     pendingRequests.set(cacheKey, requestPromise);
     return requestPromise;
   }, [language]);
+
+  // Preload upcoming steps audio (call this when demo starts)
+  const preloadAudio = useCallback(async () => {
+    if (!state.currentScript) return;
+    
+    const steps = state.currentScript.steps;
+    const currentIndex = state.currentStepIndex;
+    
+    // Preload current and next 2 steps
+    for (let i = currentIndex; i < Math.min(currentIndex + 3, steps.length); i++) {
+      const step = steps[i];
+      const narrative = step.content[language]?.narrative;
+      if (narrative) {
+        // Fire and forget - don't await
+        generateAudio(narrative, step.id).catch(() => {});
+      }
+    }
+  }, [state.currentScript, state.currentStepIndex, language, generateAudio]);
+
+  // Preload audio when demo becomes active
+  useEffect(() => {
+    if (state.isActive && state.isPlaying) {
+      preloadAudio();
+    }
+  }, [state.isActive, state.isPlaying, state.currentStepIndex, preloadAudio]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -93,16 +119,10 @@ export function useDemoAudio() {
     }
   }, []);
 
-  // Cleanup on unmount
+  // Cleanup on unmount (don't revoke URLs since they're in global cache)
   useEffect(() => {
     return () => {
       cleanup();
-      // Revoke object URLs
-      audioCache.current.forEach((url) => {
-        if (url.startsWith('blob:')) {
-          URL.revokeObjectURL(url);
-        }
-      });
     };
   }, [cleanup]);
 
