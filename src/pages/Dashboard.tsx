@@ -69,7 +69,10 @@ const Dashboard = () => {
     <AppLayout>
       <div className="space-y-6">
         {/* Page Header with Badges and Date Selector */}
-        <div className="flex items-start justify-between gap-4">
+        <div 
+          data-demo-id="page-header"
+          className="flex items-start justify-between gap-4"
+        >
           <div>
             <PageBreadcrumb items={[]} />
             <h1 className="text-2xl font-bold text-foreground">
@@ -80,7 +83,10 @@ const Dashboard = () => {
             </p>
           </div>
           {/* Date Selector */}
-          <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2">
+          <div 
+            data-demo-id="date-selector"
+            className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2"
+          >
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <Select value={effectiveDate} onValueChange={setSelectedDate}>
               <SelectTrigger className="w-[160px] border-0 bg-transparent h-auto p-0 focus:ring-0">
@@ -98,16 +104,22 @@ const Dashboard = () => {
         </div>
 
         {/* Summary Cards */}
-        <SummaryCards recordDate={effectiveDate} />
+        <div data-demo-id="summary-cards">
+          <SummaryCards recordDate={effectiveDate} />
+        </div>
 
         {/* AI Insights Panel */}
-        <InsightsPanel recordDate={effectiveDate} />
+        <div data-demo-id="insights-panel">
+          <InsightsPanel recordDate={effectiveDate} />
+        </div>
 
         {/* Product Performance Table */}
-        <ProductPerformanceTable 
-          selectedDate={selectedDate}
-          onDateChange={setSelectedDate}
-        />
+        <div data-demo-id="product-table">
+          <ProductPerformanceTable 
+            selectedDate={selectedDate}
+            onDateChange={setSelectedDate}
+          />
+        </div>
       </div>
     </AppLayout>
   );

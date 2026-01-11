@@ -230,12 +230,14 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
 
   const cards = [
     {
+      id: "benchmark-score",
       title: t.dashboard.benchmarkScore,
       value: `${benchmarkData.score}/${benchmarkData.total}`,
       subtitle: `${benchmarkData.total > 0 ? Math.round((benchmarkData.score / benchmarkData.total) * 100) : 0}% HGO ≥ 75%`,
       icon: Target,
     },
     {
+      id: "scale-up-enterprise",
       title: t.dashboard.scaleUpEnterprise,
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
       customSubtitle: (
@@ -265,6 +267,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       onClick: () => navigate("/customers"),
     },
     {
+      id: "primary-bank-score",
       title: t.dashboard.primaryBankScore,
       value: isLoading ? "..." : `${primaryBankScorePercent}%`,
       subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
@@ -272,6 +275,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       onClick: () => navigate("/primary-bank"),
     },
     {
+      id: "actions-card",
       title: t.common.actions,
       value: isLoading ? "..." : (summary?.totalActionsPlanned ?? 0),
       subtitle: `${summary?.totalActionsPlanned ?? 0} ${t.dashboard.planned} | ${summary?.totalActionsPending ?? 0} ${t.dashboard.pending}`,
@@ -288,7 +292,8 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card, index) => (
           <Card 
-            key={index} 
+            key={card.id} 
+            data-demo-id={card.id}
             className={`bg-card border-border ${card.onClick ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
             onClick={card.onClick}
           >

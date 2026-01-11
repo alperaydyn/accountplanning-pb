@@ -5,6 +5,7 @@ import { ElementRect } from "../types";
 export function DemoOverlay() {
   const { state, currentStep } = useDemo();
   const [targetRect, setTargetRect] = useState<ElementRect | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   const updateTargetRect = useCallback(() => {
     if (!currentStep) {
@@ -27,8 +28,15 @@ export function DemoOverlay() {
       if (currentStep.actions?.some((a) => a.type === "scroll")) {
         element.scrollIntoView({ behavior: "smooth", block: "center" });
       }
+      setRetryCount(0);
     } else {
-      setTargetRect(null);
+      // Element not found, set a fallback centered rect
+      setTargetRect({
+        top: window.innerHeight / 2 - 100,
+        left: window.innerWidth / 2 - 200,
+        width: 400,
+        height: 200,
+      });
     }
   }, [currentStep]);
 
@@ -36,7 +44,18 @@ export function DemoOverlay() {
   useEffect(() => {
     if (!state.isActive) return;
 
+    // Initial update
     updateTargetRect();
+
+    // Retry mechanism for elements that may load later
+    const retryTimeout = setTimeout(() => {
+      if (!document.querySelector(currentStep?.elementSelector || '')) {
+        setRetryCount(prev => prev + 1);
+        if (retryCount < 5) {
+          updateTargetRect();
+        }
+      }
+    }, 500);
 
     // Small delay to allow for any animations
     const timeout = setTimeout(updateTargetRect, 300);
@@ -46,10 +65,11 @@ export function DemoOverlay() {
 
     return () => {
       clearTimeout(timeout);
+      clearTimeout(retryTimeout);
       window.removeEventListener("resize", updateTargetRect);
       window.removeEventListener("scroll", updateTargetRect, true);
     };
-  }, [state.isActive, state.currentStepIndex, updateTargetRect]);
+  }, [state.isActive, state.currentStepIndex, updateTargetRect, retryCount, currentStep?.elementSelector]);
 
   if (!state.isActive || !targetRect) {
     return null;
