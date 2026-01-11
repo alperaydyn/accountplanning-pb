@@ -2,7 +2,7 @@ import { Language } from "@/i18n/translations";
 
 export type HighlightType = "spotlight" | "border" | "pulse" | "arrow";
 
-export type DemoActionType = "click" | "expand" | "scroll" | "hover" | "wait" | "navigate";
+export type DemoActionType = "click" | "expand" | "scroll" | "hover" | "wait" | "navigate" | "close-modal";
 
 export interface DemoAction {
   type: DemoActionType;

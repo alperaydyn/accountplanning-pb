@@ -193,7 +193,10 @@ export const dashboardDemoScript: DemoScript = {
       position: "left",
       duration: 10000,
       waitForElement: true,
-      actions: [{ type: "click", target: "[data-demo-id='product-insights-panel'] [data-demo-id='insight-item']:first-child", delay: 0 }],
+      actions: [
+        { type: "click", target: "[data-demo-id='product-insights-panel'] [data-demo-id='insight-item']:first-child", delay: 0 },
+        { type: "close-modal", delay: 9500 },
+      ],
       content: {
         tr: {
           shortText: "Ürün Analiz Modalı",
@@ -244,7 +247,10 @@ export const dashboardDemoScript: DemoScript = {
       position: "right",
       duration: 10000,
       waitForElement: true,
-      actions: [{ type: "click", target: "[data-demo-id='action-insights-panel'] [data-demo-id='action-insight-item']:first-child", delay: 0 }],
+      actions: [
+        { type: "click", target: "[data-demo-id='action-insights-panel'] [data-demo-id='action-insight-item']:first-child", delay: 0 },
+        { type: "close-modal", delay: 9500 },
+      ],
       content: {
         tr: {
           shortText: "Aksiyon Analiz Modalı",
@@ -265,7 +271,7 @@ export const dashboardDemoScript: DemoScript = {
     },
     {
       id: "product-table",
-      elementSelector: "[data-demo-id='product-table']",
+      elementSelector: "[data-demo-id='product-table'] .overflow-auto",
       highlightType: "spotlight",
       position: "top",
       duration: 10000,
@@ -290,7 +296,7 @@ export const dashboardDemoScript: DemoScript = {
     },
     {
       id: "status-indicators",
-      elementSelector: "[data-demo-id='product-table'] .overflow-auto table tbody tr:first-child",
+      elementSelector: "[data-demo-id='product-table'] .overflow-auto table tbody tr:nth-child(-n+2)",
       highlightType: "pulse",
       position: "top",
       duration: 8000,

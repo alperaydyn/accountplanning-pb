@@ -127,6 +127,18 @@ export function useDemoActions() {
         case "navigate":
           // Not used in current demo scripts; avoid hard navigation side-effects.
           return;
+
+        case "close-modal": {
+          // Close any open modal by clicking the close button or pressing Escape
+          const closeBtn = document.querySelector("[data-radix-dialog-close], [role='dialog'] button[aria-label='Close'], [role='dialog'] button:has(svg.lucide-x)");
+          if (closeBtn) {
+            safeClick(closeBtn);
+            return;
+          }
+          // Fallback: press Escape key
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          return;
+        }
       }
     };
 
