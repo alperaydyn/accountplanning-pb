@@ -696,6 +696,14 @@ export default function PrimaryBankEngine() {
     setSelectedCustomerId(null);
   };
 
+  // Handle record month change - refresh existing data
+  const handleRecordMonthChange = useCallback((newMonth: string) => {
+    setRecordMonth(newMonth);
+    setCurrentIndex(0);
+    setHasRestoredState(false); // Force re-fetch of existing data
+    clearPersistedState();
+  }, [clearPersistedState]);
+
   const progress = customers.length > 0 ? (currentIndex / customers.length) * 100 : 0;
   const successCount = results.filter(r => r.status === "success").length;
   const errorCount = results.filter(r => r.status === "error").length;
@@ -730,17 +738,13 @@ export default function PrimaryBankEngine() {
           {/* Control Panel */}
           <Card className="flex flex-col overflow-hidden">
             <CardHeader className="py-3 flex-shrink-0">
-              <CardTitle className="text-base">{t.primaryBankEngine.controls}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 flex-1 overflow-auto py-2">
-              {/* Run Date Dropdown */}
-              <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">{t.primaryBankEngine.runDate}</Label>
-                <Select value={recordMonth} onValueChange={setRecordMonth} disabled={isRunning}>
-                  <SelectTrigger className="w-full h-8 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-base">{t.primaryBankEngine.runDate}</CardTitle>
+                <Select value={recordMonth} onValueChange={handleRecordMonthChange} disabled={isRunning}>
+                  <SelectTrigger className="h-7 w-auto min-w-[100px] text-xs border-dashed">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent align="end">
                     {dateOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value} className="text-xs">
                         {option.label}
@@ -749,19 +753,20 @@ export default function PrimaryBankEngine() {
                   </SelectContent>
                 </Select>
               </div>
-
               {/* AI Model with Settings Link */}
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Sparkles className="h-3.5 w-3.5 flex-shrink-0" />
-                <span className="min-w-0">{currentModel || "Default"}</span>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                <Sparkles className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate">{currentModel || "Default"}</span>
                 <Link 
                   to="/settings" 
                   className="flex-shrink-0 text-muted-foreground hover:text-primary transition-colors"
                   title={t.primaryBankEngine.changeModel}
                 >
-                  <Settings className="h-3.5 w-3.5" />
+                  <Settings className="h-3 w-3" />
                 </Link>
               </div>
+            </CardHeader>
+            <CardContent className="space-y-3 flex-1 overflow-auto py-2">
 
               {/* Action Buttons */}
               <div className="flex gap-2">
