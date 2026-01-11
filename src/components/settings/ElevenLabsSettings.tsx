@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Volume2, Play, Loader2, Check, Trash2, Clock } from "lucide-react";
+import { Volume2, Play, Loader2, Check, Trash2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,13 @@ import { useUserSettings } from "@/hooks/useUserSettings";
 import { useVoiceHistory } from "@/hooks/useVoiceHistory";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { format } from "date-fns";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const DEFAULT_VOICE_ID = "S85IPTaQ0TGGMhJkucvb";
 const DEFAULT_VOICE_NAME = "Thomas";
@@ -24,6 +31,7 @@ export function ElevenLabsSettings() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [currentAudio, setCurrentAudio] = useState<HTMLAudioElement | null>(null);
+  const [selectedHistoryVoice, setSelectedHistoryVoice] = useState<string>("");
 
   // Load settings
   useEffect(() => {
@@ -38,6 +46,7 @@ export function ElevenLabsSettings() {
     if (activeVoice) {
       setVoiceId(activeVoice.voice_id);
       setVoiceName(activeVoice.voice_name);
+      setSelectedHistoryVoice(activeVoice.voice_id);
     }
   }, [activeVoice]);
 
@@ -132,10 +141,12 @@ export function ElevenLabsSettings() {
     }
   };
 
-  const handleSelectFromHistory = async (entry: { voice_id: string; voice_name: string }) => {
-    setVoiceId(entry.voice_id);
-    setVoiceName(entry.voice_name);
+  const handleSetActiveFromDropdown = async () => {
+    if (!selectedHistoryVoice) return;
     
+    const entry = voiceHistory.find(v => v.voice_id === selectedHistoryVoice);
+    if (!entry) return;
+
     try {
       // Update user settings
       await updateSettingsAsync({
@@ -157,6 +168,9 @@ export function ElevenLabsSettings() {
 
   const handleDeleteFromHistory = (voiceIdToDelete: string) => {
     deleteVoice(voiceIdToDelete);
+    if (selectedHistoryVoice === voiceIdToDelete) {
+      setSelectedHistoryVoice("");
+    }
     toast({
       title: "Ses Silindi",
       description: "Ses geçmişten kaldırıldı.",
@@ -175,10 +189,10 @@ export function ElevenLabsSettings() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Voice ID */}
-          <div className="space-y-2">
-            <Label>Ses ID (Voice ID)</Label>
+        {/* Voice ID, Name, Test and Save in one row */}
+        <div className="flex flex-col md:flex-row gap-3 items-end">
+          <div className="flex-1 space-y-1.5">
+            <Label>Ses ID</Label>
             <Input
               placeholder="örn: S85IPTaQ0TGGMhJkucvb"
               value={voiceId}
@@ -187,13 +201,8 @@ export function ElevenLabsSettings() {
                 setHasUnsavedChanges(true);
               }}
             />
-            <p className="text-xs text-muted-foreground">
-              ElevenLabs ses kütüphanesinden alınan ses kimliği
-            </p>
           </div>
-
-          {/* Voice Name */}
-          <div className="space-y-2">
+          <div className="flex-1 space-y-1.5">
             <Label>Ses Adı</Label>
             <Input
               placeholder="örn: Thomas"
@@ -203,80 +212,71 @@ export function ElevenLabsSettings() {
                 setHasUnsavedChanges(true);
               }}
             />
-            <p className="text-xs text-muted-foreground">
-              Seçilen sesin görüntülenen adı
-            </p>
           </div>
-        </div>
-
-        <div className="flex gap-3">
           <Button
             variant="outline"
             onClick={handleTestVoice}
             disabled={isTesting || !voiceId}
+            className="shrink-0"
           >
             {isTesting ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
               <Play className="h-4 w-4 mr-2" />
             )}
-            Sesi Test Et
+            Test
           </Button>
           <Button
             onClick={handleSave}
             disabled={isUpdating || isSaving || !hasUnsavedChanges}
+            className="shrink-0"
           >
             Kaydet
           </Button>
         </div>
 
-        {/* Voice History */}
+        {/* Saved Voices Dropdown */}
         {voiceHistory.length > 0 && (
-          <div className="space-y-3 pt-4 border-t">
-            <Label className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Ses Geçmişi
-            </Label>
-            <div className="space-y-2">
-              {voiceHistory.map((entry) => (
-                <div
-                  key={entry.id}
-                  className={`flex items-center justify-between p-3 rounded-lg border ${
-                    entry.is_active ? 'border-primary bg-primary/5' : 'border-border'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    {entry.is_active && (
-                      <Check className="h-4 w-4 text-primary" />
-                    )}
-                    <div>
-                      <p className="font-medium">{entry.voice_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {entry.voice_id.substring(0, 12)}... • Son kullanım: {format(new Date(entry.last_used_at), 'dd.MM.yyyy HH:mm')}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!entry.is_active && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSelectFromHistory(entry)}
-                      >
-                        Seç
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteFromHistory(entry.voice_id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+          <div className="flex flex-col md:flex-row gap-3 items-end pt-4 border-t">
+            <div className="flex-1 space-y-1.5">
+              <Label>Kayıtlı Sesler</Label>
+              <Select value={selectedHistoryVoice} onValueChange={setSelectedHistoryVoice}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Ses seçin..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {voiceHistory.map((entry) => (
+                    <SelectItem key={entry.id} value={entry.voice_id}>
+                      <div className="flex items-center gap-2">
+                        {entry.is_active && <Check className="h-3 w-3 text-primary" />}
+                        <span>{entry.voice_name}</span>
+                        <span className="text-muted-foreground text-xs">
+                          • {format(new Date(entry.last_used_at), 'dd.MM.yy HH:mm')}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+            <Button
+              variant="outline"
+              onClick={handleSetActiveFromDropdown}
+              disabled={!selectedHistoryVoice || voiceHistory.find(v => v.voice_id === selectedHistoryVoice)?.is_active}
+              className="shrink-0"
+            >
+              <Check className="h-4 w-4 mr-2" />
+              Aktif Yap
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => selectedHistoryVoice && handleDeleteFromHistory(selectedHistoryVoice)}
+              disabled={!selectedHistoryVoice}
+              className="shrink-0"
+            >
+              <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+            </Button>
           </div>
         )}
       </CardContent>
