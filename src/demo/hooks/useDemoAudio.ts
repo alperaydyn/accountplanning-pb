@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { supabase } from "@/integrations/supabase/client";
 
 export function useDemoAudio() {
   const { state, currentStep, nextStep } = useDemo();
@@ -10,8 +9,17 @@ export function useDemoAudio() {
   const [error, setError] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const audioCache = useRef<Map<string, string>>(new Map());
+  const isMountedRef = useRef(true);
+
+  // Track mounted state
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Generate audio from text using ElevenLabs
   const generateAudio = useCallback(async (text: string, stepId: string): Promise<string | null> => {
@@ -20,21 +28,6 @@ export function useDemoAudio() {
     // Check cache first
     if (audioCache.current.has(cacheKey)) {
       return audioCache.current.get(cacheKey)!;
-    }
-
-    try {
-      const { data: { publicUrl } } = supabase.storage
-        .from('demo-audio')
-        .getPublicUrl(`${language}/${stepId}.mp3`);
-
-      // Check if pre-generated audio exists in storage
-      const storageResponse = await fetch(publicUrl, { method: 'HEAD' });
-      if (storageResponse.ok) {
-        audioCache.current.set(cacheKey, publicUrl);
-        return publicUrl;
-      }
-    } catch {
-      // Storage file doesn't exist, generate on-the-fly
     }
 
     // Generate audio via edge function
@@ -66,16 +59,25 @@ export function useDemoAudio() {
     }
   }, [language]);
 
+  // Cleanup function
+  const cleanup = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+      audioRef.current.onerror = null;
+      audioRef.current.ontimeupdate = null;
+      audioRef.current = null;
+    }
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
+      cleanup();
       // Revoke object URLs
       audioCache.current.forEach((url) => {
         if (url.startsWith('blob:')) {
@@ -83,10 +85,33 @@ export function useDemoAudio() {
         }
       });
     };
-  }, []);
+  }, [cleanup]);
+
+  // Timer-based progression fallback
+  const startTimerProgression = useCallback((duration: number, speed: number) => {
+    const stepDuration = duration / speed;
+    const progressInterval = 100;
+    let elapsed = 0;
+
+    const updateProgress = () => {
+      if (!isMountedRef.current) return;
+      
+      elapsed += progressInterval;
+      setAudioProgress(Math.min((elapsed / stepDuration) * 100, 100));
+
+      if (elapsed < stepDuration) {
+        timerRef.current = setTimeout(updateProgress, progressInterval);
+      } else {
+        nextStep();
+      }
+    };
+
+    timerRef.current = setTimeout(updateProgress, progressInterval);
+  }, [nextStep]);
 
   // Handle step changes
   useEffect(() => {
+    // Early exit if not active
     if (!state.isActive || !state.isPlaying || !currentStep) {
       return;
     }
@@ -94,35 +119,28 @@ export function useDemoAudio() {
     const stepContent = currentStep.content[language];
     const narrative = stepContent?.narrative;
 
-    // Clear previous timer
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-    }
-
-    // Stop previous audio
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-
+    // Cleanup previous
+    cleanup();
     setAudioProgress(0);
     setError(null);
 
     // Generate and play audio
     const playAudio = async () => {
       if (!narrative) {
-        // No narrative - use timer-based progression
-        startTimerProgression();
+        startTimerProgression(currentStep.duration, state.speed);
         return;
       }
 
+      if (!isMountedRef.current) return;
       setIsLoading(true);
+      
       const audioUrl = await generateAudio(narrative, currentStep.id);
+      
+      if (!isMountedRef.current) return;
       setIsLoading(false);
 
       if (!audioUrl) {
-        // Failed to generate - use timer fallback
-        startTimerProgression();
+        startTimerProgression(currentStep.duration, state.speed);
         return;
       }
 
@@ -132,56 +150,37 @@ export function useDemoAudio() {
       audioRef.current = audio;
 
       audio.ontimeupdate = () => {
-        if (audio.duration) {
+        if (audio.duration && isMountedRef.current) {
           setAudioProgress((audio.currentTime / audio.duration) * 100);
         }
       };
 
       audio.onended = () => {
+        if (!isMountedRef.current) return;
         setAudioProgress(100);
-        // Wait a bit then go to next step
         timerRef.current = setTimeout(() => {
-          nextStep();
+          if (isMountedRef.current) {
+            nextStep();
+          }
         }, 800);
       };
 
       audio.onerror = () => {
+        if (!isMountedRef.current) return;
         setError("Failed to play audio");
-        startTimerProgression();
+        startTimerProgression(currentStep.duration, state.speed);
       };
 
       audio.play().catch(() => {
+        if (!isMountedRef.current) return;
         setError("Failed to play audio");
-        startTimerProgression();
+        startTimerProgression(currentStep.duration, state.speed);
       });
-    };
-
-    const startTimerProgression = () => {
-      const stepDuration = currentStep.duration / state.speed;
-      const progressInterval = 100;
-      let elapsed = 0;
-
-      const updateProgress = () => {
-        elapsed += progressInterval;
-        setAudioProgress(Math.min((elapsed / stepDuration) * 100, 100));
-
-        if (elapsed < stepDuration) {
-          timerRef.current = setTimeout(updateProgress, progressInterval);
-        } else {
-          nextStep();
-        }
-      };
-
-      timerRef.current = setTimeout(updateProgress, progressInterval);
     };
 
     playAudio();
 
-    return () => {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-      }
-    };
+    return cleanup;
   }, [
     state.isActive,
     state.isPlaying,
@@ -192,6 +191,8 @@ export function useDemoAudio() {
     state.speed,
     nextStep,
     generateAudio,
+    cleanup,
+    startTimerProgression,
   ]);
 
   // Handle pause/resume
@@ -202,6 +203,7 @@ export function useDemoAudio() {
       audioRef.current.pause();
       if (timerRef.current) {
         clearTimeout(timerRef.current);
+        timerRef.current = null;
       }
     } else if (state.isPlaying) {
       audioRef.current.play().catch(() => {});
