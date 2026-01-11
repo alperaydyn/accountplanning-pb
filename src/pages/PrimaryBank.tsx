@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Package, CreditCard, Wallet, PiggyBank, Users, Factory, ArrowLeft, Percent, Banknote, Receipt, FileCheck, Shield, Cog } from "lucide-react";
+import { Package, CreditCard, Wallet, PiggyBank, Users, Factory, ArrowLeft, Banknote, Receipt, FileCheck, Shield, Cog } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -165,10 +165,10 @@ const PrimaryBank = () => {
           </Button>
         </div>
 
-        {/* Filters and Info Header */}
+        {/* Filters Header */}
         <Card>
           <CardContent className="pt-6">
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 gap-6">
               <div className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-muted">
                   <Users className="h-5 w-5 text-muted-foreground" />
@@ -211,17 +211,6 @@ const PrimaryBank = () => {
                   </Select>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-muted">
-                  <Percent className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t.primaryBank.primaryBankPercent}</p>
-                  <p className="font-semibold">
-                    {isLoading ? "..." : `${metrics.primaryBankPercentage}% (${metrics.primaryBankCustomers}/${metrics.totalCustomers})`}
-                  </p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
@@ -246,8 +235,10 @@ const PrimaryBank = () => {
           </CardContent>
         </Card>
 
-        {/* Product Metrics Panel */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* External Data Section */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">{t.primaryBank.externalDataTitle}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -320,10 +311,13 @@ const PrimaryBank = () => {
               <p className="text-xs text-muted-foreground leading-tight">{t.primaryBank.collateralsDescription}</p>
             </CardContent>
           </Card>
+          </div>
         </div>
 
-        {/* Four Axes Breakdown */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Internal Data Section */}
+        <div className="space-y-3">
+          <h3 className="text-sm font-medium text-muted-foreground">{t.primaryBank.internalDataTitle}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {axes.map((axis) => (
             <Card key={axis.name}>
               <CardHeader className="pb-2">
@@ -344,6 +338,7 @@ const PrimaryBank = () => {
               </CardContent>
             </Card>
           ))}
+          </div>
         </div>
 
         {/* Explanation */}
