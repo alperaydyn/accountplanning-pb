@@ -1,13 +1,14 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Voice ID for all languages - using S85IPTaQ0TGGMhJkucvb (Turkish native voice)
-const VOICE_ID = 'S85IPTaQ0TGGMhJkucvb';
+// Default Voice ID
+const DEFAULT_VOICE_ID = 'S85IPTaQ0TGGMhJkucvb';
 
 interface GenerateAudioRequest {
   text: string;
@@ -37,11 +38,36 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Generating audio for step: ${stepId || 'unknown'}, language: ${language}`);
+    // Get user's voice settings from database
+    let voiceId = DEFAULT_VOICE_ID;
+    
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      
+      if (user) {
+        const { data: settings } = await supabase
+          .from('user_settings')
+          .select('elevenlabs_voice_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (settings?.elevenlabs_voice_id) {
+          voiceId = settings.elevenlabs_voice_id;
+        }
+      }
+    }
+
+    console.log(`Generating audio for step: ${stepId || 'unknown'}, language: ${language}, voice: ${voiceId}`);
 
     // Call ElevenLabs TTS API with specified settings
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
       {
         method: 'POST',
         headers: {

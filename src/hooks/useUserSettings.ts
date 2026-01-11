@@ -17,6 +17,8 @@ interface UserSettings {
   ai_model: string | null;
   ai_api_key_encrypted: string | null;
   ai_base_url: string | null;
+  elevenlabs_voice_id: string | null;
+  elevenlabs_voice_name: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -64,7 +66,7 @@ export function useUserSettings() {
   });
 
   const updateSettings = useMutation({
-    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view' | 'ai_provider' | 'ai_model' | 'ai_api_key_encrypted' | 'ai_base_url'>>) => {
+    mutationFn: async (updates: Partial<Pick<UserSettings, 'language' | 'theme' | 'notifications_enabled' | 'preferred_agenda_view' | 'ai_provider' | 'ai_model' | 'ai_api_key_encrypted' | 'ai_base_url' | 'elevenlabs_voice_id' | 'elevenlabs_voice_name'>>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase

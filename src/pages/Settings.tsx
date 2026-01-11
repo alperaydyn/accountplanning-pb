@@ -10,6 +10,7 @@ import { QueryPanel } from "@/components/settings/QueryPanel";
 import { useUserSettings, AgendaViewMode } from "@/hooks/useUserSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
+import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 
 const Settings = () => {
   const { t } = useLanguage();
@@ -87,6 +88,9 @@ const Settings = () => {
 
           {/* AI Provider Settings */}
           <AIProviderSettings />
+
+          {/* ElevenLabs Voice Settings */}
+          <ElevenLabsSettings />
 
           {/* Documentation Link */}
           <Card>
