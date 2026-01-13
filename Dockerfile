@@ -1,6 +1,12 @@
 # Build stage
 FROM node:20-alpine AS build
 
+# Define build arguments for Vite environment variables, 
+# > required to run at google cloud
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_PUBLISHABLE_KEY
+ARG VITE_SUPABASE_PROJECT_ID
+
 WORKDIR /app
 
 # Copy package files
