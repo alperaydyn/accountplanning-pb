@@ -1,0 +1,59 @@
+steps:
+  # Build the Docker image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "build"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${COMMIT_SHA}"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest"
+      - "--build-arg"
+      - "VITE_SUPABASE_URL=${_VITE_SUPABASE_URL}"
+      - "--build-arg"
+      - "VITE_SUPABASE_PUBLISHABLE_KEY=${_VITE_SUPABASE_PUBLISHABLE_KEY}"
+      - "--build-arg"
+      - "VITE_SUPABASE_PROJECT_ID=${_VITE_SUPABASE_PROJECT_ID}"
+      - "."
+
+  # Push the Docker image to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${COMMIT_SHA}"
+
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest"
+
+  # Deploy to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: "gcloud"
+    args:
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${COMMIT_SHA}"
+      - "--region"
+      - "${_REGION}"
+      - "--platform"
+      - "managed"
+      - "--allow-unauthenticated"
+
+# Substitution variables - update these values
+substitutions:
+  _REGION: "us-central1" # Your preferred region
+  _REPOSITORY: "cloud-run-source-deploy" # Artifact Registry repository name
+  _IMAGE: "accountplanning-v04" # Docker image name
+  _SERVICE_NAME: "accountplanning-v04" # Cloud Run service name
+  _VITE_SUPABASE_URL: "https://rfpojorabznodwaxwwvl.supabase.co" # Your Supabase URL
+  _VITE_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJmcG9qb3JhYnpub2R3YXh3d3ZsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2OTIxODgsImV4cCI6MjA4MjI2ODE4OH0.naQzdw_fD30jPKqYRYvuWGkWKWIY5qV01y8ww9tQXvE" # Your Supabase anon key
+  _VITE_SUPABASE_PROJECT_ID: "rfpojorabznodwaxwwvl" # Your Supabase project ID
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:${COMMIT_SHA}"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_IMAGE}:latest"
