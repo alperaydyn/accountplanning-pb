@@ -136,12 +136,15 @@ const Pagination = ({
 const MiniCalendar = ({ 
   selectedDate, 
   actionsByDay,
+  plannedByDay,
   onDayClick 
 }: { 
   selectedDate: Date;
   actionsByDay: Record<string, number>;
+  plannedByDay: Record<string, number>;
   onDayClick: (date: Date) => void;
 }) => {
+  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
   const today = new Date();
@@ -165,22 +168,22 @@ const MiniCalendar = ({
   
   const weekDays = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
-  // Calculate max actions for intensity scaling
-  const maxActions = Math.max(...Object.values(actionsByDay), 1);
+  // Calculate max actions for intensity scaling (based on planned actions)
+  const maxActions = Math.max(...Object.values(plannedByDay), 1);
 
   return (
     <div className="w-full">
-      <div className="text-center mb-3">
+      <div className="text-center mb-2">
         <span className="font-semibold text-sm text-foreground">
           {format(selectedDate, "MMMM yyyy", { locale: tr })}
         </span>
       </div>
-      <div className="grid grid-cols-7 gap-0.5 mb-1.5">
+      <div className="grid grid-cols-7 gap-0.5 mb-1">
         {weekDays.map((d, idx) => (
           <div 
             key={d} 
             className={cn(
-              "text-center text-[10px] text-muted-foreground font-medium py-1",
+              "text-center text-[10px] text-muted-foreground font-medium py-0.5",
               idx >= 5 && "text-muted-foreground/60"
             )}
           >
@@ -191,35 +194,48 @@ const MiniCalendar = ({
       <div className="grid grid-cols-7 gap-0.5">
         {weeks.flat().map((d, idx) => {
           const dateStr = format(d, "yyyy-MM-dd");
-          const count = actionsByDay[dateStr] || 0;
+          const completedCount = actionsByDay[dateStr] || 0;
+          const plannedCount = plannedByDay[dateStr] || 0;
           const isCurrentMonth = isSameMonth(d, selectedDate);
           const isToday = isSameDay(d, today);
           const isWeekend = getDay(d) === 0 || getDay(d) === 6;
-          const intensity = count > 0 ? Math.min(count / maxActions, 1) : 0;
+          const intensity = plannedCount > 0 ? Math.min(plannedCount / maxActions, 1) : 0;
+          const isHovered = hoveredDay === dateStr;
+          
+          // Color based on planned actions
+          const getBgColor = () => {
+            if (!isCurrentMonth || plannedCount === 0) return undefined;
+            if (intensity > 0.7) return 'hsl(var(--primary) / 0.25)';
+            if (intensity > 0.4) return 'hsl(var(--primary) / 0.15)';
+            return 'hsl(var(--primary) / 0.08)';
+          };
           
           return (
             <button
               key={idx}
               onClick={() => onDayClick(d)}
+              onMouseEnter={() => setHoveredDay(dateStr)}
+              onMouseLeave={() => setHoveredDay(null)}
               className={cn(
-                "relative aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition-all",
+                "relative aspect-square flex flex-col items-center justify-center rounded-md text-xs transition-all",
                 !isCurrentMonth && "text-muted-foreground/30",
                 isCurrentMonth && !isWeekend && "hover:bg-accent hover:scale-105",
                 isCurrentMonth && isWeekend && "bg-muted/30 hover:bg-muted/50",
                 isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background font-bold",
-                count > 0 && isCurrentMonth && "font-medium"
+                plannedCount > 0 && isCurrentMonth && "font-medium"
               )}
               style={{
-                backgroundColor: count > 0 && isCurrentMonth 
-                  ? `hsl(var(--success) / ${0.1 + intensity * 0.3})` 
-                  : undefined
+                backgroundColor: getBgColor()
               }}
             >
-              <span>{format(d, "d")}</span>
-              {count > 0 && isCurrentMonth && (
-                <span className="absolute -bottom-0.5 text-[8px] font-bold text-success">
-                  {count}
+              {isHovered && isCurrentMonth && (plannedCount > 0 || completedCount > 0) ? (
+                <span className="text-[9px] font-bold leading-tight text-center">
+                  <span className="text-success">{completedCount}</span>
+                  <span className="text-muted-foreground">/</span>
+                  <span className="text-primary">{plannedCount}</span>
                 </span>
+              ) : (
+                <span>{format(d, "d")}</span>
               )}
             </button>
           );
@@ -309,6 +325,18 @@ export const DailyPlanPanel = () => {
     });
     return counts;
   }, [allActions]);
+
+  // Planned actions by day for calendar coloring
+  const plannedByDay = useMemo(() => {
+    const counts: Record<string, number> = {};
+    allActions.forEach(a => {
+      if (a.current_status === "Beklemede" || a.current_status === "Planlandı") {
+        const dateStr = format(new Date(a.action_target_date), "yyyy-MM-dd");
+        counts[dateStr] = (counts[dateStr] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [allActions]);
   
   // Pagination calculations
   const pendingTotalPages = Math.ceil(pendingMonthActions.length / ITEMS_PER_PAGE);
@@ -379,7 +407,7 @@ export const DailyPlanPanel = () => {
               count={pendingMonthActions.length}
               subtitle={`${format(monthStart, "MMMM", { locale: tr })} ayı içinde`}
             />
-            <ScrollArea className="h-[300px] pr-2">
+            <ScrollArea className="h-[260px] pr-2">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-pulse flex flex-col items-center gap-2">
@@ -427,7 +455,7 @@ export const DailyPlanPanel = () => {
               count={todayActions.length}
               subtitle={selectedDateLabel}
             />
-            <ScrollArea className="h-[300px] pr-2">
+            <ScrollArea className="h-[260px] pr-2">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-pulse flex flex-col items-center gap-2">
@@ -476,33 +504,34 @@ export const DailyPlanPanel = () => {
           </div>
           
           {/* Section 3: Monthly calendar */}
-          <div className="space-y-4">
+          <div className="space-y-3">
             <SectionHeader 
-              icon={CheckCircle2}
-              iconColor="bg-success/10 text-success"
-              title="Tamamlanan Aksiyonlar"
+              icon={CalendarIcon}
+              iconColor="bg-primary/10 text-primary"
+              title="Aksiyon Takvimi"
               subtitle="Güne tıklayarak ajandaya gidin"
             />
-            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-4 border border-border/50">
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50">
               <MiniCalendar 
                 selectedDate={currentMonth}
                 actionsByDay={completedByDay}
+                plannedByDay={plannedByDay}
                 onDayClick={handleDayClick}
               />
             </div>
             {/* Quick stats */}
             <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 rounded-lg bg-muted/30 text-center">
-                <p className="text-2xl font-bold text-foreground">
+              <div className="p-2 rounded-lg bg-muted/30 text-center">
+                <p className="text-lg font-bold text-foreground">
                   {Object.values(completedByDay).reduce((a, b) => a + b, 0)}
                 </p>
-                <p className="text-xs text-muted-foreground">Bu Ay Tamamlanan</p>
+                <p className="text-[10px] text-muted-foreground">Bu Ay Tamamlanan</p>
               </div>
-              <div className="p-3 rounded-lg bg-muted/30 text-center">
-                <p className="text-2xl font-bold text-foreground">
+              <div className="p-2 rounded-lg bg-muted/30 text-center">
+                <p className="text-lg font-bold text-foreground">
                   {Object.keys(completedByDay).length}
                 </p>
-                <p className="text-xs text-muted-foreground">Aktif Gün</p>
+                <p className="text-[10px] text-muted-foreground">Aktif Gün</p>
               </div>
             </div>
           </div>
