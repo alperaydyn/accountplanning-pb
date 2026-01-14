@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { TrendingUp, TrendingDown, Minus, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,9 +25,12 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+type StatusFilter = 'all' | 'on_track' | 'at_risk' | 'critical';
+
 interface ProductPerformanceTableProps {
   selectedDate?: string;
   onDateChange?: (date: string | undefined) => void;
+  statusFilter?: StatusFilter;
 }
 
 type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
@@ -41,13 +45,20 @@ const statusColors: Record<ProductStatus, string> = {
   diversity: "bg-cyan-500/10 text-cyan-600 border-cyan-500/20",
 };
 
-export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductPerformanceTableProps) {
+export function ProductPerformanceTable({ selectedDate, onDateChange, statusFilter = 'all' }: ProductPerformanceTableProps) {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   
   const { data: targets = [], isLoading: targetsLoading } = usePortfolioTargets(selectedDate);
   const { data: actions = [] } = useActions();
   const createTargets = useCreatePortfolioTargets();
+
+  // Helper to get base status category (on_track, at_risk, critical)
+  const getBaseStatus = (status: ProductStatus): 'on_track' | 'at_risk' | 'critical' => {
+    if (status === 'on_track') return 'on_track';
+    if (status === 'at_risk' || status === 'melting' || status === 'growing') return 'at_risk';
+    return 'critical';
+  };
 
   const statusLabels: Record<ProductStatus, string> = {
     on_track: t.dashboard.onTrack,
@@ -136,7 +147,19 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
     }
   };
 
+  // Filter targets based on status filter
+  const filteredTargets = useMemo(() => {
+    if (statusFilter === 'all') return targets;
+    
+    return targets.filter(target => {
+      const status = getProductStatus(target);
+      const baseStatus = getBaseStatus(status);
+      return baseStatus === statusFilter;
+    });
+  }, [targets, statusFilter]);
+
   const noData = !targetsLoading && targets.length === 0;
+  const noFilteredData = !targetsLoading && targets.length > 0 && filteredTargets.length === 0;
 
   return (
     <Card className="bg-card border-border">
@@ -160,6 +183,10 @@ export function ProductPerformanceTable({ selectedDate, onDateChange }: ProductP
         ) : noData ? (
           <div className="text-center py-8 text-muted-foreground">
             {t.dashboard.noDataAvailable}
+          </div>
+        ) : noFilteredData ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {language === "tr" ? "Bu filtreye uygun ürün bulunamadı" : "No products match this filter"}
           </div>
         ) : (
           <Table>
