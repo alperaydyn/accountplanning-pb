@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, startOfWeek, addDays, startOfMonth, endOfMonth, isSameDay, isSameMonth, getDay } from "date-fns";
 import { tr } from "date-fns/locale";
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Target } from "lucide-react";
+import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Target, Sparkles, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -33,48 +33,60 @@ const generateWeekDates = () => {
   return dates;
 };
 
-// Priority badge component
+// Priority badge component with enhanced styling
 const PriorityBadge = ({ priority }: { priority: string }) => {
-  const variants: Record<string, "destructive" | "secondary" | "outline"> = {
-    high: "destructive",
-    medium: "secondary",
-    low: "outline",
+  const config: Record<string, { variant: "destructive" | "secondary" | "outline"; className: string }> = {
+    high: { variant: "destructive", className: "bg-destructive/10 text-destructive border-destructive/20" },
+    medium: { variant: "secondary", className: "bg-warning/10 text-warning border-warning/20" },
+    low: { variant: "outline", className: "bg-muted text-muted-foreground" },
   };
   const labels: Record<string, string> = {
     high: "Yüksek",
     medium: "Orta",
     low: "Düşük",
   };
+  const { className } = config[priority] || config.low;
   return (
-    <Badge variant={variants[priority] || "outline"} className="text-xs">
+    <Badge variant="outline" className={cn("text-xs font-medium", className)}>
       {labels[priority] || priority}
     </Badge>
   );
 };
 
-// Action list item
-const ActionItem = ({ action, onClick }: { action: Action; onClick: () => void }) => (
+// Action list item with enhanced design
+const ActionItem = ({ action, onClick, accentColor }: { action: Action; onClick: () => void; accentColor?: string }) => (
   <div 
     onClick={onClick}
-    className="flex items-start gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent/50 cursor-pointer transition-colors"
+    className={cn(
+      "group relative flex items-start gap-3 p-3 rounded-xl border border-border bg-card/50",
+      "hover:bg-accent/50 hover:border-accent hover:shadow-sm cursor-pointer transition-all duration-200",
+      "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:rounded-full before:transition-all",
+      accentColor
+    )}
   >
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2 mb-1">
-        <span className="font-medium text-sm truncate">{action.customers?.name}</span>
+        <span className="font-medium text-sm truncate group-hover:text-primary transition-colors">
+          {action.customers?.name}
+        </span>
         <PriorityBadge priority={action.priority} />
       </div>
       <p className="text-sm text-muted-foreground truncate">{action.name}</p>
-      <p className="text-xs text-muted-foreground mt-1">
+      <p className="text-xs text-muted-foreground/70 mt-1 flex items-center gap-1">
+        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50" />
         {action.products?.name}
       </p>
     </div>
-    <div className="text-xs text-muted-foreground whitespace-nowrap">
-      {format(new Date(action.action_target_date), "d MMM", { locale: tr })}
+    <div className="flex flex-col items-end gap-1">
+      <span className="text-xs text-muted-foreground whitespace-nowrap">
+        {format(new Date(action.action_target_date), "d MMM", { locale: tr })}
+      </span>
+      <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
   </div>
 );
 
-// Pagination component
+// Pagination component with improved design
 const Pagination = ({ 
   currentPage, 
   totalPages, 
@@ -84,23 +96,34 @@ const Pagination = ({
   totalPages: number; 
   onPageChange: (page: number) => void;
 }) => (
-  <div className="flex items-center justify-center gap-2 mt-3">
+  <div className="flex items-center justify-center gap-1 mt-3">
     <Button 
       variant="ghost" 
       size="icon" 
-      className="h-7 w-7"
+      className="h-7 w-7 rounded-full"
       disabled={currentPage <= 1}
       onClick={() => onPageChange(currentPage - 1)}
     >
       <ChevronLeft className="h-4 w-4" />
     </Button>
-    <span className="text-xs text-muted-foreground">
-      {currentPage} / {totalPages || 1}
-    </span>
+    <div className="flex items-center gap-1 px-2">
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+        <button
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={cn(
+            "w-2 h-2 rounded-full transition-all",
+            page === currentPage 
+              ? "bg-primary w-4" 
+              : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+          )}
+        />
+      ))}
+    </div>
     <Button 
       variant="ghost" 
       size="icon" 
-      className="h-7 w-7"
+      className="h-7 w-7 rounded-full"
       disabled={currentPage >= totalPages}
       onClick={() => onPageChange(currentPage + 1)}
     >
@@ -109,7 +132,7 @@ const Pagination = ({
   </div>
 );
 
-// Mini calendar component
+// Mini calendar component with enhanced visuals
 const MiniCalendar = ({ 
   selectedDate, 
   actionsByDay,
@@ -142,16 +165,25 @@ const MiniCalendar = ({
   
   const weekDays = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
+  // Calculate max actions for intensity scaling
+  const maxActions = Math.max(...Object.values(actionsByDay), 1);
+
   return (
     <div className="w-full">
-      <div className="text-center mb-2">
-        <span className="font-medium text-sm">
+      <div className="text-center mb-3">
+        <span className="font-semibold text-sm text-foreground">
           {format(selectedDate, "MMMM yyyy", { locale: tr })}
         </span>
       </div>
-      <div className="grid grid-cols-7 gap-0.5 mb-1">
-        {weekDays.map((d) => (
-          <div key={d} className="text-center text-xs text-muted-foreground font-medium py-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-1.5">
+        {weekDays.map((d, idx) => (
+          <div 
+            key={d} 
+            className={cn(
+              "text-center text-[10px] text-muted-foreground font-medium py-1",
+              idx >= 5 && "text-muted-foreground/60"
+            )}
+          >
             {d}
           </div>
         ))}
@@ -163,22 +195,29 @@ const MiniCalendar = ({
           const isCurrentMonth = isSameMonth(d, selectedDate);
           const isToday = isSameDay(d, today);
           const isWeekend = getDay(d) === 0 || getDay(d) === 6;
+          const intensity = count > 0 ? Math.min(count / maxActions, 1) : 0;
           
           return (
             <button
               key={idx}
               onClick={() => onDayClick(d)}
               className={cn(
-                "relative aspect-square flex flex-col items-center justify-center rounded text-xs transition-colors",
-                !isCurrentMonth && "text-muted-foreground/40",
-                isCurrentMonth && !isWeekend && "hover:bg-accent",
-                isCurrentMonth && isWeekend && "bg-muted/50 hover:bg-muted",
-                isToday && "ring-1 ring-primary font-bold"
+                "relative aspect-square flex flex-col items-center justify-center rounded-lg text-xs transition-all",
+                !isCurrentMonth && "text-muted-foreground/30",
+                isCurrentMonth && !isWeekend && "hover:bg-accent hover:scale-105",
+                isCurrentMonth && isWeekend && "bg-muted/30 hover:bg-muted/50",
+                isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background font-bold",
+                count > 0 && isCurrentMonth && "font-medium"
               )}
+              style={{
+                backgroundColor: count > 0 && isCurrentMonth 
+                  ? `hsl(var(--success) / ${0.1 + intensity * 0.3})` 
+                  : undefined
+              }}
             >
               <span>{format(d, "d")}</span>
               {count > 0 && isCurrentMonth && (
-                <span className="absolute -bottom-0.5 text-[9px] font-medium text-primary">
+                <span className="absolute -bottom-0.5 text-[8px] font-bold text-success">
                   {count}
                 </span>
               )}
@@ -189,6 +228,38 @@ const MiniCalendar = ({
     </div>
   );
 };
+
+// Section header component
+const SectionHeader = ({ 
+  icon: Icon, 
+  iconColor, 
+  title, 
+  count, 
+  subtitle 
+}: { 
+  icon: React.ElementType; 
+  iconColor: string; 
+  title: string; 
+  count?: number; 
+  subtitle: string;
+}) => (
+  <div className="space-y-1.5">
+    <div className="flex items-center gap-2">
+      <div className={cn("p-1.5 rounded-lg", iconColor)}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <h3 className="font-semibold text-sm">{title}</h3>
+      {count !== undefined && (
+        <Badge variant="secondary" className="text-xs h-5 px-1.5">
+          {count}
+        </Badge>
+      )}
+    </div>
+    <p className="text-xs text-muted-foreground pl-8">
+      {subtitle}
+    </p>
+  </div>
+);
 
 export const DailyPlanPanel = () => {
   const navigate = useNavigate();
@@ -265,62 +336,74 @@ export const DailyPlanPanel = () => {
   const selectedDateLabel = weekDates.find(d => d.value === selectedDate)?.label || selectedDate;
 
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-4">
+    <Card className="w-full overflow-hidden">
+      {/* Header with gradient */}
+      <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 via-transparent to-accent/5">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Günlük Planım</CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <CalendarIcon className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg font-semibold">Günlük Planım</CardTitle>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Aksiyonlarınızı takip edin ve planlayın
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Select value={selectedDate} onValueChange={setSelectedDate}>
-              <SelectTrigger className="w-[180px] h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {weekDates.map((date) => (
-                  <SelectItem key={date.value} value={date.value}>
-                    <span className={cn(date.isToday && "font-bold")}>
-                      {date.label} {date.isToday && "(Bugün)"}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Select value={selectedDate} onValueChange={setSelectedDate}>
+            <SelectTrigger className="w-[200px] h-9 text-sm bg-background/80 backdrop-blur-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {weekDates.map((date) => (
+                <SelectItem key={date.value} value={date.value}>
+                  <span className={cn(date.isToday && "font-semibold text-primary")}>
+                    {date.label} {date.isToday && "(Bugün)"}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
       
-      <CardContent>
+      <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Section 1: Pending actions for the month */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <h3 className="font-medium text-sm">Bekleyen Aksiyonlar</h3>
-              <Badge variant="secondary" className="text-xs">
-                {pendingMonthActions.length}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {format(monthStart, "MMMM", { locale: tr })} ayı içinde planlanıp sonuçlanmayan
-            </p>
-            <ScrollArea className="h-[280px]">
+          <div className="space-y-4">
+            <SectionHeader 
+              icon={AlertCircle}
+              iconColor="bg-amber-500/10 text-amber-500"
+              title="Bekleyen Aksiyonlar"
+              count={pendingMonthActions.length}
+              subtitle={`${format(monthStart, "MMMM", { locale: tr })} ayı içinde`}
+            />
+            <ScrollArea className="h-[300px] pr-2">
               {isLoading ? (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Yükleniyor...
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-pulse flex flex-col items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-muted" />
+                    <div className="h-3 w-20 rounded bg-muted" />
+                  </div>
                 </div>
               ) : paginatedPending.length === 0 ? (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Bekleyen aksiyon yok
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="p-3 rounded-full bg-muted/50 mb-3">
+                    <CheckCircle2 className="h-6 w-6 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Bekleyen aksiyon yok
+                  </p>
                 </div>
               ) : (
-                <div className="space-y-2 pr-2">
+                <div className="space-y-2">
                   {paginatedPending.map((action) => (
                     <ActionItem 
                       key={action.id} 
                       action={action} 
                       onClick={() => handleActionClick(action)}
+                      accentColor="before:bg-amber-500"
                     />
                   ))}
                 </div>
@@ -336,43 +419,48 @@ export const DailyPlanPanel = () => {
           </div>
           
           {/* Section 2: Today's actions */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Target className="h-4 w-4 text-primary" />
-              <h3 className="font-medium text-sm">Günün Aksiyonları</h3>
-              <Badge variant="default" className="text-xs">
-                {todayActions.length}
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {selectedDateLabel}
-            </p>
-            <ScrollArea className="h-[280px]">
+          <div className="space-y-4">
+            <SectionHeader 
+              icon={Target}
+              iconColor="bg-primary/10 text-primary"
+              title="Günün Aksiyonları"
+              count={todayActions.length}
+              subtitle={selectedDateLabel}
+            />
+            <ScrollArea className="h-[300px] pr-2">
               {isLoading ? (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  Yükleniyor...
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-pulse flex flex-col items-center gap-2">
+                    <div className="h-8 w-8 rounded-full bg-muted" />
+                    <div className="h-3 w-20 rounded bg-muted" />
+                  </div>
                 </div>
               ) : paginatedToday.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <Clock className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <div className="p-3 rounded-full bg-primary/5 mb-3">
+                    <Clock className="h-6 w-6 text-primary/50" />
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">
                     Bu gün için planlanmış aksiyon yok
                   </p>
                   <Button 
-                    variant="link" 
-                    className="mt-2 text-sm"
+                    variant="outline" 
+                    size="sm"
+                    className="gap-2 group"
                     onClick={() => navigate(`/ai-assistant?mode=plan-my-day&date=${selectedDate}`)}
                   >
+                    <Sparkles className="h-4 w-4 text-primary group-hover:animate-pulse" />
                     AI ile planla
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-2 pr-2">
+                <div className="space-y-2">
                   {paginatedToday.map((action) => (
                     <ActionItem 
                       key={action.id} 
                       action={action} 
                       onClick={() => handleActionClick(action)}
+                      accentColor="before:bg-primary"
                     />
                   ))}
                 </div>
@@ -388,20 +476,34 @@ export const DailyPlanPanel = () => {
           </div>
           
           {/* Section 3: Monthly calendar */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <h3 className="font-medium text-sm">Tamamlanan Aksiyonlar</h3>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Güne tıklayarak ajanda görünümüne gidin
-            </p>
-            <div className="bg-muted/30 rounded-lg p-3">
+          <div className="space-y-4">
+            <SectionHeader 
+              icon={CheckCircle2}
+              iconColor="bg-success/10 text-success"
+              title="Tamamlanan Aksiyonlar"
+              subtitle="Güne tıklayarak ajandaya gidin"
+            />
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-4 border border-border/50">
               <MiniCalendar 
                 selectedDate={currentMonth}
                 actionsByDay={completedByDay}
                 onDayClick={handleDayClick}
               />
+            </div>
+            {/* Quick stats */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-3 rounded-lg bg-muted/30 text-center">
+                <p className="text-2xl font-bold text-foreground">
+                  {Object.values(completedByDay).reduce((a, b) => a + b, 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Bu Ay Tamamlanan</p>
+              </div>
+              <div className="p-3 rounded-lg bg-muted/30 text-center">
+                <p className="text-2xl font-bold text-foreground">
+                  {Object.keys(completedByDay).length}
+                </p>
+                <p className="text-xs text-muted-foreground">Aktif Gün</p>
+              </div>
             </div>
           </div>
         </div>

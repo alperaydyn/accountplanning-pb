@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown, ClipboardList, Target, Users, CheckCircle, FileText } from "lucide-react";
+import { AlertTriangle, TrendingDown, Lightbulb, ChevronRight, ExternalLink, Loader2, RefreshCw, Sparkles, ThumbsUp, ThumbsDown, ChevronDown, ClipboardList, Target, Users, CheckCircle, FileText, Zap } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -53,6 +54,20 @@ const categoryLabels: Record<string, string> = {
   balance: "Denge",
   quality: "Kalite",
 };
+
+// Enhanced card wrapper with glassmorphism
+const InsightCard = ({ children, className, ...props }: React.HTMLAttributes<HTMLDivElement> & { children: React.ReactNode }) => (
+  <Card 
+    className={cn(
+      "relative overflow-hidden bg-card/80 backdrop-blur-sm border-border/50",
+      "before:absolute before:inset-0 before:bg-gradient-to-br before:from-primary/5 before:via-transparent before:to-accent/5 before:opacity-0 before:transition-opacity hover:before:opacity-100",
+      className
+    )}
+    {...props}
+  >
+    {children}
+  </Card>
+);
 
 export function InsightsPanel({ recordDate }: InsightsPanelProps) {
   const navigate = useNavigate();

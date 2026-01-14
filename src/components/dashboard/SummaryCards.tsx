@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
 import { useProductThresholds } from "@/hooks/useProductThresholds";
 import { useProducts } from "@/hooks/useProducts";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
+import { cn } from "@/lib/utils";
 
 interface ScoreAxis {
   name: string;
@@ -27,6 +28,34 @@ const getProgressColor = (score: number) => {
   if (score >= 80) return "bg-success";
   if (score >= 60) return "bg-warning";
   return "bg-destructive";
+};
+
+// Card accent colors for visual hierarchy
+const cardAccents = {
+  "benchmark-score": {
+    gradient: "from-primary/10 via-transparent to-transparent",
+    iconBg: "bg-primary/10",
+    iconColor: "text-primary",
+    border: "hover:border-primary/30",
+  },
+  "scale-up-enterprise": {
+    gradient: "from-accent/10 via-transparent to-transparent",
+    iconBg: "bg-accent/10",
+    iconColor: "text-accent",
+    border: "hover:border-accent/30",
+  },
+  "primary-bank-score": {
+    gradient: "from-success/10 via-transparent to-transparent",
+    iconBg: "bg-success/10",
+    iconColor: "text-success",
+    border: "hover:border-success/30",
+  },
+  "actions-card": {
+    gradient: "from-warning/10 via-transparent to-transparent",
+    iconBg: "bg-warning/10",
+    iconColor: "text-warning",
+    border: "hover:border-warning/30",
+  },
 };
 
 export function SummaryCards({ recordDate }: SummaryCardsProps) {
@@ -230,7 +259,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
 
   const cards = [
     {
-      id: "benchmark-score",
+      id: "benchmark-score" as const,
       title: t.dashboard.benchmarkScore,
       value: `${benchmarkData.score}/${benchmarkData.total}`,
       subtitle: `${benchmarkData.total > 0 ? Math.round((benchmarkData.score / benchmarkData.total) * 100) : 0}% HGO ≥ 75%`,
@@ -238,29 +267,29 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       onClick: () => navigate("/product-performance"),
     },
     {
-      id: "scale-up-enterprise",
+      id: "scale-up-enterprise" as const,
       title: t.dashboard.customerJourney,
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
       customSubtitle: (
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-2">
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels.Aktif}</span>
-            <span className="text-sm font-medium">{activeCount}</span>
+            <span className="text-sm font-semibold">{activeCount}</span>
           </div>
-          <span className="text-muted-foreground">›</span>
+          <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels.Target}</span>
-            <span className="text-sm font-medium">{targetCount}</span>
+            <span className="text-sm font-semibold">{targetCount}</span>
           </div>
-          <span className="text-muted-foreground">›</span>
+          <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Strong</span>
-            <span className="text-sm font-medium">{strongTargetCount}</span>
+            <span className="text-sm font-semibold">{strongTargetCount}</span>
           </div>
-          <span className="text-muted-foreground">›</span>
+          <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
           <div className="text-center">
             <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels["Ana Banka"]}</span>
-            <span className="text-sm font-medium">{primaryCount}</span>
+            <span className="text-sm font-semibold text-success">{primaryCount}</span>
           </div>
         </div>
       ),
@@ -268,7 +297,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       onClick: () => navigate("/customer-journey"),
     },
     {
-      id: "primary-bank-score",
+      id: "primary-bank-score" as const,
       title: t.dashboard.primaryBankScore,
       value: isLoading ? "..." : `${primaryBankScorePercent}%`,
       subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
@@ -276,7 +305,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       onClick: () => navigate("/primary-bank"),
     },
     {
-      id: "actions-card",
+      id: "actions-card" as const,
       title: t.common.actions,
       value: isLoading ? "..." : (summary?.totalActionsPlanned ?? 0),
       subtitle: `${summary?.totalActionsPlanned ?? 0} ${t.dashboard.planned} | ${summary?.totalActionsPending ?? 0} ${t.dashboard.pending}`,
@@ -291,41 +320,75 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {cards.map((card, index) => (
-          <Card 
-            key={card.id} 
-            data-demo-id={card.id}
-            className={`bg-card border-border ${card.onClick ? "cursor-pointer hover:border-primary/50 transition-colors" : ""}`}
-            onClick={card.onClick}
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {card.title}
-              </CardTitle>
-              <card.icon className="h-5 w-5 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-card-foreground">{card.value}</div>
-              {card.change !== undefined && (
-                <div className="flex items-center gap-1 mt-1">
-                  {card.positive ? (
-                    <TrendingUp className="h-4 w-4 text-success" />
-                  ) : (
-                    <TrendingDown className="h-4 w-4 text-destructive" />
-                  )}
-                  <span className={`text-sm ${card.positive ? 'text-success' : 'text-destructive'}`}>
-                    {card.positive ? '+' : ''}{card.change}%
-                  </span>
-                  <span className="text-sm text-muted-foreground">{card.changeLabel}</span>
+        {cards.map((card, index) => {
+          const accent = cardAccents[card.id];
+          return (
+            <Card 
+              key={card.id} 
+              data-demo-id={card.id}
+              className={cn(
+                "relative overflow-hidden bg-card border-border transition-all duration-300",
+                card.onClick && "cursor-pointer group",
+                card.onClick && accent.border,
+                "hover:shadow-lg hover:-translate-y-0.5"
+              )}
+              onClick={card.onClick}
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              {/* Gradient accent overlay */}
+              <div className={cn(
+                "absolute inset-0 bg-gradient-to-br opacity-60 transition-opacity group-hover:opacity-100",
+                accent.gradient
+              )} />
+              
+              <CardHeader className="relative flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  {card.title}
+                </CardTitle>
+                <div className={cn(
+                  "p-2 rounded-lg transition-transform group-hover:scale-110",
+                  accent.iconBg
+                )}>
+                  <card.icon className={cn("h-5 w-5", accent.iconColor)} />
                 </div>
-              )}
-              {card.subtitle && (
-                <p className="text-sm text-muted-foreground mt-1">{card.subtitle}</p>
-              )}
-              {card.customSubtitle && card.customSubtitle}
-            </CardContent>
-          </Card>
-        ))}
+              </CardHeader>
+              <CardContent className="relative">
+                <div className="text-3xl font-bold text-card-foreground tracking-tight">{card.value}</div>
+                {card.change !== undefined && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    {card.positive ? (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10">
+                        <TrendingUp className="h-3.5 w-3.5 text-success" />
+                        <span className="text-xs font-medium text-success">
+                          +{card.change}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10">
+                        <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+                        <span className="text-xs font-medium text-destructive">
+                          {card.change}
+                        </span>
+                      </div>
+                    )}
+                    <span className="text-xs text-muted-foreground">{card.changeLabel}</span>
+                  </div>
+                )}
+                {card.subtitle && (
+                  <p className="text-sm text-muted-foreground mt-2">{card.subtitle}</p>
+                )}
+                {card.customSubtitle && card.customSubtitle}
+                
+                {/* Hover arrow indicator */}
+                {card.onClick && (
+                  <div className="absolute bottom-4 right-4 opacity-0 translate-x-2 transition-all group-hover:opacity-100 group-hover:translate-x-0">
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Primary Bank Score Modal */}
@@ -426,11 +489,8 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
             </p>
           </div>
 
-          {/* OK Button */}
-          <div className="flex justify-center pt-2">
-            <Button onClick={() => setShowScoreModal(false)} className="px-8">
-              OK
-            </Button>
+          <div className="flex justify-end">
+            <Button onClick={() => setShowScoreModal(false)}>OK</Button>
           </div>
         </DialogContent>
       </Dialog>
