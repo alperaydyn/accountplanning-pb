@@ -478,8 +478,10 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                 <Badge variant="secondary" className="text-xs h-5 px-1.5">
                   {todayActions.length}
                 </Badge>
+              </div>
+              <div className="pl-8">
                 <Select value={selectedDate} onValueChange={setSelectedDate}>
-                  <SelectTrigger className="h-6 w-auto gap-1 px-2 text-xs bg-background border-border ml-auto">
+                  <SelectTrigger className="h-6 w-auto gap-1 px-2 text-xs bg-background border-border">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-popover z-50">
@@ -493,9 +495,6 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                   </SelectContent>
                 </Select>
               </div>
-              <p className="text-xs text-muted-foreground pl-8">
-                {selectedDateLabel}
-              </p>
             </div>
             <ScrollArea className="h-[260px] pr-2">
               {isLoading ? (
