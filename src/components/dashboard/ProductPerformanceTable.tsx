@@ -25,15 +25,14 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type StatusFilter = 'all' | 'on_track' | 'at_risk' | 'critical';
+type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
+type StatusFilter = 'all' | ProductStatus;
 
 interface ProductPerformanceTableProps {
   selectedDate?: string;
   onDateChange?: (date: string | undefined) => void;
   statusFilter?: StatusFilter;
 }
-
-type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
 
 const statusColors: Record<ProductStatus, string> = {
   on_track: "bg-success/10 text-success border-success/20",
@@ -53,11 +52,15 @@ export function ProductPerformanceTable({ selectedDate, onDateChange, statusFilt
   const { data: actions = [] } = useActions();
   const createTargets = useCreatePortfolioTargets();
 
-  // Helper to get base status category (on_track, at_risk, critical)
-  const getBaseStatus = (status: ProductStatus): 'on_track' | 'at_risk' | 'critical' => {
-    if (status === 'on_track') return 'on_track';
-    if (status === 'at_risk' || status === 'melting' || status === 'growing') return 'at_risk';
-    return 'critical';
+  // Helper to check if a status matches the filter
+  const matchesFilter = (status: ProductStatus, filter: StatusFilter): boolean => {
+    if (filter === 'all') return true;
+    if (filter === status) return true;
+    // Also match base category filters
+    if (filter === 'on_track' && status === 'on_track') return true;
+    if (filter === 'at_risk' && (status === 'at_risk' || status === 'melting' || status === 'growing')) return true;
+    if (filter === 'critical' && (status === 'critical' || status === 'ticket_size' || status === 'diversity')) return true;
+    return false;
   };
 
   const statusLabels: Record<ProductStatus, string> = {
@@ -153,8 +156,7 @@ export function ProductPerformanceTable({ selectedDate, onDateChange, statusFilt
     
     return targets.filter(target => {
       const status = getProductStatus(target);
-      const baseStatus = getBaseStatus(status);
-      return baseStatus === statusFilter;
+      return matchesFilter(status, statusFilter);
     });
   }, [targets, statusFilter]);
 
