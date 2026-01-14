@@ -420,7 +420,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Section 1: Pending actions for the month */}
-          <div className="space-y-4">
+          <div className="flex flex-col h-[340px]">
             <SectionHeader 
               icon={AlertCircle}
               iconColor="bg-amber-500/10 text-amber-500"
@@ -428,7 +428,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
               count={pendingMonthActions.length}
               subtitle={`${format(monthStart, "MMMM", { locale: tr })} ayı içinde`}
             />
-            <ScrollArea className="h-[260px] pr-2">
+            <ScrollArea className="flex-1 pr-2 mt-4">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-pulse flex flex-col items-center gap-2">
@@ -468,7 +468,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           </div>
           
           {/* Section 2: Today's actions */}
-          <div className="space-y-4">
+          <div className="flex flex-col h-[340px]">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
@@ -496,7 +496,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                 </Select>
               </div>
             </div>
-            <ScrollArea className="h-[260px] pr-2">
+            <ScrollArea className="flex-1 pr-2 mt-4">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <div className="animate-pulse flex flex-col items-center gap-2">
@@ -545,35 +545,31 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           </div>
           
           {/* Section 3: Monthly calendar */}
-          <div className="space-y-3">
-            <SectionHeader 
-              icon={CalendarIcon}
-              iconColor="bg-primary/10 text-primary"
-              title="Aksiyon Takvimi"
-              subtitle="Güne tıklayarak ajandaya gidin"
-            />
-            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50">
+          <div className="flex flex-col h-[340px]">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
+                  <CalendarIcon className="h-4 w-4" />
+                </div>
+                <h3 className="font-semibold text-sm">Aksiyon Takvimi</h3>
+              </div>
+              <div className="pl-8 flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-muted-foreground">Güne tıklayarak ajandaya gidin.</span>
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-success/10 text-success border-success/20">
+                  Bu ay tamamlanan: {Object.values(completedByDay).reduce((a, b) => a + b, 0)}
+                </Badge>
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-primary/10 text-primary border-primary/20">
+                  Aktif gün: {Object.keys(completedByDay).length}
+                </Badge>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 flex-1 mt-4">
               <MiniCalendar 
                 selectedDate={targetMonth}
                 actionsByDay={completedByDay}
                 plannedByDay={plannedByDay}
                 onDayClick={handleDayClick}
               />
-            </div>
-            {/* Quick stats */}
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-2 rounded-lg bg-muted/30 text-center">
-                <p className="text-lg font-bold text-foreground">
-                  {Object.values(completedByDay).reduce((a, b) => a + b, 0)}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Bu Ay Tamamlanan</p>
-              </div>
-              <div className="p-2 rounded-lg bg-muted/30 text-center">
-                <p className="text-lg font-bold text-foreground">
-                  {Object.keys(completedByDay).length}
-                </p>
-                <p className="text-[10px] text-muted-foreground">Aktif Gün</p>
-              </div>
             </div>
           </div>
         </div>
