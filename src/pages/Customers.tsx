@@ -76,9 +76,8 @@ const Customers = () => {
     }
   }, [searchParams]);
 
-  // Fetch data from database - use debounced search for silent updates
+  // Fetch data from database - don't pass search to hook, we'll filter locally
   const { data: customers = [], isLoading: customersLoading } = useCustomers({
-    search: debouncedSearch,
     status: statusFilter as CustomerStatus | 'all',
     groupId: groupFilter,
   });
@@ -110,7 +109,18 @@ const Customers = () => {
     return map;
   }, [productCounts]);
 
-  // Filter by product (need to check customer_products) - for now just filter actions
+  // Create a map of customer actions for quick lookup
+  const customerActionsMap = useMemo(() => {
+    const map = new Map<string, typeof allActions>();
+    allActions.forEach((action) => {
+      const existing = map.get(action.customer_id) || [];
+      existing.push(action);
+      map.set(action.customer_id, existing);
+    });
+    return map;
+  }, [allActions]);
+
+  // Filter by action status
   const getCustomerIdsWithActionStatus = (status: string): Set<string> => {
     if (status === "all") return new Set(customers.map(c => c.id));
     return new Set(allActions.filter(a => a.current_status === status).map(a => a.customer_id));
@@ -120,16 +130,35 @@ const Customers = () => {
 
   // Calculate action counts per customer
   const getCustomerActionCounts = (customerId: string) => {
-    const customerActions = allActions.filter(a => a.customer_id === customerId);
+    const customerActions = customerActionsMap.get(customerId) || [];
     const planned = customerActions.filter(a => a.current_status === 'Planlandı').length;
     const pending = customerActions.filter(a => a.current_status === 'Beklemede').length;
     return { planned, pending };
   };
 
-  const filteredCustomers = customers.filter(c => {
-    if (actionStatusFilter !== "all" && !customerIdsWithActionStatus.has(c.id)) return false;
-    return true;
-  });
+  // Apply all filters including search (customer name + action names)
+  const filteredCustomers = useMemo(() => {
+    return customers.filter(c => {
+      // Filter by action status
+      if (actionStatusFilter !== "all" && !customerIdsWithActionStatus.has(c.id)) return false;
+      
+      // Apply search filter - check customer name and action names
+      if (debouncedSearch) {
+        const searchLower = debouncedSearch.toLowerCase();
+        const customerNameMatch = c.name.toLowerCase().includes(searchLower);
+        
+        // Check if any action name matches
+        const customerActions = customerActionsMap.get(c.id) || [];
+        const actionNameMatch = customerActions.some(a => 
+          a.name.toLowerCase().includes(searchLower)
+        );
+        
+        if (!customerNameMatch && !actionNameMatch) return false;
+      }
+      
+      return true;
+    });
+  }, [customers, actionStatusFilter, customerIdsWithActionStatus, debouncedSearch, customerActionsMap]);
 
   const handleGroupClick = (groupId: string, e: React.MouseEvent) => {
     e.stopPropagation();
