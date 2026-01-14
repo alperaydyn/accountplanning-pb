@@ -238,7 +238,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
     },
     {
       id: "scale-up-enterprise",
-      title: t.dashboard.scaleUpEnterprise,
+      title: t.dashboard.customerJourney,
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
       customSubtitle: (
         <div className="flex items-center gap-2 mt-1">
@@ -264,7 +264,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
         </div>
       ),
       icon: Users,
-      onClick: () => navigate("/customers"),
+      onClick: () => navigate("/customer-journey"),
     },
     {
       id: "primary-bank-score",
