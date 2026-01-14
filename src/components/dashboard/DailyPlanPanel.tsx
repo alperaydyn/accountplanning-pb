@@ -545,7 +545,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           </div>
           
           {/* Section 3: Monthly calendar */}
-          <div className="flex flex-col h-[480px]">
+          <div className="flex flex-col h-[440px]">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
