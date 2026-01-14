@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
-import { Calendar, TrendingUp, BarChart3, Target, ArrowUpRight } from "lucide-react";
+import { Calendar, TrendingUp, BarChart3, Target, AlertTriangle, CheckCircle, Zap, Users, Receipt, X } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { ProductPerformanceTable } from "@/components/dashboard";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 // Generate fixed date options
@@ -91,12 +93,6 @@ const getProductStatus = (target: {
   return 'on_track';
 };
 
-const getBaseStatus = (status: ProductStatus): 'on_track' | 'at_risk' | 'critical' => {
-  if (status === 'on_track') return 'on_track';
-  if (status === 'at_risk' || status === 'melting' || status === 'growing') return 'at_risk';
-  return 'critical';
-};
-
 const ProductPerformance = () => {
   const { t, language } = useLanguage();
   const dateOptions = useMemo(() => generateDateOptions(t.primaryBank.current), [t]);
@@ -138,60 +134,104 @@ const ProductPerformance = () => {
     };
   }, [targets]);
 
-  const statusLabels: Record<ProductStatus, string> = {
-    on_track: t.dashboard.onTrack,
-    at_risk: t.dashboard.atRisk,
-    critical: t.dashboard.critical,
-    melting: t.dashboard.melting,
-    growing: t.dashboard.growing,
-    ticket_size: t.dashboard.ticketSize,
-    diversity: t.dashboard.diversity,
+  const statusConfig: Record<ProductStatus, { 
+    label: string; 
+    icon: React.ElementType;
+    colorClass: string;
+    bgClass: string;
+    borderClass: string;
+    description: string;
+  }> = {
+    on_track: { 
+      label: t.dashboard.onTrack, 
+      icon: CheckCircle,
+      colorClass: "text-emerald-600",
+      bgClass: "bg-emerald-500/10 hover:bg-emerald-500/20",
+      borderClass: "border-emerald-500/30",
+      description: language === "tr" ? "Hedef gerçekleşme oranı ≥80%" : "Target achievement ≥80%"
+    },
+    at_risk: { 
+      label: t.dashboard.atRisk, 
+      icon: Target,
+      colorClass: "text-amber-600",
+      bgClass: "bg-amber-500/10 hover:bg-amber-500/20",
+      borderClass: "border-amber-500/30",
+      description: language === "tr" ? "Hedef gerçekleşme oranı 50-79%" : "Target achievement 50-79%"
+    },
+    critical: { 
+      label: t.dashboard.critical, 
+      icon: AlertTriangle,
+      colorClass: "text-destructive",
+      bgClass: "bg-destructive/10 hover:bg-destructive/20",
+      borderClass: "border-destructive/30",
+      description: language === "tr" ? "Hedef gerçekleşme oranı <50%" : "Target achievement <50%"
+    },
+    melting: { 
+      label: t.dashboard.melting, 
+      icon: TrendingUp,
+      colorClass: "text-orange-600",
+      bgClass: "bg-orange-500/10 hover:bg-orange-500/20",
+      borderClass: "border-orange-500/30",
+      description: language === "tr" ? "Stok yüksek, akış düşük" : "High stock, low flow"
+    },
+    growing: { 
+      label: t.dashboard.growing, 
+      icon: Zap,
+      colorClass: "text-blue-600",
+      bgClass: "bg-blue-500/10 hover:bg-blue-500/20",
+      borderClass: "border-blue-500/30",
+      description: language === "tr" ? "Akış yüksek, stok düşük" : "High flow, low stock"
+    },
+    ticket_size: { 
+      label: t.dashboard.ticketSize, 
+      icon: Receipt,
+      colorClass: "text-purple-600",
+      bgClass: "bg-purple-500/10 hover:bg-purple-500/20",
+      borderClass: "border-purple-500/30",
+      description: language === "tr" ? "Müşteri sayısı yüksek, hacim düşük" : "High count, low volume"
+    },
+    diversity: { 
+      label: t.dashboard.diversity, 
+      icon: Users,
+      colorClass: "text-cyan-600",
+      bgClass: "bg-cyan-500/10 hover:bg-cyan-500/20",
+      borderClass: "border-cyan-500/30",
+      description: language === "tr" ? "Hacim yüksek, müşteri sayısı düşük" : "High volume, low count"
+    },
   };
 
-  const DetailedStatusLabel = ({ 
+  const handleFilterClick = (status: StatusFilter) => {
+    setStatusFilter(prev => prev === status ? 'all' : status);
+  };
+
+  const StatusChip = ({ 
     status, 
-    count 
+    count,
+    showIcon = true 
   }: { 
     status: ProductStatus; 
     count: number;
+    showIcon?: boolean;
   }) => {
     if (count === 0) return null;
     
+    const config = statusConfig[status];
+    const Icon = config.icon;
     const isSelected = statusFilter === status;
-    
-    const colorClasses: Record<ProductStatus, string> = {
-      on_track: "text-emerald-600 hover:bg-emerald-500/10",
-      at_risk: "text-amber-600 hover:bg-amber-500/10",
-      critical: "text-destructive hover:bg-destructive/10",
-      melting: "text-orange-600 hover:bg-orange-500/10",
-      growing: "text-blue-600 hover:bg-blue-500/10",
-      ticket_size: "text-purple-600 hover:bg-purple-500/10",
-      diversity: "text-cyan-600 hover:bg-cyan-500/10",
-    };
-    
-    const selectedClasses: Record<ProductStatus, string> = {
-      on_track: "bg-emerald-500/20 ring-1 ring-emerald-500/30",
-      at_risk: "bg-amber-500/20 ring-1 ring-amber-500/30",
-      critical: "bg-destructive/20 ring-1 ring-destructive/30",
-      melting: "bg-orange-500/20 ring-1 ring-orange-500/30",
-      growing: "bg-blue-500/20 ring-1 ring-blue-500/30",
-      ticket_size: "bg-purple-500/20 ring-1 ring-purple-500/30",
-      diversity: "bg-cyan-500/20 ring-1 ring-cyan-500/30",
-    };
     
     return (
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setStatusFilter(isSelected ? 'all' : status);
-        }}
+        onClick={() => handleFilterClick(status)}
         className={cn(
-          "text-xs px-2 py-0.5 rounded-full transition-all cursor-pointer",
-          colorClasses[status],
-          isSelected && selectedClasses[status]
+          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border",
+          config.bgClass,
+          config.colorClass,
+          isSelected ? `ring-2 ring-offset-1 ${config.borderClass} ring-current/30` : config.borderClass
         )}
       >
-        {statusLabels[status]} ({count})
+        {showIcon && <Icon className="w-3.5 h-3.5" />}
+        <span>{config.label}</span>
+        <span className="font-bold">({count})</span>
       </button>
     );
   };
@@ -230,149 +270,171 @@ const ProductPerformance = () => {
           </div>
         </div>
 
-        {/* Hero Panel */}
+        {/* Hero Panel - Redesigned */}
         <Card className="border-border overflow-hidden">
           <CardContent className="p-0">
-            <div className="relative bg-gradient-to-br from-muted/50 to-muted py-8 px-6">
-              <div className="max-w-6xl mx-auto">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  {/* Total Products */}
-                  <button
-                    onClick={() => setStatusFilter('all')}
-                    className={`flex flex-col gap-3 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
-                      statusFilter === 'all' 
-                        ? 'bg-primary/10 border-primary ring-2 ring-primary/20' 
-                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-lg ${statusFilter === 'all' ? 'bg-primary/20' : 'bg-primary/10'}`}>
-                        <BarChart3 className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-foreground">
-                          {summaryStats?.totalProducts || "-"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {language === "tr" ? "Toplam Ürün" : "Total Products"}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
+            {/* Main Stats Row */}
+            <div className="bg-gradient-to-br from-muted/30 via-background to-muted/50 p-6">
+              <div className="grid grid-cols-4 gap-4">
+                {/* Total Products */}
+                <button
+                  onClick={() => handleFilterClick('all')}
+                  className={cn(
+                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
+                    statusFilter === 'all' 
+                      ? "bg-primary/10 border-primary shadow-lg shadow-primary/10" 
+                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    statusFilter === 'all' ? "bg-primary/20" : "bg-primary/10"
+                  )}>
+                    <BarChart3 className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-3xl font-bold text-foreground">
+                      {summaryStats?.totalProducts || "-"}
+                    </p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {language === "tr" ? "Toplam Ürün" : "Total Products"}
+                    </p>
+                  </div>
+                </button>
 
-                  {/* On Track */}
-                  <button
-                    onClick={() => setStatusFilter('on_track')}
-                    className={`flex flex-col gap-3 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
-                      statusFilter === 'on_track' 
-                        ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/20' 
-                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-lg ${statusFilter === 'on_track' ? 'bg-emerald-500/20' : 'bg-emerald-500/10'}`}>
-                        <TrendingUp className="w-6 h-6 text-emerald-500" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-emerald-500">
-                          {summaryStats?.onTrackTotal || "-"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {t.dashboard.onTrack}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Detailed status - only on_track here */}
-                    {summaryStats && summaryStats.counts.on_track > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <DetailedStatusLabel status="on_track" count={summaryStats.counts.on_track} />
-                      </div>
-                    )}
-                  </button>
+                {/* On Track */}
+                <button
+                  onClick={() => handleFilterClick('on_track')}
+                  className={cn(
+                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
+                    statusFilter === 'on_track' 
+                      ? "bg-emerald-500/15 border-emerald-500 shadow-lg shadow-emerald-500/10" 
+                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    statusFilter === 'on_track' ? "bg-emerald-500/25" : "bg-emerald-500/10"
+                  )}>
+                    <CheckCircle className="w-6 h-6 text-emerald-500" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-3xl font-bold text-emerald-500">
+                      {summaryStats?.onTrackTotal ?? "-"}
+                    </p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {t.dashboard.onTrack}
+                    </p>
+                  </div>
+                </button>
 
-                  {/* At Risk */}
-                  <button
-                    onClick={() => setStatusFilter('at_risk')}
-                    className={`flex flex-col gap-3 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
-                      statusFilter === 'at_risk' 
-                        ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/20' 
-                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-lg ${statusFilter === 'at_risk' ? 'bg-amber-500/20' : 'bg-amber-500/10'}`}>
-                        <Target className="w-6 h-6 text-amber-500" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-amber-500">
-                          {summaryStats?.atRiskTotal || "-"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {t.dashboard.atRisk}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Detailed statuses */}
-                    {summaryStats && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <DetailedStatusLabel status="at_risk" count={summaryStats.counts.at_risk} />
-                        <DetailedStatusLabel status="melting" count={summaryStats.counts.melting} />
-                        <DetailedStatusLabel status="growing" count={summaryStats.counts.growing} />
-                      </div>
-                    )}
-                  </button>
+                {/* At Risk */}
+                <button
+                  onClick={() => handleFilterClick('at_risk')}
+                  className={cn(
+                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
+                    statusFilter === 'at_risk' 
+                      ? "bg-amber-500/15 border-amber-500 shadow-lg shadow-amber-500/10" 
+                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    statusFilter === 'at_risk' ? "bg-amber-500/25" : "bg-amber-500/10"
+                  )}>
+                    <Target className="w-6 h-6 text-amber-500" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-3xl font-bold text-amber-500">
+                      {summaryStats?.atRiskTotal ?? "-"}
+                    </p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {t.dashboard.atRisk}
+                    </p>
+                  </div>
+                </button>
 
-                  {/* Critical */}
-                  <button
-                    onClick={() => setStatusFilter('critical')}
-                    className={`flex flex-col gap-3 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
-                      statusFilter === 'critical' 
-                        ? 'bg-destructive/15 border-destructive ring-2 ring-destructive/20' 
-                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className={`p-3 rounded-lg ${statusFilter === 'critical' ? 'bg-destructive/20' : 'bg-destructive/10'}`}>
-                        <ArrowUpRight className="w-6 h-6 text-destructive" />
-                      </div>
-                      <div>
-                        <p className="text-2xl font-bold text-destructive">
-                          {summaryStats?.criticalTotal || "-"}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {t.dashboard.critical}
-                        </p>
-                      </div>
-                    </div>
-                    {/* Detailed statuses */}
-                    {summaryStats && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        <DetailedStatusLabel status="critical" count={summaryStats.counts.critical} />
-                        <DetailedStatusLabel status="ticket_size" count={summaryStats.counts.ticket_size} />
-                        <DetailedStatusLabel status="diversity" count={summaryStats.counts.diversity} />
-                      </div>
-                    )}
-                  </button>
-                </div>
+                {/* Critical */}
+                <button
+                  onClick={() => handleFilterClick('critical')}
+                  className={cn(
+                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
+                    statusFilter === 'critical' 
+                      ? "bg-destructive/15 border-destructive shadow-lg shadow-destructive/10" 
+                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    statusFilter === 'critical' ? "bg-destructive/25" : "bg-destructive/10"
+                  )}>
+                    <AlertTriangle className="w-6 h-6 text-destructive" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-3xl font-bold text-destructive">
+                      {summaryStats?.criticalTotal ?? "-"}
+                    </p>
+                    <p className="text-sm text-muted-foreground font-medium">
+                      {t.dashboard.critical}
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
 
-            {/* Legend */}
-            <div className="p-4 border-t border-border bg-card">
-              <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
+            {/* Detailed Status Chips */}
+            <div className="px-6 py-4 border-t border-border bg-card/50">
+              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-emerald-500" />
-                  <span className="text-muted-foreground">{t.dashboard.onTrack} (≥80% HGO)</span>
+                  <span className="text-sm text-muted-foreground font-medium mr-2">
+                    {language === "tr" ? "Detaylı Durum:" : "Detailed Status:"}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    {summaryStats && (
+                      <>
+                        <StatusChip status="on_track" count={summaryStats.counts.on_track} />
+                        <div className="w-px h-4 bg-border mx-1" />
+                        <StatusChip status="at_risk" count={summaryStats.counts.at_risk} />
+                        <StatusChip status="melting" count={summaryStats.counts.melting} />
+                        <StatusChip status="growing" count={summaryStats.counts.growing} />
+                        <div className="w-px h-4 bg-border mx-1" />
+                        <StatusChip status="critical" count={summaryStats.counts.critical} />
+                        <StatusChip status="ticket_size" count={summaryStats.counts.ticket_size} />
+                        <StatusChip status="diversity" count={summaryStats.counts.diversity} />
+                      </>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-amber-500" />
-                  <span className="text-muted-foreground">{t.dashboard.atRisk} (50-79% HGO)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-destructive" />
-                  <span className="text-muted-foreground">{t.dashboard.critical} (&lt;50% HGO)</span>
-                </div>
+                
+                {/* Active Filter Indicator */}
+                {statusFilter !== 'all' && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setStatusFilter('all')}
+                    className="text-muted-foreground hover:text-foreground gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    {language === "tr" ? "Filtreyi Temizle" : "Clear Filter"}
+                  </Button>
+                )}
               </div>
+              
+              {/* Filter Description */}
+              {statusFilter !== 'all' && (
+                <div className="mt-3 flex items-center gap-2 text-sm animate-fade-in">
+                  <Badge variant="outline" className={cn("gap-1.5", statusConfig[statusFilter].colorClass, statusConfig[statusFilter].bgClass)}>
+                    {(() => {
+                      const Icon = statusConfig[statusFilter].icon;
+                      return <Icon className="w-3.5 h-3.5" />;
+                    })()}
+                    {statusConfig[statusFilter].label}
+                  </Badge>
+                  <span className="text-muted-foreground">
+                    — {statusConfig[statusFilter].description}
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
