@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { Search, Users, Loader2, Sparkles, Package } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
+import { Search, Users, Loader2, Sparkles, Package, ArrowRight } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useCustomers, STATUSES, Customer } from "@/hooks/useCustomers";
 import { useCustomerGroups } from "@/hooks/useCustomerGroups";
 import { useProducts } from "@/hooks/useProducts";
-import { useActions, ACTION_STATUSES } from "@/hooks/useActions";
+import { useActions, ACTION_STATUSES, Action } from "@/hooks/useActions";
 import { CreateCustomerModal } from "@/components/customer/CreateCustomerModal";
 import { Database } from "@/integrations/supabase/types";
 import { useQuery } from "@tanstack/react-query";
@@ -132,6 +132,14 @@ const Customers = () => {
     const planned = customerActions.filter(a => a.current_status === 'Planlandı').length;
     const pending = customerActions.filter(a => a.current_status === 'Beklemede').length;
     return { planned, pending };
+  };
+
+  // Get matching actions for a customer based on search
+  const getMatchingActions = (customerId: string): Action[] => {
+    if (!debouncedSearch.trim()) return [];
+    const searchLower = debouncedSearch.toLowerCase().trim();
+    const customerActions = customerActionsMap.get(customerId) || [];
+    return customerActions.filter(a => a.name.toLowerCase().includes(searchLower));
   };
 
   // Apply all filters including search (customer name + action names)
@@ -291,9 +299,34 @@ const Customers = () => {
                   {filteredCustomers.map((customer) => {
                     const group = customer.customer_groups;
                     const actionCounts = getCustomerActionCounts(customer.id);
+                    const matchingActions = getMatchingActions(customer.id);
                     return (
                       <TableRow key={customer.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/customers/${customer.id}`)}>
-                        <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableCell>
+                          <div className="space-y-1">
+                            <div className="font-medium">{customer.name}</div>
+                            {matchingActions.length > 0 && (
+                              <div className="flex flex-wrap gap-1">
+                                {matchingActions.slice(0, 3).map((action) => (
+                                  <Link
+                                    key={action.id}
+                                    to={`/customers/${customer.id}?action=${action.id}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline bg-primary/10 px-2 py-0.5 rounded-full"
+                                  >
+                                    {action.name}
+                                    <ArrowRight className="h-3 w-3" />
+                                  </Link>
+                                ))}
+                                {matchingActions.length > 3 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    +{matchingActions.length - 3} {t.common.more}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
                         <TableCell>
                           {group ? (
                             <Badge 
