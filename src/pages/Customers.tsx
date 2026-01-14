@@ -120,13 +120,11 @@ const Customers = () => {
     return map;
   }, [allActions]);
 
-  // Filter by action status
-  const getCustomerIdsWithActionStatus = (status: string): Set<string> => {
-    if (status === "all") return new Set(customers.map(c => c.id));
-    return new Set(allActions.filter(a => a.current_status === status).map(a => a.customer_id));
-  };
-
-  const customerIdsWithActionStatus = getCustomerIdsWithActionStatus(actionStatusFilter);
+  // Filter customer IDs by action status - memoized to prevent recalculation
+  const customerIdsWithActionStatus = useMemo(() => {
+    if (actionStatusFilter === "all") return new Set(customers.map(c => c.id));
+    return new Set(allActions.filter(a => a.current_status === actionStatusFilter).map(a => a.customer_id));
+  }, [actionStatusFilter, customers, allActions]);
 
   // Calculate action counts per customer
   const getCustomerActionCounts = (customerId: string) => {
@@ -138,13 +136,14 @@ const Customers = () => {
 
   // Apply all filters including search (customer name + action names)
   const filteredCustomers = useMemo(() => {
+    const searchLower = debouncedSearch.toLowerCase().trim();
+    
     return customers.filter(c => {
       // Filter by action status
       if (actionStatusFilter !== "all" && !customerIdsWithActionStatus.has(c.id)) return false;
       
       // Apply search filter - check customer name and action names
-      if (debouncedSearch) {
-        const searchLower = debouncedSearch.toLowerCase();
+      if (searchLower) {
         const customerNameMatch = c.name.toLowerCase().includes(searchLower);
         
         // Check if any action name matches
@@ -153,7 +152,10 @@ const Customers = () => {
           a.name.toLowerCase().includes(searchLower)
         );
         
-        if (!customerNameMatch && !actionNameMatch) return false;
+        // Check group name match
+        const groupNameMatch = c.customer_groups?.name?.toLowerCase().includes(searchLower) || false;
+        
+        if (!customerNameMatch && !actionNameMatch && !groupNameMatch) return false;
       }
       
       return true;
