@@ -54,16 +54,18 @@ export function AppSidebar() {
 
   const mainNavItems: SidebarItem[] = [
     { title: t.nav.dashboard, url: "/", icon: LayoutDashboard },
-    { title: t.nav.customerJourney, url: "/customer-journey", icon: Map },
     { title: t.nav.productPerformance, url: "/product-performance", icon: BarChart3 },
-    { title: t.nav.primaryBank, url: "/primary-bank", icon: Landmark },
     { title: t.nav.customers, url: "/customers", icon: Users },
+    { title: t.nav.customerJourney, url: "/customer-journey", icon: Map },
+    { title: t.nav.primaryBank, url: "/primary-bank", icon: Landmark },
     { title: t.nav.actionsAgenda, url: "/agenda", icon: Calendar },
     { title: t.nav.aiAssistant, url: "/ai-assistant", icon: Sparkles },
-    { title: t.nav.thresholds, url: "/thresholds", icon: Target },
   ];
 
-  const settingsNavItems: SidebarItem[] = [{ title: t.nav.settings, url: "/settings", icon: Settings }];
+  const settingsNavItems: SidebarItem[] = [
+    { title: t.nav.settings, url: "/settings", icon: Settings },
+    { title: t.nav.thresholds, url: "/thresholds", icon: Target },
+  ];
 
   const userName = user?.user_metadata?.name || user?.email?.split("@")[0] || "User";
   const userInitials = userName
