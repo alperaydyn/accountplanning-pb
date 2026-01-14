@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Users, Loader2, Sparkles, Package } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
@@ -18,6 +18,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 
+// Debounce hook for silent search
+const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  
+  return debouncedValue;
+};
+
 type CustomerStatus = Database['public']['Enums']['customer_status'];
 
 const getStatusBadgeClass = (status: CustomerStatus): string => {
@@ -34,13 +49,16 @@ const getStatusBadgeClass = (status: CustomerStatus): string => {
 const Customers = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionStatusFilter, setActionStatusFilter] = useState<string>("all");
   const [productFilter, setProductFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const { t } = useLanguage();
+
+  // Debounce search input for silent, smooth filtering (300ms delay)
+  const debouncedSearch = useDebounce(searchInput, 300);
 
   // Initialize filters from URL params
   useEffect(() => {
@@ -58,15 +76,15 @@ const Customers = () => {
     }
   }, [searchParams]);
 
-  // Fetch data from database
+  // Fetch data from database - use debounced search for silent updates
   const { data: customers = [], isLoading: customersLoading } = useCustomers({
-    search,
+    search: debouncedSearch,
     status: statusFilter as CustomerStatus | 'all',
     groupId: groupFilter,
   });
   const { data: customerGroups = [] } = useCustomerGroups();
   const { data: products = [] } = useProducts();
-  const { data: allActions = [] } = useActions();
+  const { data: allActions = [], isLoading: actionsLoading } = useActions();
 
   // Fetch product counts for all customers
   const customerIds = customers.map((c) => c.id);
@@ -162,7 +180,12 @@ const Customers = () => {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder={t.customers.searchPlaceholder} value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10" />
+                <Input 
+                  placeholder={t.customers.searchPlaceholder} 
+                  value={searchInput} 
+                  onChange={(e) => setSearchInput(e.target.value)} 
+                  className="pl-10"
+                />
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
