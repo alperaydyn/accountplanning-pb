@@ -65,9 +65,16 @@ export interface Translations {
     aiAssistant: string;
     thresholds: string;
     settings: string;
+    preferences: string;
     mainMenu: string;
     system: string;
     searchPlaceholder: string;
+  };
+
+  // Preferences
+  preferences: {
+    title: string;
+    description: string;
   };
 
   // Dashboard
@@ -536,9 +543,14 @@ export const translations: Record<Language, Translations> = {
       aiAssistant: "AI Asistan",
       thresholds: "Eşik Değerleri",
       settings: "Ayarlar",
+      preferences: "Tercihler",
       mainMenu: "Ana Menü",
       system: "Sistem",
       searchPlaceholder: "Müşteri, aksiyon ara...",
+    },
+    preferences: {
+      title: "Tercihler",
+      description: "Uygulama tercihlerinizi yönetin",
     },
     dashboard: {
       portfolioDashboard: "Portföy Dashboard",
@@ -970,9 +982,14 @@ export const translations: Record<Language, Translations> = {
       aiAssistant: "AI Assistant",
       thresholds: "Thresholds",
       settings: "Settings",
+      preferences: "Preferences",
       mainMenu: "Main Menu",
       system: "System",
       searchPlaceholder: "Search customers, actions...",
+    },
+    preferences: {
+      title: "Preferences",
+      description: "Manage your application preferences",
     },
     dashboard: {
       portfolioDashboard: "Portfolio Dashboard",
@@ -1404,9 +1421,14 @@ export const translations: Record<Language, Translations> = {
       aiAssistant: "Asistente AI",
       thresholds: "Umbrales",
       settings: "Configuración",
+      preferences: "Preferencias",
       mainMenu: "Menú Principal",
       system: "Sistema",
       searchPlaceholder: "Buscar clientes, acciones...",
+    },
+    preferences: {
+      title: "Preferencias",
+      description: "Gestione sus preferencias de aplicación",
     },
     dashboard: {
       portfolioDashboard: "Panel de Cartera",

@@ -16,6 +16,7 @@ import CustomerDetail from "./pages/CustomerDetail";
 import ActionsAgenda from "./pages/ActionsAgenda";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
+import Preferences from "./pages/Preferences";
 import Documentation from "./pages/Documentation";
 import Thresholds from "./pages/Thresholds";
 import Auth from "./pages/Auth";
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/agenda" element={<ProtectedRoute><ActionsAgenda /></ProtectedRoute>} />
               <Route path="/ai-assistant" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
               <Route path="/thresholds" element={<ProtectedRoute><Thresholds /></ProtectedRoute>} />
+              <Route path="/preferences" element={<ProtectedRoute><Preferences /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="/documentation" element={<ProtectedRoute><Documentation /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

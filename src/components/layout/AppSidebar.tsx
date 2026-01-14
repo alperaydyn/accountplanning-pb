@@ -9,6 +9,7 @@ import {
   LogOut,
   Map,
   Settings,
+  SlidersHorizontal,
   Sparkles,
   Target,
   Users,
@@ -63,6 +64,7 @@ export function AppSidebar() {
   ];
 
   const settingsNavItems: SidebarItem[] = [
+    { title: t.nav.preferences, url: "/preferences", icon: SlidersHorizontal },
     { title: t.nav.settings, url: "/settings", icon: Settings },
     { title: t.nav.thresholds, url: "/thresholds", icon: Target },
   ];
