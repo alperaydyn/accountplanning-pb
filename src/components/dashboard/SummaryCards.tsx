@@ -235,6 +235,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       value: `${benchmarkData.score}/${benchmarkData.total}`,
       subtitle: `${benchmarkData.total > 0 ? Math.round((benchmarkData.score / benchmarkData.total) * 100) : 0}% HGO ≥ 75%`,
       icon: Target,
+      onClick: () => navigate("/product-performance"),
     },
     {
       id: "scale-up-enterprise",
