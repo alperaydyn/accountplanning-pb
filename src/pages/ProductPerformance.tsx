@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 // Generate fixed date options
@@ -54,7 +55,25 @@ const generateDateOptions = (currentLabel: string) => {
 };
 
 type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
-type StatusFilter = 'all' | ProductStatus;
+type BaseStatus = 'on_track' | 'at_risk' | 'critical';
+
+// Status to base category mapping
+const statusToBaseCategory: Record<ProductStatus, BaseStatus> = {
+  on_track: 'on_track',
+  at_risk: 'at_risk',
+  melting: 'at_risk',
+  growing: 'at_risk',
+  critical: 'critical',
+  ticket_size: 'critical',
+  diversity: 'critical',
+};
+
+// Detail statuses under each base category
+const baseToDetailStatuses: Record<BaseStatus, ProductStatus[]> = {
+  on_track: ['on_track'],
+  at_risk: ['at_risk', 'melting', 'growing'],
+  critical: ['critical', 'ticket_size', 'diversity'],
+};
 
 // Same logic as ProductPerformanceTable
 const getProductStatus = (target: { 
@@ -97,11 +116,12 @@ const ProductPerformance = () => {
   const { t, language } = useLanguage();
   const dateOptions = useMemo(() => generateDateOptions(t.primaryBank.current), [t]);
   const [selectedDate, setSelectedDate] = useState<string>(dateOptions[0].value);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [activeBaseStatus, setActiveBaseStatus] = useState<BaseStatus | null>(null);
+  const [selectedDetailStatuses, setSelectedDetailStatuses] = useState<Set<ProductStatus>>(new Set());
   
   const { data: targets = [] } = usePortfolioTargets(selectedDate);
   
-  // Calculate summary stats with correct status logic
+  // Calculate summary stats
   const summaryStats = useMemo(() => {
     if (targets.length === 0) return null;
     
@@ -120,7 +140,6 @@ const ProductPerformance = () => {
       counts[status]++;
     });
     
-    // Base category counts
     const onTrackTotal = counts.on_track;
     const atRiskTotal = counts.at_risk + counts.melting + counts.growing;
     const criticalTotal = counts.critical + counts.ticket_size + counts.diversity;
@@ -138,103 +157,78 @@ const ProductPerformance = () => {
     label: string; 
     icon: React.ElementType;
     colorClass: string;
-    bgClass: string;
-    borderClass: string;
-    description: string;
   }> = {
     on_track: { 
       label: t.dashboard.onTrack, 
       icon: CheckCircle,
       colorClass: "text-emerald-600",
-      bgClass: "bg-emerald-500/10 hover:bg-emerald-500/20",
-      borderClass: "border-emerald-500/30",
-      description: language === "tr" ? "Hedef gerçekleşme oranı ≥80%" : "Target achievement ≥80%"
     },
     at_risk: { 
       label: t.dashboard.atRisk, 
       icon: Target,
       colorClass: "text-amber-600",
-      bgClass: "bg-amber-500/10 hover:bg-amber-500/20",
-      borderClass: "border-amber-500/30",
-      description: language === "tr" ? "Hedef gerçekleşme oranı 50-79%" : "Target achievement 50-79%"
     },
     critical: { 
       label: t.dashboard.critical, 
       icon: AlertTriangle,
       colorClass: "text-destructive",
-      bgClass: "bg-destructive/10 hover:bg-destructive/20",
-      borderClass: "border-destructive/30",
-      description: language === "tr" ? "Hedef gerçekleşme oranı <50%" : "Target achievement <50%"
     },
     melting: { 
       label: t.dashboard.melting, 
       icon: TrendingUp,
       colorClass: "text-orange-600",
-      bgClass: "bg-orange-500/10 hover:bg-orange-500/20",
-      borderClass: "border-orange-500/30",
-      description: language === "tr" ? "Stok yüksek, akış düşük" : "High stock, low flow"
     },
     growing: { 
       label: t.dashboard.growing, 
       icon: Zap,
       colorClass: "text-blue-600",
-      bgClass: "bg-blue-500/10 hover:bg-blue-500/20",
-      borderClass: "border-blue-500/30",
-      description: language === "tr" ? "Akış yüksek, stok düşük" : "High flow, low stock"
     },
     ticket_size: { 
       label: t.dashboard.ticketSize, 
       icon: Receipt,
       colorClass: "text-purple-600",
-      bgClass: "bg-purple-500/10 hover:bg-purple-500/20",
-      borderClass: "border-purple-500/30",
-      description: language === "tr" ? "Müşteri sayısı yüksek, hacim düşük" : "High count, low volume"
     },
     diversity: { 
       label: t.dashboard.diversity, 
       icon: Users,
       colorClass: "text-cyan-600",
-      bgClass: "bg-cyan-500/10 hover:bg-cyan-500/20",
-      borderClass: "border-cyan-500/30",
-      description: language === "tr" ? "Hacim yüksek, müşteri sayısı düşük" : "High volume, low count"
     },
   };
 
-  const handleFilterClick = (status: StatusFilter) => {
-    setStatusFilter(prev => prev === status ? 'all' : status);
+  const handleBaseStatusClick = (baseStatus: BaseStatus) => {
+    if (activeBaseStatus === baseStatus) {
+      // Toggle off - clear everything
+      setActiveBaseStatus(null);
+      setSelectedDetailStatuses(new Set());
+    } else {
+      // Select new base status and auto-select all its detail statuses
+      setActiveBaseStatus(baseStatus);
+      setSelectedDetailStatuses(new Set(baseToDetailStatuses[baseStatus]));
+    }
   };
 
-  const StatusChip = ({ 
-    status, 
-    count,
-    showIcon = true 
-  }: { 
-    status: ProductStatus; 
-    count: number;
-    showIcon?: boolean;
-  }) => {
-    if (count === 0) return null;
-    
-    const config = statusConfig[status];
-    const Icon = config.icon;
-    const isSelected = statusFilter === status;
-    
-    return (
-      <button
-        onClick={() => handleFilterClick(status)}
-        className={cn(
-          "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200 border",
-          config.bgClass,
-          config.colorClass,
-          isSelected ? `ring-2 ring-offset-1 ${config.borderClass} ring-current/30` : config.borderClass
-        )}
-      >
-        {showIcon && <Icon className="w-3.5 h-3.5" />}
-        <span>{config.label}</span>
-        <span className="font-bold">({count})</span>
-      </button>
-    );
+  const handleClearFilter = () => {
+    setActiveBaseStatus(null);
+    setSelectedDetailStatuses(new Set());
   };
+
+  const handleDetailStatusToggle = (status: ProductStatus) => {
+    setSelectedDetailStatuses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(status)) {
+        newSet.delete(status);
+      } else {
+        newSet.add(status);
+      }
+      return newSet;
+    });
+  };
+
+  // Build filter for table - convert to format table expects
+  const tableStatusFilter = useMemo(() => {
+    if (selectedDetailStatuses.size === 0) return 'all';
+    return Array.from(selectedDetailStatuses);
+  }, [selectedDetailStatuses]);
 
   return (
     <AppLayout>
@@ -270,169 +264,233 @@ const ProductPerformance = () => {
           </div>
         </div>
 
-        {/* Hero Panel - Redesigned */}
+        {/* Hero Panel */}
         <Card className="border-border overflow-hidden">
           <CardContent className="p-0">
-            {/* Main Stats Row */}
             <div className="bg-gradient-to-br from-muted/30 via-background to-muted/50 p-6">
               <div className="grid grid-cols-4 gap-4">
                 {/* Total Products */}
                 <button
-                  onClick={() => handleFilterClick('all')}
+                  onClick={handleClearFilter}
                   className={cn(
-                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
-                    statusFilter === 'all' 
+                    "relative flex flex-col p-4 rounded-xl border transition-all duration-200",
+                    activeBaseStatus === null 
                       ? "bg-primary/10 border-primary shadow-lg shadow-primary/10" 
                       : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
                   )}
                 >
-                  <div className={cn(
-                    "p-3 rounded-xl transition-colors",
-                    statusFilter === 'all' ? "bg-primary/20" : "bg-primary/10"
-                  )}>
-                    <BarChart3 className="w-6 h-6 text-primary" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-3xl font-bold text-foreground">
-                      {summaryStats?.totalProducts || "-"}
-                    </p>
-                    <p className="text-sm text-muted-foreground font-medium">
-                      {language === "tr" ? "Toplam Ürün" : "Total Products"}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "p-2.5 rounded-lg transition-colors",
+                      activeBaseStatus === null ? "bg-primary/20" : "bg-primary/10"
+                    )}>
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-2xl font-bold text-foreground">
+                        {summaryStats?.totalProducts || "-"}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {language === "tr" ? "Toplam" : "Total"}
+                      </p>
+                    </div>
                   </div>
                 </button>
 
                 {/* On Track */}
-                <button
-                  onClick={() => handleFilterClick('on_track')}
-                  className={cn(
-                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
-                    statusFilter === 'on_track' 
-                      ? "bg-emerald-500/15 border-emerald-500 shadow-lg shadow-emerald-500/10" 
-                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => handleBaseStatusClick('on_track')}
+                    className={cn(
+                      "relative flex items-center gap-3 p-4 rounded-xl border transition-all duration-200",
+                      activeBaseStatus === 'on_track' 
+                        ? "bg-emerald-500/15 border-emerald-500 shadow-lg shadow-emerald-500/10 rounded-b-none" 
+                        : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-2.5 rounded-lg transition-colors",
+                      activeBaseStatus === 'on_track' ? "bg-emerald-500/25" : "bg-emerald-500/10"
+                    )}>
+                      <CheckCircle className="w-5 h-5 text-emerald-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-2xl font-bold text-emerald-500">
+                        {summaryStats?.onTrackTotal ?? "-"}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {t.dashboard.onTrack}
+                      </p>
+                    </div>
+                  </button>
+                  {activeBaseStatus === 'on_track' && summaryStats && (
+                    <div className="bg-emerald-500/10 border border-t-0 border-emerald-500/30 rounded-b-xl px-3 py-2 animate-fade-in">
+                      <div className="flex flex-wrap gap-1.5">
+                        {baseToDetailStatuses.on_track.map(status => {
+                          const count = summaryStats.counts[status];
+                          if (count === 0) return null;
+                          const isChecked = selectedDetailStatuses.has(status);
+                          return (
+                            <label
+                              key={status}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-all",
+                                isChecked 
+                                  ? "bg-emerald-500/30 text-emerald-700" 
+                                  : "bg-emerald-500/10 text-emerald-600/70 hover:bg-emerald-500/20"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => handleDetailStatusToggle(status)}
+                                className="h-3 w-3 border-emerald-500/50"
+                              />
+                              {statusConfig[status].label} ({count})
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
-                >
-                  <div className={cn(
-                    "p-3 rounded-xl transition-colors",
-                    statusFilter === 'on_track' ? "bg-emerald-500/25" : "bg-emerald-500/10"
-                  )}>
-                    <CheckCircle className="w-6 h-6 text-emerald-500" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-3xl font-bold text-emerald-500">
-                      {summaryStats?.onTrackTotal ?? "-"}
-                    </p>
-                    <p className="text-sm text-muted-foreground font-medium">
-                      {t.dashboard.onTrack}
-                    </p>
-                  </div>
-                </button>
+                </div>
 
                 {/* At Risk */}
-                <button
-                  onClick={() => handleFilterClick('at_risk')}
-                  className={cn(
-                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
-                    statusFilter === 'at_risk' 
-                      ? "bg-amber-500/15 border-amber-500 shadow-lg shadow-amber-500/10" 
-                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => handleBaseStatusClick('at_risk')}
+                    className={cn(
+                      "relative flex items-center gap-3 p-4 rounded-xl border transition-all duration-200",
+                      activeBaseStatus === 'at_risk' 
+                        ? "bg-amber-500/15 border-amber-500 shadow-lg shadow-amber-500/10 rounded-b-none" 
+                        : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
+                    )}
+                  >
+                    <div className={cn(
+                      "p-2.5 rounded-lg transition-colors",
+                      activeBaseStatus === 'at_risk' ? "bg-amber-500/25" : "bg-amber-500/10"
+                    )}>
+                      <Target className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-2xl font-bold text-amber-500">
+                        {summaryStats?.atRiskTotal ?? "-"}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {t.dashboard.atRisk}
+                      </p>
+                    </div>
+                  </button>
+                  {activeBaseStatus === 'at_risk' && summaryStats && (
+                    <div className="bg-amber-500/10 border border-t-0 border-amber-500/30 rounded-b-xl px-3 py-2 animate-fade-in">
+                      <div className="flex flex-wrap gap-1.5">
+                        {baseToDetailStatuses.at_risk.map(status => {
+                          const count = summaryStats.counts[status];
+                          if (count === 0) return null;
+                          const isChecked = selectedDetailStatuses.has(status);
+                          const Icon = statusConfig[status].icon;
+                          return (
+                            <label
+                              key={status}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-all",
+                                isChecked 
+                                  ? "bg-amber-500/30 text-amber-700" 
+                                  : "bg-amber-500/10 text-amber-600/70 hover:bg-amber-500/20"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => handleDetailStatusToggle(status)}
+                                className="h-3 w-3 border-amber-500/50"
+                              />
+                              <Icon className="w-3 h-3" />
+                              {statusConfig[status].label} ({count})
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
-                >
-                  <div className={cn(
-                    "p-3 rounded-xl transition-colors",
-                    statusFilter === 'at_risk' ? "bg-amber-500/25" : "bg-amber-500/10"
-                  )}>
-                    <Target className="w-6 h-6 text-amber-500" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-3xl font-bold text-amber-500">
-                      {summaryStats?.atRiskTotal ?? "-"}
-                    </p>
-                    <p className="text-sm text-muted-foreground font-medium">
-                      {t.dashboard.atRisk}
-                    </p>
-                  </div>
-                </button>
+                </div>
 
                 {/* Critical */}
-                <button
-                  onClick={() => handleFilterClick('critical')}
-                  className={cn(
-                    "relative flex items-center gap-4 p-5 rounded-xl border transition-all duration-200",
-                    statusFilter === 'critical' 
-                      ? "bg-destructive/15 border-destructive shadow-lg shadow-destructive/10" 
-                      : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
-                  )}
-                >
-                  <div className={cn(
-                    "p-3 rounded-xl transition-colors",
-                    statusFilter === 'critical' ? "bg-destructive/25" : "bg-destructive/10"
-                  )}>
-                    <AlertTriangle className="w-6 h-6 text-destructive" />
-                  </div>
-                  <div className="text-left">
-                    <p className="text-3xl font-bold text-destructive">
-                      {summaryStats?.criticalTotal ?? "-"}
-                    </p>
-                    <p className="text-sm text-muted-foreground font-medium">
-                      {t.dashboard.critical}
-                    </p>
-                  </div>
-                </button>
-              </div>
-            </div>
-
-            {/* Detailed Status Chips */}
-            <div className="px-6 py-4 border-t border-border bg-card/50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground font-medium mr-2">
-                    {language === "tr" ? "Detaylı Durum:" : "Detailed Status:"}
-                  </span>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {summaryStats && (
-                      <>
-                        <StatusChip status="on_track" count={summaryStats.counts.on_track} />
-                        <div className="w-px h-4 bg-border mx-1" />
-                        <StatusChip status="at_risk" count={summaryStats.counts.at_risk} />
-                        <StatusChip status="melting" count={summaryStats.counts.melting} />
-                        <StatusChip status="growing" count={summaryStats.counts.growing} />
-                        <div className="w-px h-4 bg-border mx-1" />
-                        <StatusChip status="critical" count={summaryStats.counts.critical} />
-                        <StatusChip status="ticket_size" count={summaryStats.counts.ticket_size} />
-                        <StatusChip status="diversity" count={summaryStats.counts.diversity} />
-                      </>
+                <div className="flex flex-col">
+                  <button
+                    onClick={() => handleBaseStatusClick('critical')}
+                    className={cn(
+                      "relative flex items-center gap-3 p-4 rounded-xl border transition-all duration-200",
+                      activeBaseStatus === 'critical' 
+                        ? "bg-destructive/15 border-destructive shadow-lg shadow-destructive/10 rounded-b-none" 
+                        : "bg-card/60 border-border/50 hover:bg-card hover:border-border hover:shadow-md"
                     )}
-                  </div>
+                  >
+                    <div className={cn(
+                      "p-2.5 rounded-lg transition-colors",
+                      activeBaseStatus === 'critical' ? "bg-destructive/25" : "bg-destructive/10"
+                    )}>
+                      <AlertTriangle className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div className="text-left">
+                      <p className="text-2xl font-bold text-destructive">
+                        {summaryStats?.criticalTotal ?? "-"}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {t.dashboard.critical}
+                      </p>
+                    </div>
+                  </button>
+                  {activeBaseStatus === 'critical' && summaryStats && (
+                    <div className="bg-destructive/10 border border-t-0 border-destructive/30 rounded-b-xl px-3 py-2 animate-fade-in">
+                      <div className="flex flex-wrap gap-1.5">
+                        {baseToDetailStatuses.critical.map(status => {
+                          const count = summaryStats.counts[status];
+                          if (count === 0) return null;
+                          const isChecked = selectedDetailStatuses.has(status);
+                          const Icon = statusConfig[status].icon;
+                          return (
+                            <label
+                              key={status}
+                              className={cn(
+                                "inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium cursor-pointer transition-all",
+                                isChecked 
+                                  ? "bg-destructive/30 text-destructive" 
+                                  : "bg-destructive/10 text-destructive/70 hover:bg-destructive/20"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => handleDetailStatusToggle(status)}
+                                className="h-3 w-3 border-destructive/50"
+                              />
+                              <Icon className="w-3 h-3" />
+                              {statusConfig[status].label} ({count})
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                
-                {/* Active Filter Indicator */}
-                {statusFilter !== 'all' && (
+              </div>
+
+              {/* Active Filter Indicator */}
+              {selectedDetailStatuses.size > 0 && (
+                <div className="mt-4 flex items-center justify-between animate-fade-in">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Badge variant="outline" className="gap-1">
+                      {language === "tr" ? "Filtre:" : "Filter:"}
+                      {Array.from(selectedDetailStatuses).map(s => statusConfig[s].label).join(', ')}
+                    </Badge>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setStatusFilter('all')}
-                    className="text-muted-foreground hover:text-foreground gap-1"
+                    onClick={handleClearFilter}
+                    className="text-muted-foreground hover:text-foreground gap-1 h-7"
                   >
-                    <X className="w-3.5 h-3.5" />
-                    {language === "tr" ? "Filtreyi Temizle" : "Clear Filter"}
+                    <X className="w-3 h-3" />
+                    {language === "tr" ? "Temizle" : "Clear"}
                   </Button>
-                )}
-              </div>
-              
-              {/* Filter Description */}
-              {statusFilter !== 'all' && (
-                <div className="mt-3 flex items-center gap-2 text-sm animate-fade-in">
-                  <Badge variant="outline" className={cn("gap-1.5", statusConfig[statusFilter].colorClass, statusConfig[statusFilter].bgClass)}>
-                    {(() => {
-                      const Icon = statusConfig[statusFilter].icon;
-                      return <Icon className="w-3.5 h-3.5" />;
-                    })()}
-                    {statusConfig[statusFilter].label}
-                  </Badge>
-                  <span className="text-muted-foreground">
-                    — {statusConfig[statusFilter].description}
-                  </span>
                 </div>
               )}
             </div>
@@ -444,7 +502,7 @@ const ProductPerformance = () => {
           <ProductPerformanceTable 
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
-            statusFilter={statusFilter}
+            statusFilter={tableStatusFilter}
           />
         </div>
       </div>

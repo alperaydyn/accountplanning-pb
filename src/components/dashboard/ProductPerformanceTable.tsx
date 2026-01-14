@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing' | 'ticket_size' | 'diversity';
-type StatusFilter = 'all' | ProductStatus;
+type StatusFilter = 'all' | ProductStatus[];
 
 interface ProductPerformanceTableProps {
   selectedDate?: string;
@@ -55,11 +55,9 @@ export function ProductPerformanceTable({ selectedDate, onDateChange, statusFilt
   // Helper to check if a status matches the filter
   const matchesFilter = (status: ProductStatus, filter: StatusFilter): boolean => {
     if (filter === 'all') return true;
-    if (filter === status) return true;
-    // Also match base category filters
-    if (filter === 'on_track' && status === 'on_track') return true;
-    if (filter === 'at_risk' && (status === 'at_risk' || status === 'melting' || status === 'growing')) return true;
-    if (filter === 'critical' && (status === 'critical' || status === 'ticket_size' || status === 'diversity')) return true;
+    if (Array.isArray(filter)) {
+      return filter.includes(status);
+    }
     return false;
   };
 
@@ -213,7 +211,7 @@ export function ProductPerformanceTable({ selectedDate, onDateChange, statusFilt
               </TableRow>
             </TableHeader>
             <TableBody>
-              {targets.map((target) => {
+              {filteredTargets.map((target) => {
                 const status = getProductStatus(target);
                 const actionsCount = getActionsCount(target.product_id);
                 
