@@ -559,7 +559,7 @@ export const translations: Record<Language, Translations> = {
       noInsightsYet: "Henüz içgörü yok",
       insightsDescription: "AI içgörüleri oluşturmak için butona tıklayın.",
       primaryBankScore: "Ana Banka Skoru",
-      benchmarkScore: "Benchmark Skoru",
+      benchmarkScore: "Ürün Performansı",
       primary: "Ana Banka",
       target: "Hedef",
       rest: "Diğer",
