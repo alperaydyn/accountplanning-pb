@@ -46,11 +46,15 @@ const Customers = () => {
   useEffect(() => {
     const productId = searchParams.get("product");
     const groupId = searchParams.get("group");
+    const status = searchParams.get("status");
     if (productId) {
       setProductFilter(productId);
     }
     if (groupId) {
       setGroupFilter(groupId);
+    }
+    if (status) {
+      setStatusFilter(status);
     }
   }, [searchParams]);
 
