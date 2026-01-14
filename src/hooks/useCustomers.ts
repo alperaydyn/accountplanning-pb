@@ -78,14 +78,7 @@ export const useCustomers = (filters?: CustomerFilters) => {
       return data as Customer[];
     },
     enabled: !!portfolioManager,
-    // Keep previous data while fetching to prevent flickering
     placeholderData: keepPreviousData,
-    select: (data) => {
-      // Apply search filter client-side after data is fetched
-      if (!search) return data;
-      const searchLower = search.toLowerCase();
-      return data.filter(c => c.name.toLowerCase().includes(searchLower));
-    },
   });
 };
 
