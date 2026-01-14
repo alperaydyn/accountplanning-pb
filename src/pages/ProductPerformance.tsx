@@ -50,10 +50,13 @@ const generateDateOptions = (currentLabel: string) => {
   return options;
 };
 
+type StatusFilter = 'all' | 'on_track' | 'at_risk' | 'critical';
+
 const ProductPerformance = () => {
   const { t, language } = useLanguage();
   const dateOptions = useMemo(() => generateDateOptions(t.primaryBank.current), [t]);
   const [selectedDate, setSelectedDate] = useState<string>(dateOptions[0].value);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   
   const { data: targets = [] } = usePortfolioTargets(selectedDate);
   
@@ -120,8 +123,15 @@ const ProductPerformance = () => {
               <div className="max-w-6xl mx-auto">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* Total Products */}
-                  <div className="flex items-center gap-4 p-4 bg-card/80 rounded-xl backdrop-blur-sm border border-border/50">
-                    <div className="p-3 rounded-lg bg-primary/10">
+                  <button
+                    onClick={() => setStatusFilter('all')}
+                    className={`flex items-center gap-4 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
+                      statusFilter === 'all' 
+                        ? 'bg-primary/10 border-primary ring-2 ring-primary/20' 
+                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
+                    }`}
+                  >
+                    <div className={`p-3 rounded-lg ${statusFilter === 'all' ? 'bg-primary/20' : 'bg-primary/10'}`}>
                       <BarChart3 className="w-6 h-6 text-primary" />
                     </div>
                     <div>
@@ -132,11 +142,18 @@ const ProductPerformance = () => {
                         {language === "tr" ? "Toplam Ürün" : "Total Products"}
                       </p>
                     </div>
-                  </div>
+                  </button>
 
                   {/* On Track */}
-                  <div className="flex items-center gap-4 p-4 bg-card/80 rounded-xl backdrop-blur-sm border border-border/50">
-                    <div className="p-3 rounded-lg bg-emerald-500/10">
+                  <button
+                    onClick={() => setStatusFilter('on_track')}
+                    className={`flex items-center gap-4 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
+                      statusFilter === 'on_track' 
+                        ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/20' 
+                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
+                    }`}
+                  >
+                    <div className={`p-3 rounded-lg ${statusFilter === 'on_track' ? 'bg-emerald-500/20' : 'bg-emerald-500/10'}`}>
                       <TrendingUp className="w-6 h-6 text-emerald-500" />
                     </div>
                     <div>
@@ -147,11 +164,18 @@ const ProductPerformance = () => {
                         {t.dashboard.onTrack}
                       </p>
                     </div>
-                  </div>
+                  </button>
 
                   {/* At Risk */}
-                  <div className="flex items-center gap-4 p-4 bg-card/80 rounded-xl backdrop-blur-sm border border-border/50">
-                    <div className="p-3 rounded-lg bg-amber-500/10">
+                  <button
+                    onClick={() => setStatusFilter('at_risk')}
+                    className={`flex items-center gap-4 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
+                      statusFilter === 'at_risk' 
+                        ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/20' 
+                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
+                    }`}
+                  >
+                    <div className={`p-3 rounded-lg ${statusFilter === 'at_risk' ? 'bg-amber-500/20' : 'bg-amber-500/10'}`}>
                       <Target className="w-6 h-6 text-amber-500" />
                     </div>
                     <div>
@@ -162,11 +186,18 @@ const ProductPerformance = () => {
                         {t.dashboard.atRisk}
                       </p>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Critical */}
-                  <div className="flex items-center gap-4 p-4 bg-card/80 rounded-xl backdrop-blur-sm border border-border/50">
-                    <div className="p-3 rounded-lg bg-destructive/10">
+                  <button
+                    onClick={() => setStatusFilter('critical')}
+                    className={`flex items-center gap-4 p-4 rounded-xl backdrop-blur-sm border transition-all duration-200 text-left ${
+                      statusFilter === 'critical' 
+                        ? 'bg-destructive/15 border-destructive ring-2 ring-destructive/20' 
+                        : 'bg-card/80 border-border/50 hover:bg-card hover:border-border'
+                    }`}
+                  >
+                    <div className={`p-3 rounded-lg ${statusFilter === 'critical' ? 'bg-destructive/20' : 'bg-destructive/10'}`}>
                       <ArrowUpRight className="w-6 h-6 text-destructive" />
                     </div>
                     <div>
@@ -177,7 +208,7 @@ const ProductPerformance = () => {
                         {t.dashboard.critical}
                       </p>
                     </div>
-                  </div>
+                  </button>
                 </div>
               </div>
             </div>
@@ -207,6 +238,7 @@ const ProductPerformance = () => {
           <ProductPerformanceTable 
             selectedDate={selectedDate}
             onDateChange={setSelectedDate}
+            statusFilter={statusFilter}
           />
         </div>
       </div>
