@@ -58,21 +58,24 @@ type ProductStatus = 'on_track' | 'at_risk' | 'critical' | 'melting' | 'growing'
 type BaseStatus = 'on_track' | 'at_risk' | 'critical';
 
 // Status to base category mapping
+// Yolunda: {Yolunda, Büyüyen, Çeşitlilik}
+// Riskli: {Riskli, Eriyen, Bilet Büyüklüğü}
+// Kritik: {Kritik}
 const statusToBaseCategory: Record<ProductStatus, BaseStatus> = {
   on_track: 'on_track',
+  growing: 'on_track',
+  diversity: 'on_track',
   at_risk: 'at_risk',
   melting: 'at_risk',
-  growing: 'at_risk',
+  ticket_size: 'at_risk',
   critical: 'critical',
-  ticket_size: 'critical',
-  diversity: 'critical',
 };
 
 // Detail statuses under each base category
 const baseToDetailStatuses: Record<BaseStatus, ProductStatus[]> = {
-  on_track: ['on_track'],
-  at_risk: ['at_risk', 'melting', 'growing'],
-  critical: ['critical', 'ticket_size', 'diversity'],
+  on_track: ['on_track', 'growing', 'diversity'],
+  at_risk: ['at_risk', 'melting', 'ticket_size'],
+  critical: ['critical'],
 };
 
 // Same logic as ProductPerformanceTable
@@ -140,9 +143,12 @@ const ProductPerformance = () => {
       counts[status]++;
     });
     
-    const onTrackTotal = counts.on_track;
-    const atRiskTotal = counts.at_risk + counts.melting + counts.growing;
-    const criticalTotal = counts.critical + counts.ticket_size + counts.diversity;
+    // Yolunda: on_track + growing + diversity
+    const onTrackTotal = counts.on_track + counts.growing + counts.diversity;
+    // Riskli: at_risk + melting + ticket_size
+    const atRiskTotal = counts.at_risk + counts.melting + counts.ticket_size;
+    // Kritik: critical only
+    const criticalTotal = counts.critical;
     
     return { 
       counts,
