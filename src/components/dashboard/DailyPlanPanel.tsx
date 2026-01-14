@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { format, startOfWeek, addDays, startOfMonth, endOfMonth, isSameDay, isSameMonth, getDay } from "date-fns";
+import { format, startOfWeek, addDays, startOfMonth, endOfMonth, isSameDay, isSameMonth, getDay, parseISO, eachDayOfInterval, isToday as isDateToday } from "date-fns";
 import { tr } from "date-fns/locale";
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle, Target, Sparkles, ArrowUpRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,19 +14,23 @@ import { cn } from "@/lib/utils";
 
 const ITEMS_PER_PAGE = 4;
 
-// Generate current week's dates
-const generateWeekDates = () => {
+interface DailyPlanPanelProps {
+  recordDate?: string; // Format: "YYYY-MM"
+}
+
+// Generate week dates containing a specific date
+const generateWeekDatesForDate = (targetDate: Date) => {
   const today = new Date();
-  const weekStart = startOfWeek(today, { weekStartsOn: 1 }); // Monday
+  const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 }); // Monday
   const dates: { value: string; label: string; isToday: boolean }[] = [];
   
   for (let i = 0; i < 7; i++) {
     const date = addDays(weekStart, i);
-    const isToday = isSameDay(date, today);
+    const isTodayDate = isSameDay(date, today);
     dates.push({
       value: format(date, "yyyy-MM-dd"),
       label: format(date, "EEEE, d MMM", { locale: tr }),
-      isToday,
+      isToday: isTodayDate,
     });
   }
   
@@ -277,23 +281,56 @@ const SectionHeader = ({
   </div>
 );
 
-export const DailyPlanPanel = () => {
+export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
   const navigate = useNavigate();
   const { t } = useLanguage();
-  const weekDates = useMemo(() => generateWeekDates(), []);
-  const todayStr = format(new Date(), "yyyy-MM-dd");
   
-  const [selectedDate, setSelectedDate] = useState(todayStr);
+  // Parse the recordDate prop (format: "YYYY-MM") to get the target month
+  const targetMonth = useMemo(() => {
+    if (recordDate) {
+      // recordDate is "YYYY-MM", parse as first day of that month
+      return parseISO(`${recordDate}-01`);
+    }
+    return new Date();
+  }, [recordDate]);
+  
+  const monthStart = startOfMonth(targetMonth);
+  const monthEnd = endOfMonth(targetMonth);
+  
+  // Check if target month is current month
+  const isCurrentMonth = isSameMonth(targetMonth, new Date());
+  
+  // Generate week dates - for current month use current week, otherwise use first week of month
+  const weekDates = useMemo(() => {
+    if (isCurrentMonth) {
+      return generateWeekDatesForDate(new Date());
+    }
+    // For historical months, generate dates from the first week of that month
+    return generateWeekDatesForDate(monthStart);
+  }, [isCurrentMonth, monthStart]);
+  
+  // Default selected date
+  const defaultSelectedDate = useMemo(() => {
+    if (isCurrentMonth) {
+      return format(new Date(), "yyyy-MM-dd");
+    }
+    // For historical months, select the first day of the month
+    return format(monthStart, "yyyy-MM-dd");
+  }, [isCurrentMonth, monthStart]);
+  
+  const [selectedDate, setSelectedDate] = useState(defaultSelectedDate);
   const [pendingPage, setPendingPage] = useState(1);
   const [todayPage, setTodayPage] = useState(1);
   
+  // Reset selectedDate when recordDate changes
+  useEffect(() => {
+    setSelectedDate(defaultSelectedDate);
+    setPendingPage(1);
+    setTodayPage(1);
+  }, [defaultSelectedDate]);
+  
   // Fetch all actions
   const { data: allActions = [], isLoading } = useActions();
-  
-  // Current month for filtering
-  const currentMonth = new Date();
-  const monthStart = startOfMonth(currentMonth);
-  const monthEnd = endOfMonth(currentMonth);
   
   // Pending actions for the month (planned but not completed)
   const pendingMonthActions = useMemo(() => {
@@ -513,7 +550,7 @@ export const DailyPlanPanel = () => {
             />
             <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50">
               <MiniCalendar 
-                selectedDate={currentMonth}
+                selectedDate={targetMonth}
                 actionsByDay={completedByDay}
                 plannedByDay={plannedByDay}
                 onDayClick={handleDayClick}

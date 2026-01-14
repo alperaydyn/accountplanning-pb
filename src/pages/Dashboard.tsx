@@ -132,7 +132,7 @@ const Dashboard = () => {
 
         {/* Daily Plan Panel */}
         <div data-demo-id="daily-plan-panel" className="animate-fade-in" style={{ animationDelay: '200ms' }}>
-          <DailyPlanPanel />
+          <DailyPlanPanel recordDate={effectiveDate} />
         </div>
 
         {/* AI Insights Panel */}
