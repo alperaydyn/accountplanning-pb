@@ -502,6 +502,16 @@ export default function ActionsAgenda() {
                 {day}
               </div>
             ))}
+            {/* Empty cells for days before the first of the month (week starts on Monday = 1) */}
+            {(() => {
+              const firstDayOfMonth = days[0];
+              const dayOfWeek = getDay(firstDayOfMonth); // 0 = Sunday, 1 = Monday, ...
+              // Convert to Monday-based index: Monday = 0, Sunday = 6
+              const mondayBasedIndex = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+              return Array.from({ length: mondayBasedIndex }, (_, i) => (
+                <div key={`empty-${i}`} className="min-h-[120px]" />
+              ));
+            })()}
             {days.map(day => {
               const dayActions = getActionsForDay(day);
               const isWeekend = isWeekendDay(day);
