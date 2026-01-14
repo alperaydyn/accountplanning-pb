@@ -610,7 +610,7 @@ export const translations: Record<Language, Translations> = {
     customers: {
       title: "Müşteriler",
       description: "Müşteri portföyünüzü yönetin",
-      searchPlaceholder: "Müşteri adı ara...",
+      searchPlaceholder: "Müşteri adı veya aksiyon ara...",
       newCustomer: "Yeni Müşteri",
       generateCustomer: "Müşteri Oluştur",
       noCustomers: "Müşteri bulunamadı",
@@ -1049,7 +1049,7 @@ export const translations: Record<Language, Translations> = {
     customers: {
       title: "Customers",
       description: "Manage your customer portfolio",
-      searchPlaceholder: "Search customer name...",
+      searchPlaceholder: "Search customer name or action...",
       newCustomer: "New Customer",
       generateCustomer: "Generate Customer",
       noCustomers: "No customers found",
@@ -1488,7 +1488,7 @@ export const translations: Record<Language, Translations> = {
     customers: {
       title: "Clientes",
       description: "Gestione su cartera de clientes",
-      searchPlaceholder: "Buscar nombre de cliente...",
+      searchPlaceholder: "Buscar nombre de cliente o acción...",
       newCustomer: "Nuevo Cliente",
       generateCustomer: "Generar Cliente",
       noCustomers: "No se encontraron clientes",
