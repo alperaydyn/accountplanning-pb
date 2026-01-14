@@ -58,6 +58,7 @@ export interface Translations {
   nav: {
     dashboard: string;
     primaryBank: string;
+    customerJourney: string;
     customers: string;
     actionsAgenda: string;
     aiAssistant: string;
@@ -76,6 +77,7 @@ export interface Translations {
     selectDate: string;
     totalCustomers: string;
     scaleUpEnterprise: string;
+    customerJourney: string;
     activeCustomers: string;
     totalVolume: string;
     pendingActions: string;
@@ -526,6 +528,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: "Dashboard",
       primaryBank: "Ana Banka",
+      customerJourney: "Müşteri Yolculuğu",
       customers: "Müşteriler",
       actionsAgenda: "Aksiyon Takvimi",
       aiAssistant: "AI Asistan",
@@ -542,6 +545,7 @@ export const translations: Record<Language, Translations> = {
       selectDate: "Tarih seçin",
       totalCustomers: "Toplam Müşteri",
       scaleUpEnterprise: "Scale Up Enterprise",
+      customerJourney: "Müşteri Yolculuğu",
       activeCustomers: "Aktif Müşteri",
       totalVolume: "Toplam Hacim",
       pendingActions: "Bekleyen Aksiyonlar",
@@ -957,6 +961,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: "Dashboard",
       primaryBank: "Primary Bank",
+      customerJourney: "Customer Journey",
       customers: "Customers",
       actionsAgenda: "Actions Agenda",
       aiAssistant: "AI Assistant",
@@ -973,6 +978,7 @@ export const translations: Record<Language, Translations> = {
       selectDate: "Select date",
       totalCustomers: "Total Customers",
       scaleUpEnterprise: "Scale Up Enterprise",
+      customerJourney: "Customer Journey",
       activeCustomers: "Active Customers",
       totalVolume: "Total Volume",
       pendingActions: "Pending Actions",
@@ -1388,6 +1394,7 @@ export const translations: Record<Language, Translations> = {
     nav: {
       dashboard: "Panel",
       primaryBank: "Banco Principal",
+      customerJourney: "Viaje del Cliente",
       customers: "Clientes",
       actionsAgenda: "Agenda de Acciones",
       aiAssistant: "Asistente AI",
@@ -1404,6 +1411,7 @@ export const translations: Record<Language, Translations> = {
       selectDate: "Seleccionar fecha",
       totalCustomers: "Total de Clientes",
       scaleUpEnterprise: "Scale Up Enterprise",
+      customerJourney: "Viaje del Cliente",
       activeCustomers: "Clientes Activos",
       totalVolume: "Volumen Total",
       pendingActions: "Acciones Pendientes",
