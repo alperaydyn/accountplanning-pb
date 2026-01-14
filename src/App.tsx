@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import CustomerJourney from "./pages/CustomerJourney";
+import ProductPerformance from "./pages/ProductPerformance";
 import PrimaryBank from "./pages/PrimaryBank";
 import PrimaryBankEngine from "./pages/PrimaryBankEngine";
 import Customers from "./pages/Customers";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/customer-journey" element={<ProtectedRoute><CustomerJourney /></ProtectedRoute>} />
+              <Route path="/product-performance" element={<ProtectedRoute><ProductPerformance /></ProtectedRoute>} />
               <Route path="/primary-bank" element={<ProtectedRoute><PrimaryBank /></ProtectedRoute>} />
               <Route path="/primary-bank/engine" element={<ProtectedRoute><PrimaryBankEngine /></ProtectedRoute>} />
               <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />

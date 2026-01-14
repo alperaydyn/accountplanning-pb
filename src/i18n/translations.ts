@@ -59,6 +59,7 @@ export interface Translations {
     dashboard: string;
     primaryBank: string;
     customerJourney: string;
+    productPerformance: string;
     customers: string;
     actionsAgenda: string;
     aiAssistant: string;
@@ -529,6 +530,7 @@ export const translations: Record<Language, Translations> = {
       dashboard: "Dashboard",
       primaryBank: "Ana Banka",
       customerJourney: "Müşteri Yolculuğu",
+      productPerformance: "Ürün Performansı",
       customers: "Müşteriler",
       actionsAgenda: "Aksiyon Takvimi",
       aiAssistant: "AI Asistan",
@@ -962,6 +964,7 @@ export const translations: Record<Language, Translations> = {
       dashboard: "Dashboard",
       primaryBank: "Primary Bank",
       customerJourney: "Customer Journey",
+      productPerformance: "Product Performance",
       customers: "Customers",
       actionsAgenda: "Actions Agenda",
       aiAssistant: "AI Assistant",
@@ -1395,6 +1398,7 @@ export const translations: Record<Language, Translations> = {
       dashboard: "Panel",
       primaryBank: "Banco Principal",
       customerJourney: "Viaje del Cliente",
+      productPerformance: "Rendimiento del Producto",
       customers: "Clientes",
       actionsAgenda: "Agenda de Acciones",
       aiAssistant: "Asistente AI",

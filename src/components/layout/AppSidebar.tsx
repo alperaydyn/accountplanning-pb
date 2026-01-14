@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
+  BarChart3,
   Calendar,
   Landmark,
   LayoutDashboard,
   Loader2,
   LogOut,
+  Map,
   Settings,
   Sparkles,
   Target,
@@ -52,6 +54,8 @@ export function AppSidebar() {
 
   const mainNavItems: SidebarItem[] = [
     { title: t.nav.dashboard, url: "/", icon: LayoutDashboard },
+    { title: t.nav.customerJourney, url: "/customer-journey", icon: Map },
+    { title: t.nav.productPerformance, url: "/product-performance", icon: BarChart3 },
     { title: t.nav.primaryBank, url: "/primary-bank", icon: Landmark },
     { title: t.nav.customers, url: "/customers", icon: Users },
     { title: t.nav.actionsAgenda, url: "/agenda", icon: Calendar },
