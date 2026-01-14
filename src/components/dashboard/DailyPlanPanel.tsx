@@ -404,32 +404,16 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
     <Card className="w-full overflow-hidden">
       {/* Header with gradient */}
       <CardHeader className="pb-4 bg-gradient-to-r from-primary/5 via-transparent to-accent/5">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-primary/10">
-              <CalendarIcon className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg font-semibold">Günlük Planım</CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Aksiyonlarınızı takip edin ve planlayın
-              </p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-primary/10">
+            <CalendarIcon className="h-5 w-5 text-primary" />
           </div>
-          <Select value={selectedDate} onValueChange={setSelectedDate}>
-            <SelectTrigger className="w-[200px] h-9 text-sm bg-background/80 backdrop-blur-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {weekDates.map((date) => (
-                <SelectItem key={date.value} value={date.value}>
-                  <span className={cn(date.isToday && "font-semibold text-primary")}>
-                    {date.label} {date.isToday && "(Bugün)"}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div>
+            <CardTitle className="text-lg font-semibold">Günlük Planım</CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Aksiyonlarınızı takip edin ve planlayın
+            </p>
+          </div>
         </div>
       </CardHeader>
       
@@ -485,13 +469,34 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           
           {/* Section 2: Today's actions */}
           <div className="space-y-4">
-            <SectionHeader 
-              icon={Target}
-              iconColor="bg-primary/10 text-primary"
-              title="Günün Aksiyonları"
-              count={todayActions.length}
-              subtitle={selectedDateLabel}
-            />
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
+                  <Target className="h-4 w-4" />
+                </div>
+                <h3 className="font-semibold text-sm">Günün Aksiyonları</h3>
+                <Badge variant="secondary" className="text-xs h-5 px-1.5">
+                  {todayActions.length}
+                </Badge>
+                <Select value={selectedDate} onValueChange={setSelectedDate}>
+                  <SelectTrigger className="h-6 w-auto gap-1 px-2 text-xs bg-background border-border ml-auto">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50">
+                    {weekDates.map((date) => (
+                      <SelectItem key={date.value} value={date.value} className="text-xs">
+                        <span className={cn(date.isToday && "font-semibold text-primary")}>
+                          {format(parseISO(date.value), "d MMM", { locale: tr })} {date.isToday && "(Bugün)"}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <p className="text-xs text-muted-foreground pl-8">
+                {selectedDateLabel}
+              </p>
+            </div>
             <ScrollArea className="h-[260px] pr-2">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
