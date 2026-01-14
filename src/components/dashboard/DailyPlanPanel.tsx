@@ -554,7 +554,6 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                 <h3 className="font-semibold text-sm">Aksiyon Takvimi</h3>
               </div>
               <div className="pl-8 flex items-center gap-2 flex-wrap">
-                <span className="text-xs text-muted-foreground">Güne tıklayarak ajandaya gidin.</span>
                 <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-success/10 text-success border-success/20">
                   Bu ay tamamlanan: {Object.values(completedByDay).reduce((a, b) => a + b, 0)}
                 </Badge>
