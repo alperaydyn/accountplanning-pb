@@ -420,7 +420,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
       <CardContent className="pt-2">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Section 1: Pending actions for the month */}
-          <div className="flex flex-col h-[400px]">
+          <div className="flex flex-col h-[480px]">
             <SectionHeader 
               icon={AlertCircle}
               iconColor="bg-amber-500/10 text-amber-500"
@@ -468,7 +468,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           </div>
           
           {/* Section 2: Today's actions */}
-          <div className="flex flex-col h-[400px]">
+          <div className="flex flex-col h-[480px]">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
@@ -545,7 +545,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           </div>
           
           {/* Section 3: Monthly calendar */}
-          <div className="flex flex-col h-[400px]">
+          <div className="flex flex-col h-[480px]">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
