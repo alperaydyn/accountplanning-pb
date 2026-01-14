@@ -62,9 +62,9 @@ const ActionItem = ({ action, onClick, accentColor }: { action: Action; onClick:
   <div 
     onClick={onClick}
     className={cn(
-      "group relative flex items-start gap-3 p-3 rounded-xl border border-border bg-card/50",
+      "group relative flex items-start gap-2.5 p-2.5 rounded-xl border border-border bg-card/50",
       "hover:bg-accent/50 hover:border-accent hover:shadow-sm cursor-pointer transition-all duration-200",
-      "before:absolute before:left-0 before:top-3 before:bottom-3 before:w-1 before:rounded-full before:transition-all",
+      "before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-1 before:rounded-full before:transition-all",
       accentColor
     )}
   >
@@ -446,7 +446,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                   </p>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {paginatedPending.map((action) => (
                     <ActionItem 
                       key={action.id} 
