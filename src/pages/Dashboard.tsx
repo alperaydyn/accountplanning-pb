@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Calendar } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
-import { SummaryCards, ProductPerformanceTable, InsightsPanel } from "@/components/dashboard";
+import { SummaryCards, InsightsPanel } from "@/components/dashboard";
 import { usePortfolioManager } from "@/hooks/usePortfolioManager";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -111,14 +111,6 @@ const Dashboard = () => {
         {/* AI Insights Panel */}
         <div data-demo-id="insights-panel">
           <InsightsPanel recordDate={effectiveDate} />
-        </div>
-
-        {/* Product Performance Table */}
-        <div data-demo-id="product-table">
-          <ProductPerformanceTable 
-            selectedDate={selectedDate}
-            onDateChange={setSelectedDate}
-          />
         </div>
       </div>
     </AppLayout>
