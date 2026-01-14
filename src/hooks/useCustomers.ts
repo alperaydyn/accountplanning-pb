@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePortfolioManager } from './usePortfolioManager';
 import { Database } from '@/integrations/supabase/types';
@@ -37,8 +37,11 @@ export interface CustomerFilters {
 export const useCustomers = (filters?: CustomerFilters) => {
   const { data: portfolioManager } = usePortfolioManager();
 
+  // Exclude search from queryKey to prevent refetches - search is client-side only
+  const { search, ...serverFilters } = filters || {};
+
   return useQuery({
-    queryKey: ['customers', portfolioManager?.id, filters],
+    queryKey: ['customers', portfolioManager?.id, serverFilters],
     queryFn: async () => {
       if (!portfolioManager) return [];
       
@@ -54,34 +57,35 @@ export const useCustomers = (filters?: CustomerFilters) => {
         .eq('portfolio_manager_id', portfolioManager.id)
         .order('name');
 
-      // Apply filters
-      if (filters?.sector && filters.sector !== 'all') {
-        query = query.eq('sector', filters.sector);
+      // Apply server-side filters only
+      if (serverFilters?.sector && serverFilters.sector !== 'all') {
+        query = query.eq('sector', serverFilters.sector);
       }
-      if (filters?.segment && filters.segment !== 'all') {
-        query = query.eq('segment', filters.segment);
+      if (serverFilters?.segment && serverFilters.segment !== 'all') {
+        query = query.eq('segment', serverFilters.segment);
       }
-      if (filters?.status && filters.status !== 'all') {
-        query = query.eq('status', filters.status);
+      if (serverFilters?.status && serverFilters.status !== 'all') {
+        query = query.eq('status', serverFilters.status);
       }
-      if (filters?.groupId && filters.groupId !== 'all') {
-        query = query.eq('group_id', filters.groupId);
+      if (serverFilters?.groupId && serverFilters.groupId !== 'all') {
+        query = query.eq('group_id', serverFilters.groupId);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Apply search filter client-side (for name search)
-      let results = data as Customer[];
-      if (filters?.search) {
-        const searchLower = filters.search.toLowerCase();
-        results = results.filter(c => c.name.toLowerCase().includes(searchLower));
-      }
-
-      return results;
+      return data as Customer[];
     },
     enabled: !!portfolioManager,
+    // Keep previous data while fetching to prevent flickering
+    placeholderData: keepPreviousData,
+    select: (data) => {
+      // Apply search filter client-side after data is fetched
+      if (!search) return data;
+      const searchLower = search.toLowerCase();
+      return data.filter(c => c.name.toLowerCase().includes(searchLower));
+    },
   });
 };
 
