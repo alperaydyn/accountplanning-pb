@@ -1,11 +1,15 @@
 # Build stage
 FROM node:20-alpine AS build
 
-# Define build arguments for Vite environment variables, 
-# > required to run at google cloud
+# Define build arguments for Vite environment variables
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
 ARG VITE_SUPABASE_PROJECT_ID
+
+# Set environment variables from build args (Vite embeds these at build time)
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
+ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
+ENV VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
 
 WORKDIR /app
 
