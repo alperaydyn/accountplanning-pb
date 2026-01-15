@@ -58,37 +58,52 @@ const PriorityBadge = ({ priority }: { priority: string }) => {
 };
 
 // Action list item with enhanced design
-const ActionItem = ({ action, onClick, accentColor }: { action: Action; onClick: () => void; accentColor?: string }) => (
-  <div 
-    onClick={onClick}
-    className={cn(
-      "group relative flex items-start gap-2.5 p-2.5 rounded-xl border border-border bg-card/50",
-      "hover:bg-accent/50 hover:border-accent hover:shadow-sm cursor-pointer transition-all duration-200",
-      "before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-1 before:rounded-full before:transition-all",
-      accentColor
-    )}
-  >
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2 mb-1">
-        <span className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-          {action.customers?.name}
-        </span>
-        <PriorityBadge priority={action.priority} />
+const ActionItem = ({ action, onClick, accentColor }: { action: Action; onClick: () => void; accentColor?: string }) => {
+  const isCompleted = action.current_status === "Tamamlandı";
+  
+  return (
+    <div 
+      onClick={onClick}
+      className={cn(
+        "group relative flex items-start gap-2.5 p-2.5 rounded-xl border border-border bg-card/50",
+        "hover:bg-accent/50 hover:border-accent hover:shadow-sm cursor-pointer transition-all duration-200",
+        "before:absolute before:left-0 before:top-2.5 before:bottom-2.5 before:w-1 before:rounded-full before:transition-all",
+        isCompleted && "bg-success/5 border-success/20",
+        accentColor
+      )}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          {isCompleted && <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />}
+          <span className={cn(
+            "font-medium text-sm truncate group-hover:text-primary transition-colors",
+            isCompleted && "text-muted-foreground"
+          )}>
+            {action.customers?.name}
+          </span>
+          <PriorityBadge priority={action.priority} />
+        </div>
+        <p className={cn(
+          "text-sm text-muted-foreground truncate",
+          isCompleted && "line-through text-muted-foreground/60"
+        )}>{action.name}</p>
+        <p className="text-xs text-muted-foreground/70 mt-1 flex items-center gap-1">
+          <span className={cn(
+            "inline-block w-1.5 h-1.5 rounded-full",
+            isCompleted ? "bg-success/50" : "bg-primary/50"
+          )} />
+          {action.products?.name}
+        </p>
       </div>
-      <p className="text-sm text-muted-foreground truncate">{action.name}</p>
-      <p className="text-xs text-muted-foreground/70 mt-1 flex items-center gap-1">
-        <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/50" />
-        {action.products?.name}
-      </p>
+      <div className="flex flex-col items-end gap-1">
+        <span className="text-xs text-muted-foreground whitespace-nowrap">
+          {format(new Date(action.action_target_date), "d MMM", { locale: tr })}
+        </span>
+        <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
     </div>
-    <div className="flex flex-col items-end gap-1">
-      <span className="text-xs text-muted-foreground whitespace-nowrap">
-        {format(new Date(action.action_target_date), "d MMM", { locale: tr })}
-      </span>
-      <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-    </div>
-  </div>
-);
+  );
+};
 
 // Pagination component with improved design
 const Pagination = ({ 
@@ -332,22 +347,38 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
   // Fetch all actions
   const { data: allActions = [], isLoading } = useActions();
   
-  // Pending actions for the month (planned but not completed)
-  const pendingMonthActions = useMemo(() => {
+  // All actions for the month (pending, planned, and completed)
+  const monthActions = useMemo(() => {
     return allActions.filter(a => {
       const actionDate = new Date(a.action_target_date);
-      const isPendingOrPlanned = a.current_status === "Beklemede" || a.current_status === "Planlandı";
+      const isRelevantStatus = a.current_status === "Beklemede" || a.current_status === "Planlandı" || a.current_status === "Tamamlandı";
       const isInMonth = actionDate >= monthStart && actionDate <= monthEnd;
-      return isPendingOrPlanned && isInMonth;
-    }).sort((a, b) => new Date(a.action_target_date).getTime() - new Date(b.action_target_date).getTime());
+      return isRelevantStatus && isInMonth;
+    }).sort((a, b) => {
+      // Sort: pending/planned first, then completed; within each group by date
+      const aCompleted = a.current_status === "Tamamlandı" ? 1 : 0;
+      const bCompleted = b.current_status === "Tamamlandı" ? 1 : 0;
+      if (aCompleted !== bCompleted) return aCompleted - bCompleted;
+      return new Date(a.action_target_date).getTime() - new Date(b.action_target_date).getTime();
+    });
   }, [allActions, monthStart, monthEnd]);
+
+  // Count of pending actions only (for display)
+  const pendingMonthActionsCount = useMemo(() => {
+    return monthActions.filter(a => a.current_status === "Beklemede" || a.current_status === "Planlandı").length;
+  }, [monthActions]);
   
-  // Today's actions
+  // Today's actions (including completed)
   const todayActions = useMemo(() => {
     return allActions.filter(a => {
       const actionDate = format(new Date(a.action_target_date), "yyyy-MM-dd");
-      const isActiveStatus = a.current_status === "Beklemede" || a.current_status === "Planlandı";
-      return actionDate === selectedDate && isActiveStatus;
+      const isRelevantStatus = a.current_status === "Beklemede" || a.current_status === "Planlandı" || a.current_status === "Tamamlandı";
+      return actionDate === selectedDate && isRelevantStatus;
+    }).sort((a, b) => {
+      // Sort: pending/planned first, then completed
+      const aCompleted = a.current_status === "Tamamlandı" ? 1 : 0;
+      const bCompleted = b.current_status === "Tamamlandı" ? 1 : 0;
+      return aCompleted - bCompleted;
     });
   }, [allActions, selectedDate]);
   
@@ -376,10 +407,10 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
   }, [allActions]);
   
   // Pagination calculations
-  const pendingTotalPages = Math.ceil(pendingMonthActions.length / ITEMS_PER_PAGE);
+  const pendingTotalPages = Math.ceil(monthActions.length / ITEMS_PER_PAGE);
   const todayTotalPages = Math.ceil(todayActions.length / ITEMS_PER_PAGE);
   
-  const paginatedPending = pendingMonthActions.slice(
+  const paginatedPending = monthActions.slice(
     (pendingPage - 1) * ITEMS_PER_PAGE,
     pendingPage * ITEMS_PER_PAGE
   );
@@ -424,9 +455,9 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
             <SectionHeader 
               icon={AlertCircle}
               iconColor="bg-amber-500/10 text-amber-500"
-              title="Bekleyen Aksiyonlar"
-              count={pendingMonthActions.length}
-              subtitle={`${format(monthStart, "MMMM", { locale: tr })} ayı içinde`}
+              title="Aylık Aksiyonlar"
+              count={monthActions.length}
+              subtitle={`${pendingMonthActionsCount} bekleyen, ${monthActions.length - pendingMonthActionsCount} tamamlanan`}
             />
             <ScrollArea className="flex-1 pr-2 mt-4">
               {isLoading ? (
