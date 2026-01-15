@@ -172,8 +172,8 @@ const MiniCalendar = ({
   
   const weekDays = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
-  // Calculate max actions for intensity scaling (based on planned actions)
-  const maxActions = Math.max(...Object.values(plannedByDay), 1);
+  // Calculate max actions for intensity scaling (based on completed actions)
+  const maxCompletedActions = Math.max(...Object.values(actionsByDay), 1);
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -203,15 +203,15 @@ const MiniCalendar = ({
           const isCurrentMonth = isSameMonth(d, selectedDate);
           const isToday = isSameDay(d, today);
           const isWeekend = getDay(d) === 0 || getDay(d) === 6;
-          const intensity = plannedCount > 0 ? Math.min(plannedCount / maxActions, 1) : 0;
+          const completedIntensity = completedCount > 0 ? Math.min(completedCount / maxCompletedActions, 1) : 0;
           const isHovered = hoveredDay === dateStr;
           
-          // Color based on planned actions - using sidebar dark blue tones
+          // Color based on completed actions - gradient intensity with sidebar dark blue
           const getBgColor = () => {
-            if (!isCurrentMonth || plannedCount === 0) return undefined;
-            if (intensity > 0.7) return 'hsl(215 60% 22% / 0.35)';
-            if (intensity > 0.4) return 'hsl(215 60% 22% / 0.22)';
-            return 'hsl(215 60% 22% / 0.12)';
+            if (!isCurrentMonth || completedCount === 0) return undefined;
+            // Calculate lightness: from 70% (lightest) down to 22% (darkest/max intensity)
+            const lightness = 70 - (completedIntensity * 48); // 70 -> 22
+            return `hsl(215 60% ${lightness}%)`;
           };
           
           return (
@@ -223,10 +223,10 @@ const MiniCalendar = ({
               className={cn(
                 "relative flex flex-col items-center justify-center rounded-md text-xs transition-all h-full",
                 !isCurrentMonth && "text-muted-foreground/30",
-                isCurrentMonth && !isWeekend && "hover:bg-accent hover:scale-105",
-                isCurrentMonth && isWeekend && "bg-muted/30 hover:bg-muted/50",
+                isCurrentMonth && !isWeekend && !completedCount && "hover:bg-accent hover:scale-105",
+                isCurrentMonth && isWeekend && !completedCount && "bg-muted/30 hover:bg-muted/50",
                 isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background font-bold",
-                plannedCount > 0 && isCurrentMonth && "font-medium"
+                completedCount > 0 && isCurrentMonth && "font-medium text-white hover:scale-105"
               )}
               style={{
                 backgroundColor: getBgColor()
