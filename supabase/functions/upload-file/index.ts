@@ -38,13 +38,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Decode base64 data
+    // Decode URL-safe base64 data (Python: base64.urlsafe_b64encode with padding stripped)
     let decodedData: Uint8Array;
     let bytes: Uint8Array;
     
     try {
+      // Convert URL-safe base64 to standard base64
+      let standardB64 = data.replace(/-/g, '+').replace(/_/g, '/');
+      
+      // Add back padding if needed
+      const paddingNeeded = (4 - (standardB64.length % 4)) % 4;
+      standardB64 += '='.repeat(paddingNeeded);
+      
       // Decode base64 to binary
-      const binaryString = atob(data);
+      const binaryString = atob(standardB64);
       bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
@@ -56,14 +63,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check if data is gzip compressed (magic bytes: 0x1f 0x8b)
-    const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+    // Check if data is zlib compressed (magic bytes: 0x78 for zlib)
+    // 0x78 0x01 = no compression, 0x78 0x9C = default, 0x78 0xDA = best compression
+    const isZlib = bytes.length >= 2 && bytes[0] === 0x78 && 
+      (bytes[1] === 0x01 || bytes[1] === 0x5E || bytes[1] === 0x9C || bytes[1] === 0xDA);
 
-    if (isGzip) {
+    if (isZlib) {
       try {
-        const ds = new DecompressionStream("gzip");
+        const ds = new DecompressionStream("deflate");
         const writer = ds.writable.getWriter();
-        writer.write(bytes.slice().buffer);
+        // Skip zlib header (2 bytes) and adler32 checksum (4 bytes at end)
+        const rawDeflate = bytes.slice(2, bytes.length - 4);
+        writer.write(rawDeflate.buffer);
         writer.close();
 
         const reader = ds.readable.getReader();
@@ -84,12 +95,12 @@ Deno.serve(async (req) => {
           offset += chunk.length;
         }
       } catch (e) {
-        console.error("Gzip decompression failed:", e);
+        console.error("Zlib decompression failed:", e);
         // Fall back to raw bytes if decompression fails
         decodedData = bytes;
       }
     } else {
-      // Not gzip compressed, use raw decoded bytes
+      // Not zlib compressed, use raw decoded bytes
       decodedData = bytes;
     }
 
