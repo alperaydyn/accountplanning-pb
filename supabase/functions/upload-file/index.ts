@@ -17,8 +17,19 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Parse request body
-    const { file, data }: UploadRequest = await req.json();
+    let file: string;
+    let data: string;
+
+    // Support both GET (query params) and POST (body)
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      file = url.searchParams.get("file") || "";
+      data = url.searchParams.get("data") || "";
+    } else {
+      const body: UploadRequest = await req.json();
+      file = body.file;
+      data = body.data;
+    }
 
     if (!file || !data) {
       return new Response(
