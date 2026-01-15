@@ -90,6 +90,29 @@ Deno.serve(async (req) => {
     const bucketName = "uploads";
     const filePath = file;
 
+    // Determine content type based on file extension
+    const getContentType = (filename: string): string => {
+      const ext = filename.split('.').pop()?.toLowerCase();
+      const mimeTypes: Record<string, string> = {
+        'txt': 'text/plain',
+        'json': 'application/json',
+        'csv': 'text/csv',
+        'xml': 'application/xml',
+        'html': 'text/html',
+        'css': 'text/css',
+        'js': 'application/javascript',
+        'pdf': 'application/pdf',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+      };
+      return mimeTypes[ext || ''] || 'application/octet-stream';
+    };
+
+    const contentType = getContentType(filePath);
+
     // Check if file already exists
     const { data: existingFile } = await supabase.storage
       .from(bucketName)
@@ -108,7 +131,7 @@ Deno.serve(async (req) => {
       const { error: updateError } = await supabase.storage
         .from(bucketName)
         .update(filePath, finalData, {
-          contentType: "application/octet-stream",
+          contentType,
           upsert: true,
         });
 
@@ -125,7 +148,7 @@ Deno.serve(async (req) => {
       const { error: uploadError } = await supabase.storage
         .from(bucketName)
         .upload(filePath, finalData, {
-          contentType: "application/octet-stream",
+          contentType,
           upsert: true,
         });
 
