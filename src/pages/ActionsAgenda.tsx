@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, Link, useNavigate } from "react-router-dom";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, isToday, isSameDay, addWeeks, subWeeks, addMonths, subMonths, addDays, subDays, getDay } from "date-fns";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles, List, Search, Filter } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Clock, CheckCircle2, XCircle, AlertCircle, Sparkles, List, Search, Filter, PauseCircle } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useActions, Action } from "@/hooks/useActions";
 import { useCustomers } from "@/hooks/useCustomers";
 import { useProducts } from "@/hooks/useProducts";
@@ -42,6 +43,7 @@ export default function ActionsAgenda() {
   
   const [viewMode, setViewMode] = useState<ViewMode>("weekly");
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedStatuses, setSelectedStatuses] = useState<ActionStatus[]>(['Beklemede', 'Planlandı']);
   const [isViewInitialized, setIsViewInitialized] = useState(false);
 
   // Load preferred view from settings
@@ -60,13 +62,13 @@ export default function ActionsAgenda() {
     }
   };
 
-  const statusConfig: Record<ActionStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType }> = {
-    'Beklemede': { label: t.statusLabels['Beklemede'], variant: "secondary", icon: Clock },
-    'Planlandı': { label: t.statusLabels['Planlandı'], variant: "default", icon: CalendarIcon },
-    'Tamamlandı': { label: t.statusLabels['Tamamlandı'], variant: "outline", icon: CheckCircle2 },
-    'Ertelendi': { label: t.statusLabels['Ertelendi'], variant: "secondary", icon: AlertCircle },
-    'İlgilenmiyor': { label: t.statusLabels['İlgilenmiyor'], variant: "destructive", icon: XCircle },
-    'Uygun Değil': { label: t.statusLabels['Uygun Değil'], variant: "destructive", icon: XCircle },
+  const statusConfig: Record<ActionStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: React.ElementType; color: string }> = {
+    'Beklemede': { label: t.statusLabels['Beklemede'], variant: "secondary", icon: Clock, color: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
+    'Planlandı': { label: t.statusLabels['Planlandı'], variant: "default", icon: CalendarIcon, color: "bg-primary/10 text-primary border-primary/30" },
+    'Tamamlandı': { label: t.statusLabels['Tamamlandı'], variant: "outline", icon: CheckCircle2, color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
+    'Ertelendi': { label: t.statusLabels['Ertelendi'], variant: "secondary", icon: PauseCircle, color: "bg-slate-500/10 text-slate-600 border-slate-500/30" },
+    'İlgilenmiyor': { label: t.statusLabels['İlgilenmiyor'], variant: "destructive", icon: XCircle, color: "bg-destructive/10 text-destructive border-destructive/30" },
+    'Uygun Değil': { label: t.statusLabels['Uygun Değil'], variant: "destructive", icon: XCircle, color: "bg-destructive/10 text-destructive border-destructive/30" },
   };
 
   const handleAIPlanForDate = (date: Date) => {
@@ -77,6 +79,35 @@ export default function ActionsAgenda() {
   const { data: actions = [] } = useActions();
   const { data: customers = [] } = useCustomers();
   const { data: products = [] } = useProducts();
+
+  // Calculate counts for each status
+  const statusCounts = useMemo(() => {
+    const counts: Record<ActionStatus, number> = {
+      'Beklemede': 0,
+      'Planlandı': 0,
+      'Tamamlandı': 0,
+      'Ertelendi': 0,
+      'İlgilenmiyor': 0,
+      'Uygun Değil': 0,
+    };
+    actions.forEach(action => {
+      if (counts[action.current_status] !== undefined) {
+        counts[action.current_status]++;
+      }
+    });
+    return counts;
+  }, [actions]);
+
+  const toggleStatus = (status: ActionStatus) => {
+    setSelectedStatuses(prev => {
+      if (prev.includes(status)) {
+        // Don't allow deselecting all
+        if (prev.length === 1) return prev;
+        return prev.filter(s => s !== status);
+      }
+      return [...prev, status];
+    });
+  };
 
   const navigateDate = (direction: "prev" | "next") => {
     if (viewMode === "daily" || viewMode === "list") {
@@ -113,18 +144,8 @@ export default function ActionsAgenda() {
   }, [dateRange.start, dateRange.end]);
 
   const filteredActions = useMemo(() => {
-    let result = actions;
-    
-    if (filterStatus === "Planlandı") {
-      result = result.filter(a => a.current_status === "Planlandı");
-    } else if (filterStatus === "Beklemede") {
-      result = result.filter(a => a.current_status === "Beklemede");
-    } else {
-      result = result.filter(a => a.current_status === "Planlandı" || a.current_status === "Beklemede");
-    }
-    
-    return result;
-  }, [actions, filterStatus]);
+    return actions.filter(a => selectedStatuses.includes(a.current_status));
+  }, [actions, selectedStatuses]);
 
   const getActionsForDay = (day: Date): Action[] => {
     return filteredActions.filter(action => {
@@ -245,14 +266,13 @@ export default function ActionsAgenda() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <PageBreadcrumb items={[{ label: t.actions.title }]} />
             <h1 className="text-2xl font-bold text-foreground">{t.actions.title}</h1>
-            <p className="text-muted-foreground">
-              {getFilterDescription()} 
-              {" "}• {totalActionsInView} {t.actions.actionsInView}
+            <p className="text-sm text-muted-foreground">
+              Aksiyon takvimini yönet.
             </p>
           </div>
 
@@ -269,6 +289,41 @@ export default function ActionsAgenda() {
               </TabsList>
             </Tabs>
           </div>
+        </div>
+
+        {/* Status Filter Row */}
+        <div className="flex flex-wrap items-center gap-2">
+          {(Object.keys(statusConfig) as ActionStatus[]).map(status => {
+            const config = statusConfig[status];
+            const count = statusCounts[status];
+            const isSelected = selectedStatuses.includes(status);
+            const StatusIcon = config.icon;
+            
+            return (
+              <button
+                key={status}
+                onClick={() => toggleStatus(status)}
+                className={`
+                  flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all
+                  ${isSelected 
+                    ? config.color 
+                    : "bg-muted/30 text-muted-foreground border-border/50 opacity-60 hover:opacity-80"
+                  }
+                `}
+              >
+                <Checkbox 
+                  checked={isSelected} 
+                  className="h-3 w-3 border-current data-[state=checked]:bg-current data-[state=checked]:text-background"
+                  onCheckedChange={() => toggleStatus(status)}
+                />
+                <StatusIcon className="h-3 w-3" />
+                <span>{config.label}</span>
+                <span className={`ml-0.5 px-1.5 py-0.5 rounded-full text-[10px] ${isSelected ? "bg-background/30" : "bg-muted"}`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <Card>
