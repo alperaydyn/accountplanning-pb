@@ -532,13 +532,19 @@ export default function AIAssistant() {
           <p className="text-muted-foreground">{t.ai.pageDescription}</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[calc(100vh-220px)]">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 h-[calc(100vh-220px)]">
           {/* Sessions Sidebar */}
-          <Card className="lg:col-span-1 flex flex-col overflow-hidden">
-            <CardHeader className="pb-3 border-b shrink-0">
+          <Card className="lg:col-span-1 flex flex-col overflow-hidden border-border/60 shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/40 shrink-0 bg-muted/20">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm">{t.ai.chatHistory}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={handleNewSession} disabled={createSession.isPending}>
+                <CardTitle className="text-sm font-semibold">{t.ai.chatHistory}</CardTitle>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={handleNewSession} 
+                  disabled={createSession.isPending}
+                  className="h-8 w-8 hover:bg-primary/10 hover:text-primary transition-colors"
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -549,17 +555,21 @@ export default function AIAssistant() {
                   {sessions.map((session) => (
                     <div
                       key={session.id}
-                      className={`group flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors ${
+                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
                         activeSessionId === session.id
-                          ? "bg-accent text-accent-foreground"
-                          : "hover:bg-muted"
+                          ? "bg-primary/10 text-primary shadow-sm border border-primary/20"
+                          : "hover:bg-muted/80 border border-transparent"
                       }`}
                       onClick={() => setActiveSessionId(session.id)}
                     >
-                      <MessageSquare className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <MessageSquare className={`h-4 w-4 shrink-0 transition-colors ${
+                        activeSessionId === session.id ? "text-primary" : "text-muted-foreground"
+                      }`} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{session.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className={`text-sm truncate ${
+                          activeSessionId === session.id ? "font-semibold" : "font-medium"
+                        }`}>{session.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
                           {format(new Date(session.updated_at), "d MMM, HH:mm")}
                         </p>
                       </div>
@@ -568,7 +578,7 @@ export default function AIAssistant() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive/10 hover:text-destructive"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <MoreHorizontal className="h-3 w-3" />
@@ -576,7 +586,7 @@ export default function AIAssistant() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            className="text-destructive"
+                            className="text-destructive focus:text-destructive"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteSession(session.id);
@@ -590,16 +600,20 @@ export default function AIAssistant() {
                     </div>
                   ))}
                   {sessions.length === 0 && !sessionsLoading && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Henüz sohbet yok</p>
+                    <div className="text-center py-10 text-muted-foreground">
+                      <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-muted/50 flex items-center justify-center">
+                        <MessageSquare className="h-6 w-6 opacity-40" />
+                      </div>
+                      <p className="text-sm font-medium">Henüz sohbet yok</p>
+                      <p className="text-xs mt-1 opacity-70">Yeni bir sohbet başlatın</p>
                       <Button
-                        variant="link"
+                        variant="outline"
                         size="sm"
                         onClick={handleNewSession}
-                        className="mt-2"
+                        className="mt-3"
                       >
-                        Yeni sohbet başlat
+                        <Plus className="h-3.5 w-3.5 mr-1.5" />
+                        Yeni sohbet
                       </Button>
                     </div>
                   )}
@@ -609,37 +623,42 @@ export default function AIAssistant() {
           </Card>
 
           {/* Chat Area */}
-          <Card className="lg:col-span-3 flex flex-col overflow-hidden">
-            <CardHeader className="pb-3 border-b shrink-0">
+          <Card className="lg:col-span-3 flex flex-col overflow-hidden border-border/60 shadow-sm">
+            <CardHeader className="pb-3 border-b border-border/40 shrink-0 bg-muted/10">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-full bg-violet-500/10">
-                    <Sparkles className="h-5 w-5 text-violet-500" />
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/15 to-purple-500/10 shadow-sm">
+                    <Sparkles className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                   </div>
-                  <CardTitle className="text-base">{t.ai.chatWindowTitle}</CardTitle>
+                  <div>
+                    <CardTitle className="text-base font-semibold">{t.ai.chatWindowTitle}</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">Portföy analizi ve müşteri önerileri</p>
+                  </div>
                 </div>
               </div>
 
               {/* Privacy Notice */}
-              <div className="mt-3 rounded-lg border border-border/50 bg-muted/30 p-2.5">
+              <div className="mt-3 rounded-xl border border-success/20 bg-success/5 p-3">
                 <button
                   type="button"
                   onClick={() => setShowPrivacyDetails(!showPrivacyDetails)}
-                  className="flex items-center gap-2 w-full text-left"
+                  className="flex items-center gap-2.5 w-full text-left"
                 >
-                  <ShieldCheck className="h-4 w-4 text-green-600" />
-                  <span className="text-xs text-muted-foreground flex-1">
+                  <div className="p-1 rounded-full bg-success/10">
+                    <ShieldCheck className="h-3.5 w-3.5 text-success" />
+                  </div>
+                  <span className="text-xs text-foreground/80 flex-1 font-medium">
                     {t.ai.privacyNotice}
                   </span>
                   {showPrivacyDetails ? (
-                    <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
                   ) : (
-                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                 </button>
 
                 {showPrivacyDetails && (
-                  <div className="mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground space-y-1.5">
+                  <div className="mt-2.5 pt-2.5 border-t border-success/20 text-xs text-muted-foreground space-y-1.5 pl-7">
                     <p>• {t.ai.privacyDetail1}</p>
                     <p>• {t.ai.privacyDetail2}</p>
                     <p>• {t.ai.privacyDetail3}</p>
@@ -660,32 +679,35 @@ export default function AIAssistant() {
                     return (
                       <div
                         key={message.id}
-                        className={`flex gap-3 ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                        className={`flex gap-3 animate-fade-in ${message.role === "user" ? "justify-end" : "justify-start"}`}
                       >
                         {message.role === "assistant" && (
-                          <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
-                            <Bot className="h-4 w-4 text-violet-500" />
+                          <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/15 to-purple-500/10 h-fit shadow-sm">
+                            <Bot className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                           </div>
                         )}
                         <div
-                          className={`max-w-[80%] rounded-lg p-3 ${
-                            message.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
+                          className={`max-w-[80%] rounded-2xl p-3.5 shadow-sm ${
+                            message.role === "user" 
+                              ? "bg-primary text-primary-foreground rounded-br-md" 
+                              : "bg-muted/80 border border-border/40 rounded-bl-md"
                           }`}
                         >
                           {message.id === "welcome" ? (
-                            <p className="text-sm whitespace-pre-line">{message.content}</p>
+                            <p className="text-sm whitespace-pre-line leading-relaxed">{message.content}</p>
                           ) : (
                             renderMessageContent(message as ChatMessage, isLastAssistantMessage)
                           )}
                           {/* Provider and model info for assistant messages */}
                           {message.role === "assistant" && message.id !== "welcome" && (message as ChatMessage).model_name && (
-                            <p className="text-[10px] text-muted-foreground/60 mt-2 pt-2 border-t border-border/30">
+                            <p className="text-[10px] text-muted-foreground/50 mt-2.5 pt-2 border-t border-border/30 flex items-center gap-1">
+                              <Sparkles className="h-2.5 w-2.5" />
                               {(message as ChatMessage).provider && `${(message as ChatMessage).provider} · `}{(message as ChatMessage).model_name}
                             </p>
                           )}
                         </div>
                         {message.role === "user" && (
-                          <div className="p-1.5 rounded-full bg-primary/10 h-fit">
+                          <div className="p-2 rounded-xl bg-primary/10 h-fit shadow-sm">
                             <User className="h-4 w-4 text-primary" />
                           </div>
                         )}
@@ -693,14 +715,14 @@ export default function AIAssistant() {
                     );
                   })}
                   {isLoading && (
-                    <div className="flex gap-3 justify-start">
-                      <div className="p-1.5 rounded-full bg-violet-500/10 h-fit">
-                        <Bot className="h-4 w-4 text-violet-500" />
+                    <div className="flex gap-3 justify-start animate-fade-in">
+                      <div className="p-2 rounded-xl bg-gradient-to-br from-violet-500/15 to-purple-500/10 h-fit shadow-sm">
+                        <Bot className="h-4 w-4 text-violet-600 dark:text-violet-400" />
                       </div>
-                      <div className="bg-muted rounded-lg p-3">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Portföyünüz analiz ediliyor...
+                      <div className="bg-muted/80 border border-border/40 rounded-2xl rounded-bl-md p-3.5 shadow-sm">
+                        <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin text-violet-500" />
+                          <span>Portföyünüz analiz ediliyor...</span>
                         </div>
                       </div>
                     </div>
@@ -709,13 +731,13 @@ export default function AIAssistant() {
               </ScrollArea>
             </div>
 
-            <div className="border-t p-3 shrink-0">
+            <div className="border-t border-border/40 p-3 shrink-0 bg-background/50">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   handleSend();
                 }}
-                className="flex gap-2"
+                className="flex gap-2.5"
               >
                 <Input
                   ref={inputRef}
@@ -723,29 +745,35 @@ export default function AIAssistant() {
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Odaklanılacak müşterileri sorun..."
                   disabled={isLoading || !activeSessionId}
-                  className="flex-1"
+                  className="flex-1 rounded-xl border-border/60 focus:border-primary/50 focus:ring-primary/20 transition-all"
                 />
-                <Button type="submit" size="icon" disabled={isLoading || !input.trim() || !activeSessionId}>
+                <Button 
+                  type="submit" 
+                  size="icon" 
+                  disabled={isLoading || !input.trim() || !activeSessionId}
+                  className="rounded-xl h-10 w-10 shadow-sm"
+                >
                   <Send className="h-4 w-4" />
                 </Button>
               </form>
             </div>
 
             {/* Token Counter & Cost */}
-            <div className="border-t px-3 py-2 bg-muted/20 shrink-0">
+            <div className="border-t border-border/40 px-3 py-2 bg-muted/30 shrink-0">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-4">
-                  <span>
-                    <span className="font-medium">{totalUsage.total_tokens.toLocaleString()}</span> tokens
+                <div className="flex items-center gap-3">
+                  <span className="flex items-center gap-1.5">
+                    <span className="font-semibold text-foreground/70">{totalUsage.total_tokens.toLocaleString()}</span> 
+                    <span className="opacity-70">tokens</span>
                   </span>
-                  <span className="text-muted-foreground/60">
+                  <span className="text-muted-foreground/50 text-[10px]">
                     (↑{totalUsage.prompt_tokens.toLocaleString()} / ↓{totalUsage.completion_tokens.toLocaleString()})
                   </span>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Coins className="h-3 w-3" />
-                  <span className="font-medium">${calculateCost(totalUsage).toFixed(4)}</span>
-                  <span className="text-muted-foreground/60">est.</span>
+                <div className="flex items-center gap-1.5 bg-background/50 px-2 py-1 rounded-md">
+                  <Coins className="h-3 w-3 text-amber-500" />
+                  <span className="font-semibold text-foreground/70">${calculateCost(totalUsage).toFixed(4)}</span>
+                  <span className="opacity-50 text-[10px]">est.</span>
                 </div>
               </div>
             </div>
