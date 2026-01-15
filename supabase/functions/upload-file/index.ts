@@ -185,6 +185,13 @@ Deno.serve(async (req) => {
     // Decode the data to text for response
     const decodedText = new TextDecoder().decode(decodedData);
 
+    // Generate a signed URL for download (valid for 1 hour)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+      .from(bucketName)
+      .createSignedUrl(filePath, 3600); // 1 hour expiry
+
+    const downloadUrl = signedUrlError ? null : signedUrlData?.signedUrl;
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -192,6 +199,7 @@ Deno.serve(async (req) => {
         size: finalData.length,
         appended: !!existingFile,
         decodedText,
+        downloadUrl,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
