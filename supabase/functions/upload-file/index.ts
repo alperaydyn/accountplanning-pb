@@ -29,19 +29,30 @@ Deno.serve(async (req) => {
 
     // Decode base64 data
     let decodedData: Uint8Array;
+    let bytes: Uint8Array;
+    
     try {
       // Decode base64 to binary
       const binaryString = atob(data);
-      const bytes = new Uint8Array(binaryString.length);
+      bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "Invalid base64 data", details: String(e) }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-      // Try to decompress using DecompressionStream (gzip)
+    // Check if data is gzip compressed (magic bytes: 0x1f 0x8b)
+    const isGzip = bytes.length >= 2 && bytes[0] === 0x1f && bytes[1] === 0x8b;
+
+    if (isGzip) {
       try {
         const ds = new DecompressionStream("gzip");
         const writer = ds.writable.getWriter();
-        writer.write(bytes);
+        writer.write(bytes.slice().buffer);
         writer.close();
 
         const reader = ds.readable.getReader();
@@ -61,15 +72,14 @@ Deno.serve(async (req) => {
           decodedData.set(chunk, offset);
           offset += chunk.length;
         }
-      } catch {
-        // Not gzip compressed, use raw decoded bytes
+      } catch (e) {
+        console.error("Gzip decompression failed:", e);
+        // Fall back to raw bytes if decompression fails
         decodedData = bytes;
       }
-    } catch (e) {
-      return new Response(
-        JSON.stringify({ error: "Invalid base64 data", details: String(e) }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    } else {
+      // Not gzip compressed, use raw decoded bytes
+      decodedData = bytes;
     }
 
     // Initialize Supabase client
