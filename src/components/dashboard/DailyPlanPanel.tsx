@@ -234,9 +234,9 @@ const MiniCalendar = ({
             >
               {isHovered && isCurrentMonth && (plannedCount > 0 || completedCount > 0) ? (
                 <span className="text-[9px] font-bold leading-tight text-center">
-                  <span className="text-success">{completedCount}</span>
-                  <span className="text-muted-foreground">/</span>
-                  <span className="text-primary">{plannedCount}</span>
+                  <span className={completedCount > 0 ? "text-emerald-300" : "text-success"}>{completedCount}</span>
+                  <span className={completedCount > 0 ? "text-white/70" : "text-muted-foreground"}>/</span>
+                  <span className={completedCount > 0 ? "text-sky-300" : "text-primary"}>{plannedCount}</span>
                 </span>
               ) : (
                 <span>{format(d, "d")}</span>
