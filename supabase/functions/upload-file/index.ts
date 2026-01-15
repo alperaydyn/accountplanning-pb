@@ -64,17 +64,17 @@ Deno.serve(async (req) => {
     }
 
     // Check if data is zlib compressed (magic bytes: 0x78 for zlib)
-    // 0x78 0x01 = no compression, 0x78 0x9C = default, 0x78 0xDA = best compression
+    // 0x78 0x01 = no compression, 0x78 0x5E = fast, 0x78 0x9C = default, 0x78 0xDA = best compression
     const isZlib = bytes.length >= 2 && bytes[0] === 0x78 && 
       (bytes[1] === 0x01 || bytes[1] === 0x5E || bytes[1] === 0x9C || bytes[1] === 0xDA);
 
     if (isZlib) {
       try {
+        // Use pako-style manual zlib decompression via DecompressionStream
+        // Deno's "deflate" mode expects zlib format with header
         const ds = new DecompressionStream("deflate");
         const writer = ds.writable.getWriter();
-        // Skip zlib header (2 bytes) and adler32 checksum (4 bytes at end)
-        const rawDeflate = bytes.slice(2, bytes.length - 4);
-        writer.write(rawDeflate.buffer);
+        writer.write(new Uint8Array(bytes).buffer as ArrayBuffer);
         writer.close();
 
         const reader = ds.readable.getReader();
