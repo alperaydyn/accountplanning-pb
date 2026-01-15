@@ -562,7 +562,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                 </Badge>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 mt-4 h-[380px] max-w-[320px]">
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 mt-4 h-[380px]">
               <MiniCalendar 
                 selectedDate={targetMonth}
                 actionsByDay={completedByDay}
