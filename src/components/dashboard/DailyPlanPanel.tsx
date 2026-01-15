@@ -206,12 +206,12 @@ const MiniCalendar = ({
           const intensity = plannedCount > 0 ? Math.min(plannedCount / maxActions, 1) : 0;
           const isHovered = hoveredDay === dateStr;
           
-          // Color based on planned actions
+          // Color based on planned actions - using sidebar dark blue tones
           const getBgColor = () => {
             if (!isCurrentMonth || plannedCount === 0) return undefined;
-            if (intensity > 0.7) return 'hsl(var(--primary) / 0.25)';
-            if (intensity > 0.4) return 'hsl(var(--primary) / 0.15)';
-            return 'hsl(var(--primary) / 0.08)';
+            if (intensity > 0.7) return 'hsl(215 60% 22% / 0.35)';
+            if (intensity > 0.4) return 'hsl(215 60% 22% / 0.22)';
+            return 'hsl(215 60% 22% / 0.12)';
           };
           
           return (
