@@ -171,12 +171,16 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Decode the data to text for response
+    const decodedText = new TextDecoder().decode(decodedData);
+
     return new Response(
       JSON.stringify({
         success: true,
         file: filePath,
         size: finalData.length,
         appended: !!existingFile,
+        decodedText,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
