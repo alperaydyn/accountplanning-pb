@@ -176,7 +176,7 @@ const MiniCalendar = ({
   const maxActions = Math.max(...Object.values(plannedByDay), 1);
 
   return (
-    <div className="w-full">
+    <div className="w-full h-full flex flex-col">
       <div className="text-center mb-2">
         <span className="font-semibold text-sm text-foreground">
           {format(selectedDate, "MMMM yyyy", { locale: tr })}
@@ -195,7 +195,7 @@ const MiniCalendar = ({
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-0.5">
+      <div className="grid grid-cols-7 gap-0.5 flex-1">
         {weeks.flat().map((d, idx) => {
           const dateStr = format(d, "yyyy-MM-dd");
           const completedCount = actionsByDay[dateStr] || 0;
@@ -221,7 +221,7 @@ const MiniCalendar = ({
               onMouseEnter={() => setHoveredDay(dateStr)}
               onMouseLeave={() => setHoveredDay(null)}
               className={cn(
-                "relative aspect-square flex flex-col items-center justify-center rounded-md text-xs transition-all",
+                "relative flex flex-col items-center justify-center rounded-md text-xs transition-all h-full",
                 !isCurrentMonth && "text-muted-foreground/30",
                 isCurrentMonth && !isWeekend && "hover:bg-accent hover:scale-105",
                 isCurrentMonth && isWeekend && "bg-muted/30 hover:bg-muted/50",
@@ -545,7 +545,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
           </div>
           
           {/* Section 3: Monthly calendar */}
-          <div className="flex flex-col h-[440px]">
+          <div className="flex flex-col h-[480px]">
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
@@ -562,7 +562,7 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
                 </Badge>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 flex-1 mt-4">
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 mt-4 h-[380px] max-w-[320px]">
               <MiniCalendar 
                 selectedDate={targetMonth}
                 actionsByDay={completedByDay}
