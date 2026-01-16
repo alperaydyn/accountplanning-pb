@@ -3,6 +3,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { QueryPanel } from "@/components/settings/QueryPanel";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
+import { VersionInfo } from "@/components/settings/VersionInfo";
 
 const Settings = () => {
   const { t } = useLanguage();
@@ -19,6 +20,9 @@ const Settings = () => {
         </div>
 
         <div className="grid gap-6">
+          {/* Version Information */}
+          <VersionInfo />
+
           {/* AI Provider Settings */}
           <AIProviderSettings />
 
