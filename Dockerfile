@@ -1,6 +1,9 @@
 # Build stage
 FROM node:20-alpine AS build
 
+# Install git for version info extraction
+RUN apk add --no-cache git
+
 # Define build arguments for Vite environment variables
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_PUBLISHABLE_KEY
@@ -19,7 +22,7 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy source code (including .git for version info)
 COPY . .
 
 # Build the app
