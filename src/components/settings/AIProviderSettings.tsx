@@ -156,6 +156,85 @@ export function AIProviderSettings() {
     setTestResult(null);
 
     try {
+      const resolvedModel = model === 'custom' ? customModel : model;
+
+      // For local provider, make direct browser call (edge functions can't reach localhost)
+      if (provider === 'local') {
+        if (!baseUrl) {
+          setTestResult({
+            success: false,
+            message: 'Sunucu adresi gerekli',
+          });
+          setIsTesting(false);
+          return;
+        }
+
+        const endpoint = baseUrl.endsWith('/v1/chat/completions')
+          ? baseUrl
+          : `${baseUrl.replace(/\/$/, '')}/v1/chat/completions`;
+
+        const prompt = testPrompt || 'Say "OK" in one word.';
+        const maxTokens = testPrompt ? 500 : 10;
+
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: resolvedModel || 'llama3',
+              messages: [{ role: 'user', content: prompt }],
+              max_tokens: maxTokens,
+            }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text();
+            let errorMessage = 'Bağlantı hatası';
+            if (response.status === 404) {
+              errorMessage = 'Model bulunamadı veya endpoint geçersiz';
+            } else if (response.status === 0) {
+              errorMessage = 'Sunucuya bağlanılamadı. CORS veya ağ hatası olabilir.';
+            } else {
+              errorMessage = `Hata ${response.status}: ${errorText.substring(0, 100)}`;
+            }
+
+            setTestResult({
+              success: false,
+              message: errorMessage,
+            });
+            setIsTesting(false);
+            return;
+          }
+
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || 'Yanıt yok';
+
+          setTestResult({
+            success: true,
+            message: `Bağlantı başarılı (${resolvedModel || 'llama3'})`,
+            response: content,
+          });
+
+          toast({
+            title: "Bağlantı Başarılı",
+            description: `Yerel sunucu bağlantısı başarılı`,
+          });
+        } catch (fetchError) {
+          console.error('Local API fetch error:', fetchError);
+          setTestResult({
+            success: false,
+            message: fetchError instanceof Error 
+              ? `Bağlantı hatası: ${fetchError.message}. Sunucunun çalıştığından ve CORS ayarlarının yapıldığından emin olun.`
+              : 'Sunucuya bağlanılamadı',
+          });
+        }
+        setIsTesting(false);
+        return;
+      }
+
+      // For other providers, use edge function
       const session = await supabase.auth.getSession();
       const accessToken = session.data.session?.access_token;
       
@@ -168,8 +247,6 @@ export function AIProviderSettings() {
         return;
       }
 
-      const resolvedModel = model === 'custom' ? customModel : model;
-      
       // Use new API key if provided, otherwise test will use saved key
       const testApiKey = isEditingApiKey && apiKey ? apiKey : null;
 
