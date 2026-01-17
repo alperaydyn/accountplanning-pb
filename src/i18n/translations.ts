@@ -514,7 +514,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       accountPlanning: "Account Planning",
-      accountPlanningDescription: "AI destekli portföy / aksiyon yönetim uygulaması",
+      accountPlanningDescription: "Yapay Zeka Destekli Strateji ve Aksiyon Yönetimi",
       login: "Giriş Yap",
       signup: "Kayıt Ol",
       logout: "Çıkış Yap",
@@ -953,7 +953,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       accountPlanning: "Account Planning",
-      accountPlanningDescription: "AI-powered portfolio / action management application",
+      accountPlanningDescription: "AI-Powered Strategy and Action Management",
       login: "Login",
       signup: "Sign Up",
       logout: "Logout",
@@ -1392,7 +1392,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       accountPlanning: "Account Planning",
-      accountPlanningDescription: "Aplicación de gestión de cartera / acciones impulsada por IA",
+      accountPlanningDescription: "Gestión de Estrategias y Acciones Impulsada por IA",
       login: "Iniciar Sesión",
       signup: "Registrarse",
       logout: "Cerrar Sesión",
