@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { usePortfolioManager } from './usePortfolioManager';
+import { useAuth } from '@/contexts/AuthContext';
 import { Database } from '@/integrations/supabase/types';
 
 type CustomerSector = Database['public']['Enums']['customer_sector'];
@@ -35,7 +36,8 @@ export interface CustomerFilters {
 }
 
 export const useCustomers = (filters?: CustomerFilters) => {
-  const { data: portfolioManager } = usePortfolioManager();
+  const { data: portfolioManager, isLoading: pmLoading } = usePortfolioManager();
+  const { session } = useAuth();
 
   // Exclude search from queryKey to prevent refetches - search is client-side only
   const { search, ...serverFilters } = filters || {};
@@ -43,7 +45,18 @@ export const useCustomers = (filters?: CustomerFilters) => {
   return useQuery({
     queryKey: ['customers', portfolioManager?.id, serverFilters],
     queryFn: async () => {
-      if (!portfolioManager) return [];
+      // Don't fetch if no portfolio manager or no valid session
+      if (!portfolioManager || !session) return [];
+      
+      // Verify session is still valid
+      const expiresAt = session.expires_at;
+      if (expiresAt) {
+        const now = Math.floor(Date.now() / 1000);
+        if (expiresAt < now) {
+          console.warn('Session expired during customers fetch');
+          return [];
+        }
+      }
       
       let query = supabase
         .from('customers')
@@ -73,12 +86,27 @@ export const useCustomers = (filters?: CustomerFilters) => {
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        // Check for auth errors
+        if (error.message?.includes('JWT') || error.code === 'PGRST301') {
+          console.warn('Auth error during customers fetch');
+          return [];
+        }
+        throw error;
+      }
 
       return data as Customer[];
     },
-    enabled: !!portfolioManager,
+    enabled: !!portfolioManager && !!session && !pmLoading,
     placeholderData: keepPreviousData,
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error instanceof Error && 
+          (error.message?.includes('JWT') || error.message?.includes('401'))) {
+        return false;
+      }
+      return failureCount < 2;
+    },
   });
 };
 

@@ -13,12 +13,23 @@ export interface PortfolioManager {
 }
 
 export const usePortfolioManager = () => {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
 
   return useQuery({
     queryKey: ['portfolio-manager', user?.id],
     queryFn: async () => {
-      if (!user) return null;
+      // Double-check session is still valid before querying
+      if (!user || !session) return null;
+      
+      // Verify the session token is not expired
+      const expiresAt = session.expires_at;
+      if (expiresAt) {
+        const now = Math.floor(Date.now() / 1000);
+        if (expiresAt < now) {
+          console.warn('Session expired during portfolio manager fetch');
+          return null;
+        }
+      }
       
       const { data, error } = await supabase
         .from('portfolio_managers')
@@ -26,10 +37,26 @@ export const usePortfolioManager = () => {
         .eq('user_id', user.id)
         .maybeSingle();
 
-      if (error) throw error;
+      if (error) {
+        // Check if error is auth-related
+        if (error.message?.includes('JWT') || error.code === 'PGRST301') {
+          console.warn('Auth error during portfolio manager fetch:', error.message);
+          return null;
+        }
+        throw error;
+      }
       return data as PortfolioManager | null;
     },
-    enabled: !!user,
+    enabled: !!user && !!session,
+    retry: (failureCount, error) => {
+      // Don't retry on auth errors
+      if (error instanceof Error && 
+          (error.message?.includes('JWT') || error.message?.includes('401'))) {
+        return false;
+      }
+      return failureCount < 2;
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 };
 

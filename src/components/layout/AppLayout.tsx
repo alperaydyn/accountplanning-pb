@@ -1,9 +1,11 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo, useEffect, type ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { AppHeader } from "./AppHeader";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
+import { useAuth } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/demo/contexts/DemoContext";
 import { DemoOverlay, DemoTooltip, DemoControls } from "@/demo/components";
 
@@ -14,8 +16,18 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const { authError, user, loading } = useAuth();
+  const navigate = useNavigate();
+  
   // Validate session and redirect to login if expired
   useSessionValidator();
+
+  // Watch for auth errors and redirect
+  useEffect(() => {
+    if (!loading && authError && !user) {
+      navigate('/auth', { replace: true });
+    }
+  }, [authError, user, loading, navigate]);
 
   // Memoize once per mount so page navigation doesn't reset the sidebar.
   const defaultOpen = useMemo(() => {
