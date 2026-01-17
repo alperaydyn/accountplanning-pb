@@ -151,6 +151,83 @@ const Pagination = ({
   </div>
 );
 
+// Performance stats component
+const PerformanceStats = ({ 
+  completedThisMonth, 
+  totalPlanned, 
+  activeDays,
+  totalDaysWithActions,
+  completionRate,
+  avgActionsPerDay
+}: { 
+  completedThisMonth: number;
+  totalPlanned: number;
+  activeDays: number;
+  totalDaysWithActions: number;
+  completionRate: number;
+  avgActionsPerDay: number;
+}) => {
+  const getCompletionColor = (rate: number) => {
+    if (rate >= 80) return "text-success";
+    if (rate >= 50) return "text-warning";
+    return "text-destructive";
+  };
+
+  return (
+    <div className="grid grid-cols-2 gap-2 mb-3">
+      {/* Completion Rate - Primary Metric */}
+      <div className="col-span-2 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-lg p-3 border border-primary/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Tamamlanma Oranı</p>
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className={cn("text-2xl font-bold", getCompletionColor(completionRate))}>
+                %{completionRate}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                ({completedThisMonth}/{totalPlanned})
+              </span>
+            </div>
+          </div>
+          <div className="relative w-12 h-12">
+            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+              <circle
+                cx="18" cy="18" r="14"
+                fill="none"
+                className="stroke-muted"
+                strokeWidth="3"
+              />
+              <circle
+                cx="18" cy="18" r="14"
+                fill="none"
+                className={cn(
+                  completionRate >= 80 ? "stroke-success" : 
+                  completionRate >= 50 ? "stroke-warning" : "stroke-destructive"
+                )}
+                strokeWidth="3"
+                strokeDasharray={`${completionRate * 0.88} 100`}
+                strokeLinecap="round"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      
+      {/* Secondary Metrics */}
+      <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
+        <p className="text-[10px] text-muted-foreground">Aktif Gün</p>
+        <p className="text-lg font-semibold text-foreground">{activeDays}</p>
+        <p className="text-[9px] text-muted-foreground">/ {totalDaysWithActions} planlı</p>
+      </div>
+      <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
+        <p className="text-[10px] text-muted-foreground">Ort. Aksiyon/Gün</p>
+        <p className="text-lg font-semibold text-foreground">{avgActionsPerDay.toFixed(1)}</p>
+        <p className="text-[9px] text-muted-foreground">tamamlanan</p>
+      </div>
+    </div>
+  );
+};
+
 // Mini calendar component with enhanced visuals
 const MiniCalendar = ({ 
   selectedDate, 
@@ -192,17 +269,17 @@ const MiniCalendar = ({
 
   return (
     <div className="w-full h-full flex flex-col">
-      <div className="text-center mb-2">
+      <div className="text-center mb-1.5">
         <span className="font-semibold text-sm text-foreground">
           {format(selectedDate, "MMMM yyyy", { locale: tr })}
         </span>
       </div>
-      <div className="grid grid-cols-7 gap-0.5 mb-1">
+      <div className="grid grid-cols-7 gap-0.5 mb-0.5">
         {weekDays.map((d, idx) => (
           <div 
             key={d} 
             className={cn(
-              "text-center text-[10px] text-muted-foreground font-medium py-0.5",
+              "text-center text-[9px] text-muted-foreground font-medium py-0.5",
               idx >= 5 && "text-muted-foreground/60"
             )}
           >
@@ -215,18 +292,26 @@ const MiniCalendar = ({
           const dateStr = format(d, "yyyy-MM-dd");
           const completedCount = actionsByDay[dateStr] || 0;
           const plannedCount = plannedByDay[dateStr] || 0;
+          const totalCount = completedCount + plannedCount;
           const isCurrentMonth = isSameMonth(d, selectedDate);
           const isToday = isSameDay(d, today);
           const isWeekend = getDay(d) === 0 || getDay(d) === 6;
           const completedIntensity = completedCount > 0 ? Math.min(completedCount / maxCompletedActions, 1) : 0;
           const isHovered = hoveredDay === dateStr;
+          const hasPlanned = plannedCount > 0 && completedCount === 0;
           
           // Color based on completed actions - gradient intensity with sidebar dark blue
           const getBgColor = () => {
-            if (!isCurrentMonth || completedCount === 0) return undefined;
-            // Calculate lightness: from 70% (lightest) down to 22% (darkest/max intensity)
-            const lightness = 70 - (completedIntensity * 48); // 70 -> 22
-            return `hsl(215 60% ${lightness}%)`;
+            if (!isCurrentMonth) return undefined;
+            if (completedCount > 0) {
+              // Calculate lightness: from 70% (lightest) down to 22% (darkest/max intensity)
+              const lightness = 70 - (completedIntensity * 48); // 70 -> 22
+              return `hsl(215 60% ${lightness}%)`;
+            }
+            if (hasPlanned) {
+              return `hsl(35 90% 85%)`; // Light amber for pending
+            }
+            return undefined;
           };
           
           return (
@@ -236,22 +321,23 @@ const MiniCalendar = ({
               onMouseEnter={() => setHoveredDay(dateStr)}
               onMouseLeave={() => setHoveredDay(null)}
               className={cn(
-                "relative flex flex-col items-center justify-center rounded-md text-xs transition-all h-full",
+                "relative flex flex-col items-center justify-center rounded text-[11px] transition-all h-full min-h-[24px]",
                 !isCurrentMonth && "text-muted-foreground/30",
-                isCurrentMonth && !isWeekend && !completedCount && "hover:bg-accent hover:scale-105",
-                isCurrentMonth && isWeekend && !completedCount && "bg-muted/30 hover:bg-muted/50",
-                isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background font-bold",
-                completedCount > 0 && isCurrentMonth && "font-medium text-white hover:scale-105"
+                isCurrentMonth && !isWeekend && !completedCount && !hasPlanned && "hover:bg-accent hover:scale-105",
+                isCurrentMonth && isWeekend && !completedCount && !hasPlanned && "bg-muted/30 hover:bg-muted/50",
+                isToday && "ring-1 ring-primary ring-offset-1 ring-offset-background font-bold",
+                completedCount > 0 && isCurrentMonth && "font-medium text-white hover:scale-105",
+                hasPlanned && isCurrentMonth && "text-amber-900 font-medium hover:scale-105"
               )}
               style={{
                 backgroundColor: getBgColor()
               }}
             >
-              {isHovered && isCurrentMonth && (plannedCount > 0 || completedCount > 0) ? (
-                <span className="text-[9px] font-bold leading-tight text-center">
+              {isHovered && isCurrentMonth && totalCount > 0 ? (
+                <span className="text-[8px] font-bold leading-tight text-center">
                   <span className={completedCount > 0 ? "text-emerald-300" : "text-success"}>{completedCount}</span>
                   <span className={completedCount > 0 ? "text-white/70" : "text-muted-foreground"}>/</span>
-                  <span className={completedCount > 0 ? "text-sky-300" : "text-primary"}>{plannedCount}</span>
+                  <span className={completedCount > 0 ? "text-sky-300" : "text-primary"}>{totalCount}</span>
                 </span>
               ) : (
                 <span>{format(d, "d")}</span>
@@ -259,6 +345,17 @@ const MiniCalendar = ({
             </button>
           );
         })}
+      </div>
+      {/* Legend */}
+      <div className="flex items-center justify-center gap-3 mt-2 pt-2 border-t border-border/50">
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(215_60%_46%)]" />
+          <span className="text-[9px] text-muted-foreground">Tamamlandı</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(35_90%_85%)]" />
+          <span className="text-[9px] text-muted-foreground">Bekliyor</span>
+        </div>
       </div>
     </div>
   );
@@ -575,25 +672,37 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
             )}
           </div>
           
-          {/* Section 3: Monthly calendar */}
+          {/* Section 3: Monthly calendar with performance insights */}
           <div className="flex flex-col h-[480px]">
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 mb-3">
               <div className="flex items-center gap-2">
                 <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
                   <CalendarIcon className="h-4 w-4" />
                 </div>
-                <h3 className="font-semibold text-sm">Aksiyon Takvimi</h3>
+                <h3 className="font-semibold text-sm">Aksiyon Performansı</h3>
               </div>
-              <div className="pl-8 flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-success/10 text-success border-success/20">
-                  Bu ay tamamlanan: {Object.values(completedByDay).reduce((a, b) => a + b, 0)}
-                </Badge>
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-primary/10 text-primary border-primary/20">
-                  Aktif gün: {Object.keys(completedByDay).length}
-                </Badge>
-              </div>
+              <p className="text-xs text-muted-foreground pl-8">
+                Aylık aksiyon takip ve analiz
+              </p>
             </div>
-            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 mt-4 h-[380px]">
+            
+            {/* Performance Stats */}
+            <PerformanceStats 
+              completedThisMonth={Object.values(completedByDay).reduce((a, b) => a + b, 0)}
+              totalPlanned={monthActions.length}
+              activeDays={Object.keys(completedByDay).length}
+              totalDaysWithActions={Object.keys(plannedByDay).length + Object.keys(completedByDay).length - 
+                Object.keys(plannedByDay).filter(k => completedByDay[k]).length}
+              completionRate={monthActions.length > 0 
+                ? Math.round((Object.values(completedByDay).reduce((a, b) => a + b, 0) / monthActions.length) * 100) 
+                : 0}
+              avgActionsPerDay={Object.keys(completedByDay).length > 0 
+                ? Object.values(completedByDay).reduce((a, b) => a + b, 0) / Object.keys(completedByDay).length 
+                : 0}
+            />
+            
+            {/* Mini Calendar */}
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-2.5 border border-border/50 flex-1">
               <MiniCalendar 
                 selectedDate={targetMonth}
                 actionsByDay={completedByDay}
