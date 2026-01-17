@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import type { Json } from '@/integrations/supabase/types';
 
 export interface PromptTemplate {
   id: string;
@@ -215,8 +216,8 @@ export function useCreateTestCase() {
         .insert([{
           prompt_template_id: testCase.prompt_template_id,
           name: testCase.name,
-          input_data: testCase.input_data,
-          expected_output: testCase.expected_output,
+          input_data: testCase.input_data as Json,
+          expected_output: testCase.expected_output as Json,
           is_regression_test: testCase.is_regression_test,
           created_by: user?.id,
         }])
@@ -261,7 +262,7 @@ export function useSaveTestResult() {
         .insert([{
           prompt_version_id: result.prompt_version_id,
           test_case_id: result.test_case_id,
-          actual_output: result.actual_output,
+          actual_output: result.actual_output as Json,
           passed: result.passed,
           evaluation_notes: result.evaluation_notes,
           execution_time_ms: result.execution_time_ms,
