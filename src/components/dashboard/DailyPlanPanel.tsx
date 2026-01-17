@@ -151,83 +151,6 @@ const Pagination = ({
   </div>
 );
 
-// Performance stats component
-const PerformanceStats = ({ 
-  completedThisMonth, 
-  totalPlanned, 
-  activeDays,
-  totalDaysWithActions,
-  completionRate,
-  avgActionsPerDay
-}: { 
-  completedThisMonth: number;
-  totalPlanned: number;
-  activeDays: number;
-  totalDaysWithActions: number;
-  completionRate: number;
-  avgActionsPerDay: number;
-}) => {
-  const getCompletionColor = (rate: number) => {
-    if (rate >= 80) return "text-success";
-    if (rate >= 50) return "text-warning";
-    return "text-destructive";
-  };
-
-  return (
-    <div className="grid grid-cols-2 gap-2 mb-3">
-      {/* Completion Rate - Primary Metric */}
-      <div className="col-span-2 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-lg p-3 border border-primary/20">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Tamamlanma Oranı</p>
-            <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className={cn("text-2xl font-bold", getCompletionColor(completionRate))}>
-                %{completionRate}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ({completedThisMonth}/{totalPlanned})
-              </span>
-            </div>
-          </div>
-          <div className="relative w-12 h-12">
-            <svg className="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
-              <circle
-                cx="18" cy="18" r="14"
-                fill="none"
-                className="stroke-muted"
-                strokeWidth="3"
-              />
-              <circle
-                cx="18" cy="18" r="14"
-                fill="none"
-                className={cn(
-                  completionRate >= 80 ? "stroke-success" : 
-                  completionRate >= 50 ? "stroke-warning" : "stroke-destructive"
-                )}
-                strokeWidth="3"
-                strokeDasharray={`${completionRate * 0.88} 100`}
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        </div>
-      </div>
-      
-      {/* Secondary Metrics */}
-      <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
-        <p className="text-[10px] text-muted-foreground">Aktif Gün</p>
-        <p className="text-lg font-semibold text-foreground">{activeDays}</p>
-        <p className="text-[9px] text-muted-foreground">/ {totalDaysWithActions} planlı</p>
-      </div>
-      <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
-        <p className="text-[10px] text-muted-foreground">Ort. Aksiyon/Gün</p>
-        <p className="text-lg font-semibold text-foreground">{avgActionsPerDay.toFixed(1)}</p>
-        <p className="text-[9px] text-muted-foreground">tamamlanan</p>
-      </div>
-    </div>
-  );
-};
-
 // Mini calendar component with enhanced visuals
 const MiniCalendar = ({ 
   selectedDate, 
@@ -672,37 +595,17 @@ export const DailyPlanPanel = ({ recordDate }: DailyPlanPanelProps) => {
             )}
           </div>
           
-          {/* Section 3: Monthly calendar with performance insights */}
+          {/* Section 3: Monthly calendar */}
           <div className="flex flex-col h-[480px]">
-            <div className="space-y-1.5 mb-3">
-              <div className="flex items-center gap-2">
-                <div className={cn("p-1.5 rounded-lg", "bg-primary/10 text-primary")}>
-                  <CalendarIcon className="h-4 w-4" />
-                </div>
-                <h3 className="font-semibold text-sm">Aksiyon Performansı</h3>
-              </div>
-              <p className="text-xs text-muted-foreground pl-8">
-                Aylık aksiyon takip ve analiz
-              </p>
-            </div>
-            
-            {/* Performance Stats */}
-            <PerformanceStats 
-              completedThisMonth={Object.values(completedByDay).reduce((a, b) => a + b, 0)}
-              totalPlanned={monthActions.length}
-              activeDays={Object.keys(completedByDay).length}
-              totalDaysWithActions={Object.keys(plannedByDay).length + Object.keys(completedByDay).length - 
-                Object.keys(plannedByDay).filter(k => completedByDay[k]).length}
-              completionRate={monthActions.length > 0 
-                ? Math.round((Object.values(completedByDay).reduce((a, b) => a + b, 0) / monthActions.length) * 100) 
-                : 0}
-              avgActionsPerDay={Object.keys(completedByDay).length > 0 
-                ? Object.values(completedByDay).reduce((a, b) => a + b, 0) / Object.keys(completedByDay).length 
-                : 0}
+            <SectionHeader 
+              icon={CalendarIcon}
+              iconColor="bg-primary/10 text-primary"
+              title="Aksiyon Takvimi"
+              subtitle={format(targetMonth, "MMMM yyyy", { locale: tr })}
             />
             
-            {/* Mini Calendar */}
-            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-2.5 border border-border/50 flex-1">
+            {/* Mini Calendar - Full Size */}
+            <div className="bg-gradient-to-br from-muted/30 to-muted/10 rounded-xl p-3 border border-border/50 flex-1 mt-4">
               <MiniCalendar 
                 selectedDate={targetMonth}
                 actionsByDay={completedByDay}
