@@ -24,6 +24,7 @@ export interface PromptVersion {
   creator_id: string | null;
   creator_name: string;
   is_active: boolean;
+  status: 'active' | 'deleted';
   created_at: string;
 }
 
@@ -75,12 +76,32 @@ export function usePromptVersions(templateId: string | null) {
         .from('prompt_versions')
         .select('*')
         .eq('prompt_template_id', templateId)
+        .eq('status', 'active')
         .order('version_number', { ascending: false });
       
       if (error) throw error;
       return data as PromptVersion[];
     },
     enabled: !!templateId,
+  });
+}
+
+export function useSoftDeleteVersion() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ versionId, templateId }: { versionId: string; templateId: string }) => {
+      const { error } = await supabase
+        .from('prompt_versions')
+        .update({ status: 'deleted' })
+        .eq('id', versionId);
+      
+      if (error) throw error;
+      return { templateId };
+    },
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['prompt-versions', result.templateId] });
+    },
   });
 }
 

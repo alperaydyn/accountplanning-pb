@@ -23,10 +23,12 @@ import {
   useCreateTestCase,
   useDeleteTestCase,
   useSaveTestResult,
+  useSoftDeleteVersion,
   PromptTemplate,
   PromptVersion,
   PromptTestCase,
 } from "@/hooks/usePromptTemplates";
+import { useAuth } from "@/contexts/AuthContext";
 import { 
   FileText, 
   Plus, 
@@ -46,6 +48,7 @@ import {
 
 export function PromptManagementPanel() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState<PromptTemplate | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<PromptVersion | null>(null);
   const [isCreatingTemplate, setIsCreatingTemplate] = useState(false);
@@ -96,6 +99,7 @@ export function PromptManagementPanel() {
   const createTestCase = useCreateTestCase();
   const deleteTestCase = useDeleteTestCase();
   const saveTestResult = useSaveTestResult();
+  const softDeleteVersion = useSoftDeleteVersion();
 
   const handleCreateTemplate = async () => {
     try {
@@ -126,6 +130,7 @@ export function PromptManagementPanel() {
         explanation: newVersion.explanation || null,
         creator_name: newVersion.creator_name,
         is_active: false,
+        status: 'active',
       });
       setIsCreatingVersion(false);
       setNewVersion({ prompt_text: '', reason: '', explanation: '', creator_name: '' });
@@ -138,6 +143,56 @@ export function PromptManagementPanel() {
         variant: "destructive" 
       });
     }
+  };
+  
+  const handleDeleteVersion = async (version: PromptVersion) => {
+    if (version.version_number === 1) {
+      toast({
+        title: "Silinemez",
+        description: "İlk versiyon silinemez",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await softDeleteVersion.mutateAsync({
+        versionId: version.id,
+        templateId: selectedTemplate!.id,
+      });
+      if (selectedVersion?.id === version.id) {
+        setSelectedVersion(null);
+      }
+      toast({ title: "Versiyon silindi" });
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: error instanceof Error ? error.message : "Versiyon silinemedi",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleOpenNewVersionDialog = () => {
+    // Pre-populate with selected version's prompt text if available
+    const activeVersion = versions.find(v => v.is_active);
+    const baseVersion = selectedVersion || activeVersion || versions[0];
+    if (baseVersion) {
+      setNewVersion({
+        prompt_text: baseVersion.prompt_text,
+        reason: '',
+        explanation: '',
+        creator_name: user?.email || '',
+      });
+    } else {
+      setNewVersion({
+        prompt_text: '',
+        reason: '',
+        explanation: '',
+        creator_name: user?.email || '',
+      });
+    }
+    setIsCreatingVersion(true);
   };
 
   const handleCreateTestCase = async () => {
@@ -422,7 +477,13 @@ export function PromptManagementPanel() {
                 <TabsContent value="versions" className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium">Versiyon Geçmişi</h4>
-                    <Dialog open={isCreatingVersion} onOpenChange={setIsCreatingVersion}>
+                    <Dialog open={isCreatingVersion} onOpenChange={(open) => {
+                      if (open) {
+                        handleOpenNewVersionDialog();
+                      } else {
+                        setIsCreatingVersion(false);
+                      }
+                    }}>
                       <DialogTrigger asChild>
                         <Button size="sm">
                           <Plus className="h-4 w-4 mr-1" />
@@ -443,8 +504,8 @@ export function PromptManagementPanel() {
                               value={newVersion.prompt_text}
                               onChange={(e) => setNewVersion({ ...newVersion, prompt_text: e.target.value })}
                               placeholder="System prompt metni..."
-                              rows={10}
-                              className="font-mono text-sm"
+                              rows={15}
+                              className="font-mono text-sm w-full min-h-[300px] whitespace-pre-wrap"
                             />
                           </div>
                           <div className="grid grid-cols-2 gap-4">
@@ -460,8 +521,8 @@ export function PromptManagementPanel() {
                               <Label>Oluşturan</Label>
                               <Input 
                                 value={newVersion.creator_name}
-                                onChange={(e) => setNewVersion({ ...newVersion, creator_name: e.target.value })}
-                                placeholder="İsminiz"
+                                readOnly
+                                className="bg-muted"
                               />
                             </div>
                           </div>
@@ -540,10 +601,11 @@ export function PromptManagementPanel() {
                                   )}
                                   <div>
                                     <Label className="text-xs text-muted-foreground">Prompt</Label>
-                                    <pre className="text-xs bg-muted p-2 rounded mt-1 overflow-x-auto max-h-32">
-                                      {version.prompt_text.substring(0, 500)}
-                                      {version.prompt_text.length > 500 && '...'}
-                                    </pre>
+                                    <ScrollArea className="h-48 mt-1">
+                                      <pre className="text-xs bg-muted p-3 rounded whitespace-pre-wrap break-words">
+                                        {version.prompt_text}
+                                      </pre>
+                                    </ScrollArea>
                                   </div>
                                   <div className="flex gap-2">
                                     <Button 
@@ -569,6 +631,18 @@ export function PromptManagementPanel() {
                                       >
                                         <Save className="h-4 w-4 mr-1" />
                                         Aktif Et
+                                      </Button>
+                                    )}
+                                    {version.version_number > 1 && !version.is_active && (
+                                      <Button 
+                                        size="sm" 
+                                        variant="ghost"
+                                        className="text-destructive hover:text-destructive"
+                                        onClick={() => handleDeleteVersion(version)}
+                                        disabled={softDeleteVersion.isPending}
+                                      >
+                                        <Trash2 className="h-4 w-4 mr-1" />
+                                        Sil
                                       </Button>
                                     )}
                                   </div>
