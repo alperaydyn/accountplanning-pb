@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,11 +9,14 @@ import { toast } from 'sonner';
  * This hook should be used in protected layouts to handle mid-session JWT expiry.
  */
 export const useSessionValidator = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, refreshSession } = useAuth();
   const navigate = useNavigate();
+  const isValidating = useRef(false);
 
   const validateSession = useCallback(async () => {
-    if (!user) return;
+    if (!user || isValidating.current) return true;
+
+    isValidating.current = true;
 
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
@@ -23,6 +26,7 @@ export const useSessionValidator = () => {
         toast.error('Oturumunuz sona erdi. Lütfen tekrar giriş yapın.');
         await signOut();
         navigate('/auth', { replace: true });
+        isValidating.current = false;
         return false;
       }
 
@@ -41,31 +45,33 @@ export const useSessionValidator = () => {
           });
           await signOut();
           navigate('/auth', { replace: true });
+          isValidating.current = false;
           return false;
         }
         
         // Proactive refresh: if token expires within 5 minutes (300 seconds)
         if (timeToExpiry > 0 && timeToExpiry < 300) {
           console.log('Token expiring soon, attempting refresh...');
-          const { error: refreshError } = await supabase.auth.refreshSession();
-          if (refreshError) {
-            console.warn('Failed to refresh token:', refreshError);
-            toast.warning('Oturumunuz yakında sona erecek. Lütfen sayfayı yenileyin.', {
-              duration: 10000,
-              description: 'Çalışmanızı kaybetmemek için kaydedin.'
-            });
-          } else {
-            console.log('Token refreshed proactively');
+          const refreshed = await refreshSession();
+          if (!refreshed) {
+            console.warn('Failed to refresh token, redirecting to login');
+            toast.error('Oturum yenilenemiyor. Lütfen tekrar giriş yapın.');
+            navigate('/auth', { replace: true });
+            isValidating.current = false;
+            return false;
           }
+          console.log('Token refreshed proactively');
         }
       }
 
+      isValidating.current = false;
       return true;
     } catch (err) {
       console.error('Session validation error:', err);
+      isValidating.current = false;
       return false;
     }
-  }, [user, signOut, navigate]);
+  }, [user, signOut, refreshSession, navigate]);
 
   useEffect(() => {
     // Validate session on mount
