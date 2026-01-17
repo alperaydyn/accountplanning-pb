@@ -1164,6 +1164,7 @@ export type Database = {
           prompt_template_id: string
           prompt_text: string
           reason: string
+          status: string
           version_number: number
         }
         Insert: {
@@ -1176,6 +1177,7 @@ export type Database = {
           prompt_template_id: string
           prompt_text: string
           reason: string
+          status?: string
           version_number?: number
         }
         Update: {
@@ -1188,6 +1190,7 @@ export type Database = {
           prompt_template_id?: string
           prompt_text?: string
           reason?: string
+          status?: string
           version_number?: number
         }
         Relationships: [
