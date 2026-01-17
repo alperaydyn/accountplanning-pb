@@ -4,9 +4,13 @@ import { QueryPanel } from "@/components/settings/QueryPanel";
 import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VersionInfo } from "@/components/settings/VersionInfo";
+import { PromptManagementPanel } from "@/components/settings/PromptManagementPanel";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Settings = () => {
   const { t } = useLanguage();
+  const { data: userRole } = useUserRole();
+  const isAdmin = userRole === 'admin';
 
   return (
     <AppLayout>
@@ -28,6 +32,9 @@ const Settings = () => {
 
           {/* ElevenLabs Voice Settings */}
           <ElevenLabsSettings />
+
+          {/* Prompt Management - Admin only */}
+          {isAdmin && <PromptManagementPanel />}
 
           {/* SQL Query Runner */}
           <QueryPanel />

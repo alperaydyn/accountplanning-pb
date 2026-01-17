@@ -1028,6 +1028,178 @@ export type Database = {
         }
         Relationships: []
       }
+      prompt_templates: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          input_description: string
+          name: string
+          output_description: string
+          updated_at: string
+          where_used: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          input_description: string
+          name: string
+          output_description: string
+          updated_at?: string
+          where_used: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          input_description?: string
+          name?: string
+          output_description?: string
+          updated_at?: string
+          where_used?: string
+        }
+        Relationships: []
+      }
+      prompt_test_cases: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          expected_output: Json
+          id: string
+          input_data: Json
+          is_regression_test: boolean
+          name: string
+          prompt_template_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          expected_output: Json
+          id?: string
+          input_data: Json
+          is_regression_test?: boolean
+          name: string
+          prompt_template_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          expected_output?: Json
+          id?: string
+          input_data?: Json
+          is_regression_test?: boolean
+          name?: string
+          prompt_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_test_cases_prompt_template_id_fkey"
+            columns: ["prompt_template_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_test_results: {
+        Row: {
+          actual_output: Json | null
+          created_at: string
+          error_message: string | null
+          evaluation_notes: string | null
+          execution_time_ms: number | null
+          id: string
+          passed: boolean | null
+          prompt_version_id: string
+          test_case_id: string
+        }
+        Insert: {
+          actual_output?: Json | null
+          created_at?: string
+          error_message?: string | null
+          evaluation_notes?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          passed?: boolean | null
+          prompt_version_id: string
+          test_case_id: string
+        }
+        Update: {
+          actual_output?: Json | null
+          created_at?: string
+          error_message?: string | null
+          evaluation_notes?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          passed?: boolean | null
+          prompt_version_id?: string
+          test_case_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_test_results_prompt_version_id_fkey"
+            columns: ["prompt_version_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prompt_test_results_test_case_id_fkey"
+            columns: ["test_case_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_test_cases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prompt_versions: {
+        Row: {
+          created_at: string
+          creator_id: string | null
+          creator_name: string
+          explanation: string | null
+          id: string
+          is_active: boolean
+          prompt_template_id: string
+          prompt_text: string
+          reason: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          creator_id?: string | null
+          creator_name: string
+          explanation?: string | null
+          id?: string
+          is_active?: boolean
+          prompt_template_id: string
+          prompt_text: string
+          reason: string
+          version_number?: number
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string | null
+          creator_name?: string
+          explanation?: string | null
+          id?: string
+          is_active?: boolean
+          prompt_template_id?: string
+          prompt_text?: string
+          reason?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prompt_versions_prompt_template_id_fkey"
+            columns: ["prompt_template_id"]
+            isOneToOne: false
+            referencedRelation: "prompt_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       saved_queries: {
         Row: {
           created_at: string
@@ -1148,12 +1320,17 @@ export type Database = {
     }
     Functions: {
       execute_readonly_query: { Args: { query_text: string }; Returns: Json }
+      get_active_prompt: { Args: { template_name: string }; Returns: string }
       get_portfolio_manager_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      set_active_prompt_version: {
+        Args: { version_id: string }
         Returns: boolean
       }
       user_owns_customer: { Args: { _customer_id: string }; Returns: boolean }
