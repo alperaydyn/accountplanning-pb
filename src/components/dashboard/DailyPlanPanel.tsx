@@ -244,7 +244,7 @@ const MiniCalendar = ({
               onMouseEnter={() => setHoveredDay(dateStr)}
               onMouseLeave={() => setHoveredDay(null)}
               className={cn(
-                "relative flex flex-col items-center justify-center rounded text-[11px] transition-all h-full min-h-[24px]",
+                "relative flex flex-col items-center justify-center rounded text-[11px] transition-all h-full min-h-[28px]",
                 !isCurrentMonth && "text-muted-foreground/30",
                 isCurrentMonth && !isWeekend && !completedCount && !hasPlanned && "hover:bg-accent hover:scale-105",
                 isCurrentMonth && isWeekend && !completedCount && !hasPlanned && "bg-muted/30 hover:bg-muted/50",
@@ -256,14 +256,31 @@ const MiniCalendar = ({
                 backgroundColor: getBgColor()
               }}
             >
-              {isHovered && isCurrentMonth && totalCount > 0 ? (
-                <span className="text-[8px] font-bold leading-tight text-center">
-                  <span className={completedCount > 0 ? "text-emerald-300" : "text-success"}>{completedCount}</span>
-                  <span className={completedCount > 0 ? "text-white/70" : "text-muted-foreground"}>/</span>
-                  <span className={completedCount > 0 ? "text-sky-300" : "text-primary"}>{totalCount}</span>
+              {/* Day number */}
+              <span className="leading-none">{format(d, "d")}</span>
+              
+              {/* Planned count badge - shown when there are planned actions */}
+              {isCurrentMonth && plannedCount > 0 && (
+                <span 
+                  className={cn(
+                    "absolute -top-0.5 -right-0.5 min-w-[12px] h-[12px] flex items-center justify-center",
+                    "text-[8px] font-bold rounded-full leading-none",
+                    completedCount > 0 
+                      ? "bg-warning text-warning-foreground" 
+                      : "bg-primary text-primary-foreground"
+                  )}
+                >
+                  {plannedCount}
                 </span>
-              ) : (
-                <span>{format(d, "d")}</span>
+              )}
+              
+              {/* Hover overlay showing completed/total ratio */}
+              {isHovered && isCurrentMonth && totalCount > 0 && (
+                <span className="absolute inset-0 flex items-center justify-center bg-background/80 rounded text-[9px] font-bold">
+                  <span className="text-success">{completedCount}</span>
+                  <span className="text-muted-foreground mx-0.5">/</span>
+                  <span className="text-primary">{totalCount}</span>
+                </span>
               )}
             </button>
           );
@@ -278,6 +295,13 @@ const MiniCalendar = ({
         <div className="flex items-center gap-1">
           <div className="w-2.5 h-2.5 rounded-sm bg-[hsl(35_90%_85%)]" />
           <span className="text-[9px] text-muted-foreground">Bekliyor</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <div className="relative w-3 h-3">
+            <div className="w-2.5 h-2.5 rounded-sm bg-muted" />
+            <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-primary text-[6px] text-primary-foreground flex items-center justify-center font-bold">2</div>
+          </div>
+          <span className="text-[9px] text-muted-foreground">Planlanan</span>
         </div>
       </div>
     </div>
