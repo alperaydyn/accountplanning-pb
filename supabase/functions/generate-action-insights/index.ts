@@ -127,12 +127,18 @@ serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    // Fetch user's AI provider settings
-    const { data: userSettings } = await supabase
-      .from('user_settings')
-      .select('ai_provider, ai_model, ai_api_key_encrypted, ai_base_url')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Fetch user's AI provider settings and active prompt in parallel
+    const [userSettingsResult, promptResult] = await Promise.all([
+      supabase
+        .from('user_settings')
+        .select('ai_provider, ai_model, ai_api_key_encrypted, ai_base_url')
+        .eq('user_id', userId)
+        .maybeSingle(),
+      supabase.rpc('get_active_prompt', { template_name: 'Action Quality Analyzer' })
+    ]);
+
+    const userSettings = userSettingsResult.data;
+    const dbPrompt = promptResult.data;
 
     const aiConfig: AIProviderConfig = {
       provider: userSettings?.ai_provider || 'lovable',
@@ -147,7 +153,8 @@ serve(async (req) => {
       throw new Error("Missing required parameter: actionSummary");
     }
 
-    const systemPrompt = `Sen bir banka portföy yöneticisi asistanısın. Aksiyon planlaması ve kalitesi hakkında 1-3 içgörü üret.
+    // Use database prompt if available, otherwise fall back to default
+    const defaultPrompt = `Sen bir banka portföy yöneticisi asistanısın. Aksiyon planlaması ve kalitesi hakkında 1-3 içgörü üret.
 
 İçgörü türleri:
 - critical: Acil aksiyon gerekli (yetersiz planlama, kritik ürünlere odaklanma eksikliği)
@@ -170,6 +177,10 @@ DİL KURALLARI:
 - Somut ve uygulanabilir öneriler ver
 - İş diline uygun yaz
 - Pozitif durumları da belirt`;
+
+    const systemPrompt = dbPrompt || defaultPrompt;
+    
+    console.log(`Using prompt from: ${dbPrompt ? 'database' : 'default fallback'}`);
 
     const actionsByProductSummary = actionSummary.actionsByProduct
       .slice(0, 10)
