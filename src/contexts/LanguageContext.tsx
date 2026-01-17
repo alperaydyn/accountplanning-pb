@@ -28,40 +28,48 @@ export const LanguageProvider = ({ children }: { children: ReactNode }) => {
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const syncLanguageFromDb = async (newUserId: string) => {
+      // Fetch user settings from database
+      try {
+        const { data, error } = await supabase
+          .from('user_settings')
+          .select('language')
+          .eq('user_id', newUserId)
+          .maybeSingle();
+
+        if (!error && data?.language) {
+          const dbLang = data.language as Language;
+          if (['tr', 'en', 'es'].includes(dbLang)) {
+            setLanguageState(dbLang);
+            localStorage.setItem(LANGUAGE_STORAGE_KEY, dbLang);
+          }
+        } else if (!data) {
+          // Create default settings for new user
+          await supabase
+            .from('user_settings')
+            .insert({
+              user_id: newUserId,
+              language: DEFAULT_LANGUAGE,
+              theme: 'system',
+              notifications_enabled: true,
+            });
+        }
+      } catch (err) {
+        console.error('Error fetching user settings:', err);
+      }
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id || null;
       setUserId(newUserId);
 
+      // IMPORTANT: do not call async Supabase APIs directly inside this callback.
       if (newUserId) {
-        // Fetch user settings from database
-        try {
-          const { data, error } = await supabase
-            .from('user_settings')
-            .select('language')
-            .eq('user_id', newUserId)
-            .maybeSingle();
-
-          if (!error && data?.language) {
-            const dbLang = data.language as Language;
-            if (['tr', 'en', 'es'].includes(dbLang)) {
-              setLanguageState(dbLang);
-              localStorage.setItem(LANGUAGE_STORAGE_KEY, dbLang);
-            }
-          } else if (!data) {
-            // Create default settings for new user
-            await supabase
-              .from('user_settings')
-              .insert({
-                user_id: newUserId,
-                language: DEFAULT_LANGUAGE,
-                theme: 'system',
-                notifications_enabled: true,
-              });
-          }
-        } catch (err) {
-          console.error('Error fetching user settings:', err);
-        }
+        setTimeout(() => {
+          void syncLanguageFromDb(newUserId);
+        }, 0);
       }
+
       setIsLoading(false);
     });
 
