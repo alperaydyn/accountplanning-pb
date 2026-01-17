@@ -514,7 +514,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       accountPlanning: "Account Planning",
-      accountPlanningDescription: "Hesap planlaması yönetim sistemi",
+      accountPlanningDescription: "AI destekli portföy / aksiyon yönetim uygulaması",
       login: "Giriş Yap",
       signup: "Kayıt Ol",
       logout: "Çıkış Yap",
@@ -953,7 +953,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       accountPlanning: "Account Planning",
-      accountPlanningDescription: "Account planning management system",
+      accountPlanningDescription: "AI-powered portfolio / action management application",
       login: "Login",
       signup: "Sign Up",
       logout: "Logout",
@@ -1392,7 +1392,7 @@ export const translations: Record<Language, Translations> = {
     },
     auth: {
       accountPlanning: "Account Planning",
-      accountPlanningDescription: "Sistema de gestión de planificación de cuentas",
+      accountPlanningDescription: "Aplicación de gestión de cartera / acciones impulsada por IA",
       login: "Iniciar Sesión",
       signup: "Registrarse",
       logout: "Cerrar Sesión",
