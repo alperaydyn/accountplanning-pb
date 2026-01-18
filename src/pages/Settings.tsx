@@ -37,6 +37,9 @@ const Settings = () => {
           {/* Prompt Management - Admin only */}
           {isAdmin && <PromptManagementPanel />}
 
+          {/* RAG Documentation Management - Admin only */}
+          {isAdmin && <RAGManagementPanel />}
+
           {/* SQL Query Runner */}
           <QueryPanel />
         </div>
