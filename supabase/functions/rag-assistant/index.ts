@@ -35,6 +35,75 @@ const MAX_OUT_OF_CONTEXT = 3;
 const BLOCK_DURATION_HOURS = 24;
 const WINDOW_DURATION_HOURS = 24;
 
+// Helper function to get file descriptions for code context
+function getFileDescription(filePath: string): string {
+  const descriptions: Record<string, string> = {
+    // Pages
+    'src/pages/Dashboard.tsx': 'Main dashboard page with portfolio overview, summary cards, and daily plan',
+    'src/pages/Index.tsx': 'Landing/index page that redirects to dashboard or auth',
+    'src/pages/Customers.tsx': 'Customer list page with filtering and customer management',
+    'src/pages/CustomerDetail.tsx': 'Individual customer detail view with products and actions',
+    'src/pages/CustomerJourney.tsx': 'Customer journey tracking and visualization',
+    'src/pages/ProductPerformance.tsx': 'Product performance metrics and HGO tracking',
+    'src/pages/PrimaryBank.tsx': 'Primary bank analysis and share of wallet',
+    'src/pages/PrimaryBankEngine.tsx': 'Primary bank engine for portfolio-level analysis',
+    'src/pages/ActionsAgenda.tsx': 'Actions agenda with calendar and list views',
+    'src/pages/AIAssistant.tsx': 'AI chat assistant for portfolio insights',
+    'src/pages/Settings.tsx': 'Application settings including AI and prompt management',
+    'src/pages/Preferences.tsx': 'User preferences for theme, language, notifications',
+    'src/pages/Thresholds.tsx': 'Product threshold configuration by segment/sector',
+    'src/pages/Auth.tsx': 'Authentication page for login and signup',
+    
+    // Hooks
+    'src/hooks/useCustomers.ts': 'Hook for fetching and managing customer data from Supabase',
+    'src/hooks/useActions.ts': 'Hook for fetching and managing actions from Supabase',
+    'src/hooks/useProducts.ts': 'Hook for fetching product definitions',
+    'src/hooks/useCustomerProducts.ts': 'Hook for fetching customer-product relationships',
+    'src/hooks/usePortfolioSummary.ts': 'Hook for calculating portfolio summary metrics (benchmark score, customer counts)',
+    'src/hooks/usePortfolioTargets.ts': 'Hook for fetching portfolio targets and HGO metrics',
+    'src/hooks/usePrimaryBankData.ts': 'Hook for fetching primary bank data (loans, POS, collateral)',
+    'src/hooks/useInsights.ts': 'Hook for fetching AI-generated portfolio insights',
+    'src/hooks/useProductThresholds.ts': 'Hook for fetching and managing product thresholds',
+    'src/hooks/useUserSettings.ts': 'Hook for user settings and preferences',
+    'src/hooks/useAIChatSessions.ts': 'Hook for AI chat session management',
+    
+    // Components
+    'src/components/dashboard/SummaryCards.tsx': 'Dashboard summary cards showing key metrics',
+    'src/components/dashboard/InsightsPanel.tsx': 'AI insights panel on dashboard',
+    'src/components/dashboard/DailyPlanPanel.tsx': 'Daily plan panel for scheduled actions',
+    'src/components/dashboard/ProductPerformanceTable.tsx': 'Product performance table with HGO metrics',
+    'src/components/actions/ActionPlanningModal.tsx': 'Modal for planning and updating actions',
+    'src/components/actions/AddActionModal.tsx': 'Modal for creating new actions',
+    'src/components/customer/PrimaryBankPanel.tsx': 'Panel showing primary bank data for a customer',
+    'src/components/customer/AutoPilotPanel.tsx': 'Autopilot workflow panel for automated actions',
+    'src/components/customer/PrincipalityScoreModal.tsx': 'Modal showing principality score breakdown',
+    'src/components/customer/CreateCustomerModal.tsx': 'Modal for creating new customers',
+    'src/components/settings/AIProviderSettings.tsx': 'AI provider configuration settings',
+    'src/components/settings/PromptManagementPanel.tsx': 'Prompt template management for admins',
+    'src/components/settings/RAGManagementPanel.tsx': 'RAG documentation management panel',
+    
+    // Data files
+    'src/data/customers.ts': 'Customer data types and mock data',
+    'src/data/actions.ts': 'Action data types and mock data',
+    'src/data/products.ts': 'Product definitions and mock data',
+    'src/data/portfolio.ts': 'Portfolio data types and mock data',
+    'src/data/autopilot.ts': 'Autopilot workflow definitions',
+    
+    // Types and contexts
+    'src/types/index.ts': 'TypeScript type definitions for the application',
+    'src/contexts/AuthContext.tsx': 'Authentication context and provider',
+    'src/contexts/LanguageContext.tsx': 'Multi-language support context',
+    
+    // Edge functions
+    'supabase/functions/ai-action-assistant/index.ts': 'Edge function for AI action assistant',
+    'supabase/functions/generate-insights/index.ts': 'Edge function for generating AI insights',
+    'supabase/functions/generate-actions/index.ts': 'Edge function for generating action recommendations',
+    'supabase/functions/rag-assistant/index.ts': 'Edge function for RAG-based help assistant',
+  };
+  
+  return descriptions[filePath] || 'Source file for application functionality';
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -342,60 +411,165 @@ Respond with ONLY one word: business, technical, or out_of_context
       }));
     }
 
-    // Step 3: For technical queries, fetch relevant source code if needed
-    let codeContext = "";
-    if (queryType === 'technical' && currentRoute) {
+    // Step 3: Collect related source files for code context
+    let relatedFiles: string[] = [];
+    
+    // Get related files from matched chunks
+    for (const chunk of relevantChunks) {
+      if (chunk.related_files?.length) {
+        relatedFiles.push(...chunk.related_files);
+      }
+    }
+    
+    // Also get files from current route chunk
+    if (currentRoute) {
       const routeChunk = availableChunks.find(c => c.route === currentRoute);
       if (routeChunk?.related_files?.length) {
-        codeContext = `\nRelated source files: ${routeChunk.related_files.join(', ')}`;
+        relatedFiles.push(...routeChunk.related_files);
+      }
+    }
+    
+    // Deduplicate files
+    relatedFiles = [...new Set(relatedFiles)];
+
+    // Step 4: Build code context - dynamic source code reading
+    let codeContext = "";
+    let dynamicCodeAnalysis = "";
+    
+    // If we have few/no chunks OR this is a technical query, do dynamic code analysis
+    const needsDynamicAnalysis = relevantChunks.length < 2 || queryType === 'technical';
+    
+    if (needsDynamicAnalysis) {
+      // Build a mapping of routes to likely source files
+      const routeToFiles: Record<string, string[]> = {
+        '/': ['src/pages/Index.tsx', 'src/pages/Dashboard.tsx', 'src/components/dashboard/SummaryCards.tsx', 'src/components/dashboard/InsightsPanel.tsx'],
+        '/dashboard': ['src/pages/Dashboard.tsx', 'src/components/dashboard/SummaryCards.tsx', 'src/components/dashboard/InsightsPanel.tsx', 'src/components/dashboard/DailyPlanPanel.tsx', 'src/hooks/usePortfolioSummary.ts'],
+        '/product-performance': ['src/pages/ProductPerformance.tsx', 'src/components/dashboard/ProductPerformanceTable.tsx', 'src/hooks/usePortfolioTargets.ts'],
+        '/customer-journey': ['src/pages/CustomerJourney.tsx', 'src/hooks/useCustomers.ts', 'src/hooks/useActions.ts'],
+        '/primary-bank': ['src/pages/PrimaryBank.tsx', 'src/hooks/usePrimaryBankData.ts', 'src/components/customer/PrimaryBankPanel.tsx'],
+        '/primary-bank-engine': ['src/pages/PrimaryBankEngine.tsx', 'src/hooks/usePrimaryBankData.ts'],
+        '/customers': ['src/pages/Customers.tsx', 'src/hooks/useCustomers.ts', 'src/components/customer/CreateCustomerModal.tsx'],
+        '/actions': ['src/pages/ActionsAgenda.tsx', 'src/hooks/useActions.ts', 'src/components/actions/ActionPlanningModal.tsx', 'src/components/actions/AddActionModal.tsx'],
+        '/ai-assistant': ['src/pages/AIAssistant.tsx', 'src/hooks/useAIChatSessions.ts'],
+        '/settings': ['src/pages/Settings.tsx', 'src/components/settings/AIProviderSettings.tsx', 'src/components/settings/PromptManagementPanel.tsx', 'src/components/settings/RAGManagementPanel.tsx'],
+        '/preferences': ['src/pages/Preferences.tsx', 'src/hooks/useUserSettings.ts'],
+        '/thresholds': ['src/pages/Thresholds.tsx', 'src/hooks/useProductThresholds.ts'],
+      };
+      
+      // Get files for current route
+      const routeFiles = currentRoute ? (routeToFiles[currentRoute] || []) : [];
+      
+      // Add route-specific files if not already included
+      for (const file of routeFiles) {
+        if (!relatedFiles.includes(file)) {
+          relatedFiles.push(file);
+        }
+      }
+      
+      // Add common hook files based on question keywords
+      const keywordToFiles: Record<string, string[]> = {
+        'customer': ['src/hooks/useCustomers.ts', 'src/data/customers.ts', 'src/types/index.ts'],
+        'action': ['src/hooks/useActions.ts', 'src/data/actions.ts', 'src/components/actions/ActionPlanningModal.tsx'],
+        'product': ['src/hooks/useProducts.ts', 'src/data/products.ts', 'src/hooks/useCustomerProducts.ts'],
+        'portfolio': ['src/hooks/usePortfolioSummary.ts', 'src/hooks/usePortfolioTargets.ts', 'src/data/portfolio.ts'],
+        'primary bank': ['src/hooks/usePrimaryBankData.ts', 'src/components/customer/PrimaryBankPanel.tsx'],
+        'principality': ['src/components/customer/PrincipalityScoreModal.tsx', 'src/hooks/useCustomers.ts'],
+        'insight': ['src/hooks/useInsights.ts', 'src/components/dashboard/InsightsPanel.tsx'],
+        'autopilot': ['src/components/customer/AutoPilotPanel.tsx', 'src/data/autopilot.ts'],
+        'threshold': ['src/hooks/useProductThresholds.ts', 'src/pages/Thresholds.tsx'],
+        'benchmark': ['src/hooks/usePortfolioSummary.ts', 'src/components/dashboard/SummaryCards.tsx'],
+        'hgo': ['src/hooks/usePortfolioTargets.ts', 'src/components/dashboard/ProductPerformanceTable.tsx'],
+        'target': ['src/hooks/usePortfolioTargets.ts', 'src/pages/ProductPerformance.tsx'],
+        'dashboard': ['src/pages/Dashboard.tsx', 'src/components/dashboard/SummaryCards.tsx'],
+        'ai': ['src/pages/AIAssistant.tsx', 'supabase/functions/ai-action-assistant/index.ts'],
+        'auth': ['src/contexts/AuthContext.tsx', 'src/pages/Auth.tsx', 'src/components/ProtectedRoute.tsx'],
+        'setting': ['src/pages/Settings.tsx', 'src/hooks/useUserSettings.ts'],
+      };
+      
+      for (const [keyword, files] of Object.entries(keywordToFiles)) {
+        if (questionLower.includes(keyword)) {
+          for (const file of files) {
+            if (!relatedFiles.includes(file)) {
+              relatedFiles.push(file);
+            }
+          }
+        }
+      }
+      
+      // Limit to top 8 most relevant files
+      relatedFiles = relatedFiles.slice(0, 8);
+      
+      if (relatedFiles.length > 0) {
+        codeContext = `\n\n### Related Source Files:\nThe following source files are related to this query and can be used to understand the implementation:\n${relatedFiles.map(f => `- ${f}`).join('\n')}`;
+        
+        // Generate a code analysis description for the AI
+        dynamicCodeAnalysis = `
+### Dynamic Code Analysis:
+Based on the user's question and the current page (${currentRoute || 'unknown'}), here are the relevant implementation details:
+
+**Architecture Overview:**
+- This is a React + TypeScript application using Vite, Tailwind CSS, and shadcn/ui components
+- State management uses React Query (@tanstack/react-query) for server state
+- Backend is powered by Supabase (PostgreSQL database, Edge Functions, Auth)
+- Data is fetched through custom hooks in src/hooks/
+
+**Key Technical Patterns:**
+1. **Data Hooks**: All data fetching is done through custom hooks (e.g., useCustomers, useActions, useProducts)
+2. **Supabase Integration**: Database queries use the Supabase client from src/integrations/supabase/client.ts
+3. **Type Safety**: Types are defined in src/types/index.ts and auto-generated from Supabase in src/integrations/supabase/types.ts
+4. **Edge Functions**: AI and complex operations use Supabase Edge Functions in supabase/functions/
+
+**Relevant Files for this Query:**
+${relatedFiles.map(f => `- **${f}**: ${getFileDescription(f)}`).join('\n')}
+`;
       }
     }
 
-    // Step 4: Generate the answer - only if we have sufficient sources
+    // Step 5: Generate the answer
     let answer: string;
     let needsInvestigation = false;
     const usedChunkIds = relevantChunks.map(c => c.chunk_id);
 
-    if (relevantChunks.length === 0) {
-      // No relevant sources found
-      answer = "I couldn't find relevant information about this in the documentation. This question has been marked for review by administrators.";
-      needsInvestigation = true;
-    } else {
-      const answerPrompt = `You are a helpful assistant for the "Account Planning System", a corporate banking application.
+    // Build the answer prompt - include dynamic code analysis when chunks are insufficient
+    const hasGoodDocumentation = relevantChunks.length >= 2 && topScore >= 4;
+    
+    const answerPrompt = `You are a helpful assistant for the "Account Planning System", a corporate banking application.
 
-IMPORTANT: You MUST only answer based on the provided sources below. Do NOT make up or infer information not explicitly stated in these sources.
+${hasGoodDocumentation ? 'IMPORTANT: Answer based on the provided documentation sources.' : 'IMPORTANT: Documentation is limited for this query. Use the provided code context and your understanding of the application architecture to provide a helpful answer.'}
 
-### SOURCES:
-${focusedContext}
+### DOCUMENTATION SOURCES:
+${focusedContext || 'No specific documentation chunks found.'}
+
+${dynamicCodeAnalysis}
+${codeContext}
 
 ${elementContext}
 ${routeContext}
-${codeContext}
 
 ### USER QUESTION:
 "${question}"
 
+### QUERY TYPE: ${queryType} (${queryType === 'business' ? 'user wants business/functional explanation' : 'user wants technical/implementation details'})
+
 ### INSTRUCTIONS:
-1. Answer ONLY using information from the provided sources
-2. Keep the answer SHORT (2-4 sentences maximum)
-3. If the sources don't contain the answer, respond with: "I don't have specific information about this in my documentation."
-4. Do NOT add any information not present in the sources
-5. Be direct and factual
+1. ${hasGoodDocumentation ? 'Answer primarily using the documentation sources' : 'Use the code context and architecture information to provide a helpful answer'}
+2. For BUSINESS queries: Focus on what the feature does, how it helps users, and business value
+3. For TECHNICAL queries: Focus on implementation details, file locations, code patterns, and how things work technically
+4. Keep the answer concise (3-5 sentences for business, can be longer for technical)
+5. If you truly cannot find relevant information, say so honestly
+6. Be direct and helpful
 
 ### ANSWER:`;
 
-      const answerResponse = await callAI(aiConfig, {
-        messages: [{ role: 'user', content: answerPrompt }],
-        max_tokens: 300,
-      });
+    const answerResponse = await callAI(aiConfig, {
+      messages: [{ role: 'user', content: answerPrompt }],
+      max_tokens: 500,
+    });
 
-      answer = answerResponse.choices?.[0]?.message?.content || "I couldn't generate an answer. Please try rephrasing your question.";
+    answer = answerResponse.choices?.[0]?.message?.content || "I couldn't generate an answer. Please try rephrasing your question.";
 
-      // Check if answer indicates missing information
-      needsInvestigation = answer.toLowerCase().includes("don't have specific information") || 
-                                 answer.toLowerCase().includes("marked for review") ||
-                                 answer.toLowerCase().includes("not in my documentation");
-    }
+    // Check if answer indicates missing information
+    needsInvestigation = !hasGoodDocumentation && relevantChunks.length === 0;
 
     // Append raw sources at the end
     if (rawSources.length > 0) {
