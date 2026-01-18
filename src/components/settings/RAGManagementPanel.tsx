@@ -154,11 +154,26 @@ export function RAGManagementPanel() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5" />
-          RAG Documentation Management
-        </CardTitle>
-        <CardDescription>Manage help documentation chunks and review user feedback</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Database className="h-5 w-5" />
+              RAG Documentation Management
+            </CardTitle>
+            <CardDescription>Manage help documentation chunks and review user feedback</CardDescription>
+          </div>
+          <Button 
+            onClick={() => importBuiltInDocsMutation.mutate()} 
+            disabled={importBuiltInDocsMutation.isPending}
+            variant="outline"
+          >
+            {importBuiltInDocsMutation.isPending ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Importing...</>
+            ) : (
+              <><Plus className="h-4 w-4 mr-2" /> Import built-in docs</>
+            )}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="chunks">
