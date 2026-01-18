@@ -103,34 +103,37 @@ serve(async (req) => {
       console.error("Error fetching chunks:", chunksError);
     }
 
-    // If no chunks in DB, load from static JSON file
-    let ragContent = "";
+    // Use DB chunks when available; otherwise fall back to a small built-in overview.
+    // (This prevents the assistant from returning "no relevant information" just because the DB hasn't been seeded yet.)
     let availableChunks: RAGChunk[] = chunks || [];
 
     if (availableChunks.length === 0) {
-      // Fall back to static documentation
-      ragContent = `
-The Account Planning System is a corporate banking portfolio management application.
-Key features include:
-- Dashboard with portfolio overview and AI insights
-- Customer management with journey tracking
-- Product performance tracking with HGO metrics
-- Primary Bank analytics for share of wallet
-- Actions agenda for planning and tracking
-- AI Assistant for portfolio intelligence
-
-For detailed documentation, please contact an administrator to load the RAG database.
-      `;
-    } else {
-      // Format chunks as context
-      ragContent = availableChunks.map(chunk => {
-        let content = `## ${chunk.title} (${chunk.category})\n`;
-        if (chunk.route) content += `Route: ${chunk.route}\n`;
-        if (chunk.business_description) content += `Business: ${chunk.business_description}\n`;
-        if (chunk.technical_description) content += `Technical: ${chunk.technical_description}\n`;
-        if (chunk.keywords?.length) content += `Keywords: ${chunk.keywords.join(", ")}\n`;
-        return content;
-      }).join("\n---\n");
+      availableChunks = [
+        {
+          id: "fallback_overview",
+          chunk_id: "fallback_overview",
+          category: "General",
+          audience: ["business", "technical"],
+          title: "Application Overview (Fallback)",
+          business_description:
+            "The Account Planning System is a corporate banking portfolio management app for relationship/portfolio managers. It includes a Dashboard portfolio overview, customer journey tracking, product performance (HGO/target achievement), primary bank analytics (share of wallet), an actions agenda for planning, and an AI assistant.",
+          technical_description: null,
+          route: "/",
+          related_files: null,
+          keywords: [
+            "account",
+            "planning",
+            "system",
+            "dashboard",
+            "customers",
+            "actions",
+            "primary",
+            "bank",
+            "hgo",
+          ],
+          metadata: { source: "fallback" },
+        },
+      ];
     }
 
     // Build context about clicked element
@@ -278,39 +281,45 @@ Respond with ONLY one word: business, technical, or out_of_context
       .map(w => w.replace(/[^a-z0-9]/g, ''));
 
     // Score each chunk by relevance
-    const scoredChunks = availableChunks.map(chunk => {
-      const content = `${chunk.title} ${chunk.business_description || ''} ${chunk.technical_description || ''} ${chunk.keywords?.join(' ') || ''}`.toLowerCase();
-      
+    const scoredChunks = availableChunks.map((chunk) => {
+      const content = `${chunk.title} ${chunk.business_description || ""} ${chunk.technical_description || ""} ${chunk.keywords?.join(" ") || ""}`.toLowerCase();
+
       let score = 0;
-      
+
       // Exact phrase match (highest priority)
       if (content.includes(questionLower)) score += 10;
-      
+
       // Word matches
       for (const word of questionWords) {
         if (content.includes(word)) score += 2;
         if (chunk.title?.toLowerCase().includes(word)) score += 3;
-        if (chunk.keywords?.some(k => k.toLowerCase().includes(word))) score += 4;
+        if (chunk.keywords?.some((k) => k.toLowerCase().includes(word))) score += 4;
       }
-      
+
       // Route match bonus
       if (currentRoute && chunk.route === currentRoute) score += 5;
-      
+
       // Category match for query type
-      if (queryType === 'technical' && chunk.category?.toLowerCase().includes('technical')) score += 2;
-      if (queryType === 'business' && (chunk.category?.toLowerCase().includes('business') || chunk.category?.toLowerCase().includes('kpi'))) score += 2;
-      
+      if (queryType === "technical" && chunk.category?.toLowerCase().includes("technical")) score += 2;
+      if (queryType === "business" && (chunk.category?.toLowerCase().includes("business") || chunk.category?.toLowerCase().includes("kpi"))) score += 2;
+
       return { chunk, score };
     });
 
-    // Get top relevant chunks (minimum score of 2)
-    const relevantChunks = scoredChunks
-      .filter(sc => sc.score >= 2)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(sc => sc.chunk);
+    const sortedScoredChunks = scoredChunks.sort((a, b) => b.score - a.score);
 
-    console.log(`Found ${relevantChunks.length} relevant chunks for question`);
+    // Get top relevant chunks (minimum score of 2)
+    const relevantChunks = sortedScoredChunks
+      .filter((sc) => sc.score >= 2)
+      .slice(0, 5)
+      .map((sc) => sc.chunk);
+
+    const topScore = sortedScoredChunks[0]?.score ?? 0;
+    const hasSufficientSources = relevantChunks.length > 0 && topScore >= 4;
+
+    console.log(
+      `Found ${relevantChunks.length} relevant chunks for question (topScore=${topScore})`,
+    );
 
     // Build focused context from relevant chunks only
     let focusedContext = "";
@@ -390,11 +399,13 @@ ${codeContext}
 
     // Append raw sources at the end
     if (rawSources.length > 0) {
-      const sourcesList = rawSources.map((s, i) => 
-        `**[${i + 1}] ${s.title}** (${s.category})\n${s.content.substring(0, 200)}${s.content.length > 200 ? '...' : ''}`
-      ).join('\n\n');
-      
-      answer += `\n\n---\n📚 **Sources (${rawSources.length}):**\n\n${sourcesList}`;
+      const sourcesList = rawSources
+        .map(
+          (s, i) => `**[${i + 1}] ${s.title}** (${s.category})\n\n${s.content}`,
+        )
+        .join("\n\n---\n\n");
+
+      answer += `\n\n---\nSources (raw):\n\n${sourcesList}`;
     }
 
     // Save feedback record

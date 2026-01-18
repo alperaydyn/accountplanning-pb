@@ -1,0 +1,1192 @@
+{
+  "metadata": {
+    "application_name": "Account Planning System",
+    "version": "2.0",
+    "domain": "Corporate Banking - Portfolio Management",
+    "target_users": ["Portfolio Managers", "Relationship Managers", "Administrators"],
+    "technology_stack": "React 18 + TypeScript + Vite + Supabase + TailwindCSS",
+    "last_updated": "2026-01-18"
+  },
+
+  "chunks": [
+    {
+      "id": "app_overview",
+      "category": "General",
+      "audience": ["business", "technical"],
+      "title": "Application Overview",
+      "business_description": "The Account Planning System is a corporate banking relationship management application designed for portfolio managers to optimize customer relationships and maximize revenue opportunities. It provides data-driven insights, AI-powered action recommendations, and streamlined customer engagement workflows.",
+      "technical_description": "A React single-page application built with Vite, using Supabase for backend (PostgreSQL + Edge Functions), TanStack Query for state management, and React Router for navigation. Supports multi-language (TR/EN/ES) via LanguageContext.",
+      "key_capabilities": [
+        "Portfolio Management - Track and manage corporate banking customer portfolios",
+        "AI-Powered Insights - Automated recommendations for customer actions and daily planning",
+        "Primary Bank Analytics - Share of wallet analysis and competitive intelligence",
+        "Product Performance Tracking - Stock/flow metrics with target achievement monitoring",
+        "Customer Journey Visualization - Progressive relationship development roadmap",
+        "Multi-language Support - Turkish, English, and Spanish interfaces"
+      ],
+      "related_files": ["src/App.tsx", "src/main.tsx", "README.md"]
+    },
+
+    {
+      "id": "page_dashboard",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Dashboard Page",
+      "route": "/",
+      "business_description": "The main landing page providing a portfolio overview. Shows personalized greeting with time-based message, key summary metrics, daily plan calendar with action density visualization, and AI-generated portfolio insights.",
+      "technical_description": "Located at src/pages/Dashboard.tsx. Uses usePortfolioManager hook for user data, renders SummaryCards, DailyPlanPanel, and InsightsPanel components. Date selector allows viewing historical data.",
+      "components": ["SummaryCards", "DailyPlanPanel", "InsightsPanel", "PageBreadcrumb"],
+      "data_sources": ["portfolio_managers", "customers", "actions", "portfolio_targets", "ai_insights"],
+      "hooks_used": ["usePortfolioManager", "useLanguage"],
+      "features": [
+        "Time-based personalized greeting (Good morning/afternoon/evening)",
+        "Date selector for historical periods (current month, last 3 months, quarter ends, year ends)",
+        "Summary cards with navigation to detailed pages",
+        "Mini calendar showing action density",
+        "AI insights panel with recommendations"
+      ],
+      "related_files": ["src/pages/Dashboard.tsx", "src/components/dashboard/SummaryCards.tsx", "src/components/dashboard/DailyPlanPanel.tsx", "src/components/dashboard/InsightsPanel.tsx"]
+    },
+
+    {
+      "id": "component_summary_cards",
+      "category": "Components",
+      "audience": ["business", "technical"],
+      "title": "Summary Cards Component",
+      "business_description": "Displays four key portfolio metrics: Benchmark Score (HGO achievement), Customer Journey (customer distribution by status), Primary Bank Score (percentage of primary bank customers), and Actions (planned/pending/completed counts).",
+      "technical_description": "Located at src/components/dashboard/SummaryCards.tsx. Calculates metrics from multiple data sources. Each card is clickable and navigates to the relevant detailed page.",
+      "metrics_displayed": [
+        {
+          "name": "Benchmark Score",
+          "calculation": "Count of HGO% >= 75% across all portfolio targets (stock count, stock volume, flow count, flow volume) divided by total HGO count",
+          "formula": "benchmarkScore = (count where HGO >= 75%) / (total HGO metrics)",
+          "data_source": "portfolio_targets table",
+          "navigation": "/product-performance"
+        },
+        {
+          "name": "Customer Journey",
+          "calculation": "Count of customers by status: Aktif -> Target -> Strong Target -> Ana Banka",
+          "data_source": "customers table, status column",
+          "navigation": "/customer-journey"
+        },
+        {
+          "name": "Primary Bank Score",
+          "calculation": "Percentage of customers with status 'Ana Banka' over total customers",
+          "formula": "primaryBankScore = (count where status='Ana Banka') / (total customers) * 100",
+          "data_source": "customers table",
+          "navigation": "/primary-bank"
+        },
+        {
+          "name": "Actions",
+          "calculation": "Count of actions by status (Planlandy, Beklemede, Tamamlandy)",
+          "data_source": "actions table, current_status column",
+          "navigation": "/agenda"
+        }
+      ],
+      "hooks_used": ["usePortfolioSummary", "useCustomers", "useAllCustomerProducts", "useProductThresholds", "useProducts", "usePortfolioTargets"],
+      "related_files": ["src/components/dashboard/SummaryCards.tsx"]
+    },
+
+    {
+      "id": "page_product_performance",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Product Performance Page",
+      "route": "/product-performance",
+      "business_description": "Shows portfolio-level product metrics and target achievement analysis. Products are categorized by status (On Track, At Risk, Critical) with sub-statuses (Growing, Melting, Diversity, Ticket Size). Clicking a status filters the product table.",
+      "technical_description": "Located at src/pages/ProductPerformance.tsx. Uses usePortfolioTargets hook. Hero panel shows status summary cards, main table shows detailed stock/flow metrics per product.",
+      "status_definitions": {
+        "on_track": "Overall average HGO >= 80%",
+        "at_risk": "Overall average HGO >= 50% but < 80%",
+        "critical": "Overall average HGO < 50%",
+        "melting": "Stock metrics good (>= 80%) but flow metrics low (< 80%) - losing momentum",
+        "growing": "Flow metrics good (>= 80%) but stock metrics low (< 80%) - building up",
+        "ticket_size": "Customer count good but volume low - small transactions",
+        "diversity": "Volume good but customer count low - few large customers"
+      },
+      "status_calculation": {
+        "function": "getProductStatus()",
+        "logic": "If stockAvg >= 80 && flowAvg < 80: 'melting'. If stockAvg < 80 && flowAvg >= 80: 'growing'. If countAvg >= 80 && volumeAvg < 80: 'ticket_size'. If countAvg < 80 && volumeAvg >= 80: 'diversity'. Else use overall average thresholds.",
+        "thresholds": { "GOOD_THRESHOLD": 80, "BAD_THRESHOLD": 50 }
+      },
+      "table_columns": ["Product Name", "Category", "Stock Count", "Stock Volume", "Stock HGO%", "Stock YoY%", "Stock MoM%", "Flow Count", "Flow Volume", "Flow HGO%", "Flow YoY%", "Flow MoM%", "Status"],
+      "data_source": "portfolio_targets table joined with products table",
+      "hooks_used": ["usePortfolioTargets", "useLanguage"],
+      "related_files": ["src/pages/ProductPerformance.tsx", "src/components/dashboard/ProductPerformanceTable.tsx"]
+    },
+
+    {
+      "id": "page_customer_journey",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Customer Journey Page",
+      "route": "/customer-journey",
+      "business_description": "Visual customer progression roadmap showing how customers move through relationship stages from new customer to primary bank status. Displays interactive road visualization with customer counts at each stage, development strategies, and tips for progression.",
+      "technical_description": "Located at src/pages/CustomerJourney.tsx. Uses useCustomers hook to get customer counts by status. SVG road visualization with animated markers.",
+      "journey_stages": [
+        { "name": "Yeni Musteri", "english": "New Customer", "description": "Recently acquired customers" },
+        { "name": "Aktif", "english": "Active", "description": "Customers with regular transactions" },
+        { "name": "Target", "english": "Target", "description": "Customers with growth potential" },
+        { "name": "Strong Target", "english": "Strong Target", "description": "High-value customers close to primary bank" },
+        { "name": "Ana Banka", "english": "Primary Bank", "description": "Customers where we are the main banking partner" }
+      ],
+      "features": [
+        "Interactive SVG road with stage markers",
+        "Customer counts per stage with animated markers",
+        "Stage description cards",
+        "Development strategies for each stage",
+        "View Customers buttons with status filter deep-linking"
+      ],
+      "related_files": ["src/pages/CustomerJourney.tsx"]
+    },
+
+    {
+      "id": "page_primary_bank",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Primary Bank Page",
+      "route": "/primary-bank",
+      "business_description": "Share of wallet analysis and competitive positioning dashboard. Shows overall principality score and breaks it down into external data (from market sources like KKB/TCMB) and internal product metrics across four axes.",
+      "technical_description": "Located at src/pages/PrimaryBank.tsx. Uses usePrimaryBankData and useCustomers hooks. Displays external share metrics and internal product axis scores.",
+      "principality_score": {
+        "definition": "Weighted average of share of wallet across different banking product categories",
+        "formula": "overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateralShare * 0.1",
+        "weights": { "loanShare": 0.4, "posShare": 0.3, "chequeShare": 0.2, "collateralShare": 0.1 }
+      },
+      "external_data_metrics": [
+        { "name": "Loans Share", "description": "Bank's share of customer total loans (cash + non-cash)", "data_source": "primary_bank_loan_summary table" },
+        { "name": "POS Share", "description": "Point-of-sale transaction volume share", "data_source": "primary_bank_pos table" },
+        { "name": "Cheque Share", "description": "Percentage of customers with cheque activity at our bank", "data_source": "primary_bank_cheque table" },
+        { "name": "Collateral Share", "description": "Collateral registration share", "data_source": "primary_bank_collateral table" }
+      ],
+      "internal_axes": [
+        { "name": "Products Axis", "description": "Product diversity score" },
+        { "name": "Transactional Axis", "description": "Transaction activity score" },
+        { "name": "Liabilities Axis", "description": "Deposit and liability score" },
+        { "name": "Assets Axis", "description": "Lending and asset score" }
+      ],
+      "hooks_used": ["usePrimaryBankData", "useCustomers", "useLanguage"],
+      "related_files": ["src/pages/PrimaryBank.tsx", "src/hooks/usePrimaryBankData.ts"]
+    },
+
+    {
+      "id": "page_primary_bank_engine",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Primary Bank Engine Page",
+      "route": "/primary-bank/engine",
+      "business_description": "AI-powered batch processing engine to generate primary bank data for the entire customer portfolio. Allows generating competitive intelligence data with progress tracking, pause/resume capability, and individual customer data management.",
+      "technical_description": "Located at src/pages/PrimaryBankEngine.tsx. Calls generate-primary-bank-data edge function. Supports batch processing with state persistence across page refreshes. Shows status indicators (Pending, Processing, Success, Error, Existing) for each customer.",
+      "features": [
+        "Batch data generation for entire portfolio",
+        "Progress tracking with pause/resume",
+        "State persistence across page refreshes",
+        "Overwrite existing data option",
+        "Manual generation for individual customers",
+        "Record month selection for historical data",
+        "Data type badges (Summary, Detail, POS, Cheque, Collateral)",
+        "Delete and regenerate options",
+        "AI provider display"
+      ],
+      "edge_function": "generate-primary-bank-data",
+      "related_files": ["src/pages/PrimaryBankEngine.tsx", "supabase/functions/generate-primary-bank-data/index.ts"]
+    },
+
+    {
+      "id": "page_customers",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Customers Page",
+      "route": "/customers",
+      "business_description": "Customer portfolio management with search, filtering, and navigation to individual customer details. Shows customer list with group membership, sector/segment, status badges, product count, action counts, and last activity date.",
+      "technical_description": "Located at src/pages/Customers.tsx. Uses useCustomers hook with filters. Supports URL parameters for deep-linking (?status=, ?product=, ?group=). Debounced search across customer names, action names, and group names.",
+      "filters": [
+        { "name": "Search", "description": "Debounced search across customer names, action names, and group names" },
+        { "name": "Status", "options": ["Yeni Musteri", "Aktif", "Target", "Strong Target", "Ana Banka"] },
+        { "name": "Product", "description": "Filter by product ownership" },
+        { "name": "Group", "description": "Customer group membership (holding companies)" },
+        { "name": "Action Status", "options": ["Beklemede", "Planlandy"] }
+      ],
+      "table_columns": ["Customer Name", "Group", "Sector", "Segment", "Status", "Product Count", "Planned Actions", "Pending Actions", "Last Activity"],
+      "data_source": "customers table joined with customer_groups, actions aggregated",
+      "hooks_used": ["useCustomers", "useLanguage"],
+      "url_parameters": ["status", "product", "group"],
+      "related_files": ["src/pages/Customers.tsx"]
+    },
+
+    {
+      "id": "page_customer_detail",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Customer Detail Page",
+      "route": "/customers/:customerId",
+      "business_description": "Comprehensive single-customer view with four view modes: Primary Bank (share of wallet), Products (owned products with threshold comparison), Actions (action management), and Autopilot (workflow automation templates).",
+      "technical_description": "Located at src/pages/CustomerDetail.tsx. Uses useCustomerById, useCustomerProducts, useActionsByCustomer hooks. Supports deep-linking with ?action=<actionId> to open specific action.",
+      "view_modes": [
+        {
+          "name": "Primary Bank",
+          "description": "Customer-specific share of wallet analysis with principality score breakdown",
+          "components": ["PrimaryBankPanel", "PrincipalityScoreModal"]
+        },
+        {
+          "name": "Products",
+          "description": "All customer products with current value, threshold comparison, gap analysis, and action counts. Shows non-owned products as cross-sell opportunities.",
+          "features": ["Sorting by product/gap/threshold", "Add Action button from product row", "Non-owned products section"]
+        },
+        {
+          "name": "Actions",
+          "description": "All customer actions with priority, status badges, sorting, filtering. Generate Actions button for AI recommendations.",
+          "components": ["ActionPlanningModal"]
+        },
+        {
+          "name": "Autopilot",
+          "description": "Pre-configured workflow templates (Installment Loan, Credit Card, Term Deposit, Trade Finance) with step tracking.",
+          "components": ["AutoPilotPanel"]
+        }
+      ],
+      "additional_features": [
+        "AI Customer Summary (collapsed by default)",
+        "Deep-link support for ?action=<actionId>"
+      ],
+      "hooks_used": ["useCustomerById", "useCustomerProducts", "useActionsByCustomer", "useCustomerPrimaryBankData"],
+      "related_files": ["src/pages/CustomerDetail.tsx", "src/components/customer/PrimaryBankPanel.tsx", "src/components/customer/AICustomerSummary.tsx", "src/components/customer/AutoPilotPanel.tsx"]
+    },
+
+    {
+      "id": "page_actions_agenda",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Actions Agenda Page",
+      "route": "/agenda",
+      "business_description": "Calendar-based action planning and management with multiple view modes (daily, weekly, monthly, list). Shows action cards with priority badges, customer links, and status indicators. Supports filtering and 'Let AI Plan Your Day' feature.",
+      "technical_description": "Located at src/pages/ActionsAgenda.tsx. Uses useActions hook with filters. View mode preference saved to user_settings. Supports URL parameters (?status=Planlandy or ?status=Beklemede).",
+      "view_modes": ["Daily", "Weekly", "Monthly", "List"],
+      "filters": ["Status (Planlandy, Beklemede)", "Priority (high, medium, low)", "Search"],
+      "features": [
+        "Navigation (Previous/Next period, Today button)",
+        "Action cards with priority badges",
+        "Customer links from action cards",
+        "Empty state with AI suggestion",
+        "View mode saved to user preferences"
+      ],
+      "data_source": "actions table joined with customers and products",
+      "hooks_used": ["useActions", "useUserSettings", "useLanguage"],
+      "related_files": ["src/pages/ActionsAgenda.tsx"]
+    },
+
+    {
+      "id": "page_ai_assistant",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "AI Assistant Page",
+      "route": "/ai-assistant",
+      "business_description": "Conversational AI interface for portfolio intelligence. Supports multiple chat sessions, 'Plan My Day' feature with automatic customer prioritization and action recommendations. Users can save suggested actions directly from AI responses.",
+      "technical_description": "Located at src/pages/AIAssistant.tsx. Uses ai-action-assistant edge function. Chat history stored in ai_chat_sessions and ai_chat_messages tables. Supports URL trigger ?prompt=plan-my-day&date=YYYY-MM-DD.",
+      "features": [
+        "Multiple conversation threads",
+        "Create/delete sessions",
+        "Auto-title based on first message",
+        "Plan My Day with date targeting",
+        "Save actions from AI suggestions",
+        "Token usage and cost tracking",
+        "Privacy panel (collapsible)"
+      ],
+      "ai_context": [
+        "Customer portfolio data",
+        "Product holdings and thresholds",
+        "Existing actions and status",
+        "Action templates"
+      ],
+      "edge_function": "ai-action-assistant",
+      "data_tables": ["ai_chat_sessions", "ai_chat_messages"],
+      "hooks_used": ["useAIChatSessions", "useAIChatMessages", "useCustomers", "useActionTemplates"],
+      "related_files": ["src/pages/AIAssistant.tsx", "supabase/functions/ai-action-assistant/index.ts", "src/components/ai/PlanMyDayDisplay.tsx"]
+    },
+
+    {
+      "id": "page_thresholds",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Thresholds Page",
+      "route": "/thresholds",
+      "business_description": "Product threshold management interface. Shows threshold values per product/sector/segment combination with calculation date and version. Admin-only editing capability.",
+      "technical_description": "Located at src/pages/Thresholds.tsx. Uses useProductThresholds hook. Admin role checked via useUserRole. Edit modal for threshold value updates.",
+      "table_columns": ["Product", "Sector", "Segment", "Threshold Value", "Calculation Date", "Version", "Active Status"],
+      "filters": ["Product", "Sector", "Segment", "Active/Inactive status"],
+      "role_based_access": {
+        "admin": "Full edit access",
+        "user": "Read-only view"
+      },
+      "data_source": "product_thresholds table joined with products",
+      "hooks_used": ["useProductThresholds", "useUserRole", "useLanguage"],
+      "related_files": ["src/pages/Thresholds.tsx"]
+    },
+
+    {
+      "id": "page_settings",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Settings Page",
+      "route": "/settings",
+      "business_description": "Technical configuration page for AI provider settings, voice settings (ElevenLabs), and SQL query runner. Typically used by power users and administrators.",
+      "technical_description": "Located at src/pages/Settings.tsx. Contains AIProviderSettings, ElevenLabsSettings, and QueryPanel components.",
+      "sections": [
+        {
+          "name": "AI Provider Settings",
+          "description": "Configure AI provider (Lovable, OpenAI, OpenRouter, Local), model selection, API key, connection test",
+          "component": "AIProviderSettings"
+        },
+        {
+          "name": "ElevenLabs Voice Settings",
+          "description": "Voice selection, parameters (stability, similarity, speed, style), speaker boost, voice history",
+          "component": "ElevenLabsSettings"
+        },
+        {
+          "name": "SQL Query Panel",
+          "description": "Execute read-only SQL queries, save/load queries, results display",
+          "component": "QueryPanel"
+        }
+      ],
+      "data_source": "user_settings, saved_queries tables",
+      "related_files": ["src/pages/Settings.tsx", "src/components/settings/AIProviderSettings.tsx", "src/components/settings/ElevenLabsSettings.tsx", "src/components/settings/QueryPanel.tsx"]
+    },
+
+    {
+      "id": "page_preferences",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Preferences Page",
+      "route": "/preferences",
+      "business_description": "User personalization settings including language selection (Turkish, English, Spanish), preferred agenda view mode, and access to documentation.",
+      "technical_description": "Located at src/pages/Preferences.tsx. Uses useUserSettings hook for language and agenda view preference.",
+      "settings": [
+        { "name": "Language", "options": ["Turkish (tr)", "English (en)", "Spanish (es)"] },
+        { "name": "Preferred Agenda View", "options": ["Daily", "Weekly", "Monthly", "List"] },
+        { "name": "Documentation Link", "description": "Access to README documentation" }
+      ],
+      "data_source": "user_settings table",
+      "hooks_used": ["useUserSettings", "useLanguage"],
+      "related_files": ["src/pages/Preferences.tsx"]
+    },
+
+    {
+      "id": "db_customers",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Customers Table",
+      "table_name": "customers",
+      "description": "Core table storing corporate customer records with their relationship status, segment classification, and portfolio manager assignment.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "name", "type": "text", "description": "Customer company name" },
+        { "name": "sector", "type": "customer_sector enum", "description": "Business sector", "values": ["Turizm", "Ulasim", "Perakende", "Gayrimenkul", "Tarim Hayvancilik", "Saglik", "Enerji"] },
+        { "name": "segment", "type": "customer_segment enum", "description": "Customer size segment", "values": ["MIKRO", "KI", "OBI", "TICARI"] },
+        { "name": "status", "type": "customer_status enum", "description": "Relationship status", "values": ["Yeni Musteri", "Aktif", "Target", "Strong Target", "Ana Banka"] },
+        { "name": "principality_score", "type": "number", "description": "Primary bank score (0-100)" },
+        { "name": "last_activity_date", "type": "date", "description": "Last interaction date" },
+        { "name": "portfolio_manager_id", "type": "uuid", "description": "FK to portfolio_managers" },
+        { "name": "group_id", "type": "uuid", "description": "FK to customer_groups (holding company)" },
+        { "name": "created_at", "type": "timestamp", "description": "Record creation time" },
+        { "name": "updated_at", "type": "timestamp", "description": "Last update time" }
+      ],
+      "relationships": [
+        { "table": "portfolio_managers", "type": "many-to-one", "foreign_key": "portfolio_manager_id" },
+        { "table": "customer_groups", "type": "many-to-one", "foreign_key": "group_id" }
+      ],
+      "rls_policy": "Users can only access customers where portfolio_manager_id matches their portfolio manager"
+    },
+
+    {
+      "id": "db_actions",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Actions Table",
+      "table_name": "actions",
+      "description": "Stores sales and relationship actions for customers. Actions can be AI-generated (model_based), manually created (ad_hoc, rm_action), or recurring (recursive).",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
+        { "name": "product_id", "type": "uuid", "description": "FK to products" },
+        { "name": "name", "type": "text", "description": "Action name/title" },
+        { "name": "description", "type": "text", "description": "Detailed description" },
+        { "name": "creator_name", "type": "text", "description": "Who created the action" },
+        { "name": "creation_reason", "type": "text", "description": "Why the action was created" },
+        { "name": "customer_hints", "type": "text", "description": "AI hints about customer context" },
+        { "name": "source_data_date", "type": "date", "description": "Data date used for creation" },
+        { "name": "action_target_date", "type": "date", "description": "Target completion date" },
+        { "name": "type", "type": "action_type enum", "values": ["model_based", "ad_hoc", "rm_action", "recursive"], "description": "Action source type" },
+        { "name": "priority", "type": "action_priority enum", "values": ["high", "medium", "low"], "description": "Priority level" },
+        { "name": "target_value", "type": "number", "description": "Target transaction value" },
+        { "name": "current_status", "type": "action_status enum", "values": ["Beklemede", "Planlandy", "Tamamlandy", "Ertelendi", "Ilgilenmiyor", "Uygun Degil"], "description": "Current action status" },
+        { "name": "current_planned_date", "type": "date", "description": "Current planned date (may differ from target)" },
+        { "name": "current_value", "type": "number", "description": "Current achieved value" },
+        { "name": "is_recursive", "type": "boolean", "description": "Whether action repeats" },
+        { "name": "recurrence_pattern", "type": "text", "description": "Recurrence pattern (daily, weekly, monthly)" },
+        { "name": "recurrence_interval", "type": "number", "description": "Interval between recurrences" },
+        { "name": "recurrence_end_date", "type": "date", "description": "When recurrence ends" },
+        { "name": "next_recurrence_date", "type": "date", "description": "Next occurrence date" },
+        { "name": "parent_action_id", "type": "uuid", "description": "FK to parent action for recurring" }
+      ],
+      "relationships": [
+        { "table": "customers", "type": "many-to-one", "foreign_key": "customer_id" },
+        { "table": "products", "type": "many-to-one", "foreign_key": "product_id" },
+        { "table": "actions", "type": "self-reference", "foreign_key": "parent_action_id" }
+      ],
+      "status_flow": "Beklemede -> Planlandy -> Tamamlandy / Ertelendi / Ilgilenmiyor / Uygun Degil"
+    },
+
+    {
+      "id": "db_products",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Products Table",
+      "table_name": "products",
+      "description": "Banking product catalog with categorization and display ordering.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "name", "type": "text", "description": "Product name" },
+        { "name": "category", "type": "product_category enum", "values": ["Kredi", "Kaynak", "Odeme", "Tahsilat", "Sigorta", "Istirak"], "description": "Product category" },
+        { "name": "description", "type": "text", "description": "Product description" },
+        { "name": "display_order", "type": "number", "description": "UI display order" },
+        { "name": "is_external", "type": "boolean", "description": "Whether product data comes from external sources" }
+      ],
+      "categories_explained": {
+        "Kredi": "Loans (cash and non-cash)",
+        "Kaynak": "Deposits and resources",
+        "Odeme": "Payment services",
+        "Tahsilat": "Collection services",
+        "Sigorta": "Insurance products",
+        "Istirak": "Investment/affiliate products"
+      }
+    },
+
+    {
+      "id": "db_customer_products",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Customer Products Table",
+      "table_name": "customer_products",
+      "description": "Junction table storing which products each customer has and their current values.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
+        { "name": "product_id", "type": "uuid", "description": "FK to products" },
+        { "name": "current_value", "type": "number", "description": "Current product value/balance" },
+        { "name": "external_data", "type": "number", "description": "External data value (from KKB/TCMB)" }
+      ],
+      "relationships": [
+        { "table": "customers", "type": "many-to-one", "foreign_key": "customer_id" },
+        { "table": "products", "type": "many-to-one", "foreign_key": "product_id" }
+      ],
+      "gap_calculation": "gap = threshold_value - current_value (calculated in useCustomerProducts hook)"
+    },
+
+    {
+      "id": "db_product_thresholds",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Product Thresholds Table",
+      "table_name": "product_thresholds",
+      "description": "Target threshold values for products per sector/segment combination. Used to determine if a customer meets the 'primary bank' threshold for a product.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "product_id", "type": "uuid", "description": "FK to products" },
+        { "name": "sector", "type": "customer_sector enum", "description": "Customer sector" },
+        { "name": "segment", "type": "customer_segment enum", "description": "Customer segment" },
+        { "name": "threshold_value", "type": "number", "description": "Target value threshold" },
+        { "name": "calculation_date", "type": "date", "description": "When threshold was calculated" },
+        { "name": "version_num", "type": "number", "description": "Version number" },
+        { "name": "is_active", "type": "boolean", "description": "Whether this threshold is currently active" }
+      ],
+      "usage": "When displaying customer products, the threshold for that customer's sector/segment is looked up to calculate the gap"
+    },
+
+    {
+      "id": "db_portfolio_targets",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Portfolio Targets Table",
+      "table_name": "portfolio_targets",
+      "description": "Portfolio-level target metrics for products. Contains stock and flow metrics with actual values, targets, and delta calculations.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "portfolio_manager_id", "type": "uuid", "description": "FK to portfolio_managers" },
+        { "name": "product_id", "type": "uuid", "description": "FK to products" },
+        { "name": "record_date", "type": "date", "description": "Period date (YYYY-MM format)" },
+        { "name": "measure_date", "type": "date", "description": "When measurement was taken" },
+        { "name": "stock_count", "type": "number", "description": "Current customer count (stock)" },
+        { "name": "stock_count_target", "type": "number", "description": "Target customer count" },
+        { "name": "stock_count_tar", "type": "number", "description": "HGO% (stock_count/target*100)" },
+        { "name": "stock_count_delta_ytd", "type": "number", "description": "Year-to-date change" },
+        { "name": "stock_count_delta_mtd", "type": "number", "description": "Month-to-date change" },
+        { "name": "stock_volume", "type": "number", "description": "Current volume (stock)" },
+        { "name": "stock_volume_target", "type": "number", "description": "Target volume" },
+        { "name": "stock_volume_tar", "type": "number", "description": "HGO% for volume" },
+        { "name": "stock_volume_delta_ytd", "type": "number", "description": "YTD volume change" },
+        { "name": "stock_volume_delta_mtd", "type": "number", "description": "MTD volume change" },
+        { "name": "flow_count", "type": "number", "description": "New acquisitions count (flow)" },
+        { "name": "flow_count_target", "type": "number", "description": "Target acquisitions" },
+        { "name": "flow_count_tar", "type": "number", "description": "HGO% for flow count" },
+        { "name": "flow_volume", "type": "number", "description": "New volume (flow)" },
+        { "name": "flow_volume_target", "type": "number", "description": "Target new volume" },
+        { "name": "flow_volume_tar", "type": "number", "description": "HGO% for flow volume" }
+      ],
+      "metrics_explained": {
+        "Stock": "Current state - total customers/volume at a point in time",
+        "Flow": "Change - new acquisitions during the period",
+        "TAR/HGO%": "Target Achievement Ratio = (actual / target) * 100",
+        "YTD": "Year-to-date cumulative change",
+        "MTD": "Month-to-date change"
+      }
+    },
+
+    {
+      "id": "db_primary_bank_loan_summary",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Primary Bank Loan Summary Table",
+      "table_name": "primary_bank_loan_summary",
+      "description": "Bank-level loan summary data per customer showing cash and non-cash loan amounts across all banks the customer works with.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
+        { "name": "bank_code", "type": "text", "description": "Bank identifier" },
+        { "name": "cash_loan", "type": "number", "description": "Cash loan amount" },
+        { "name": "non_cash_loan", "type": "number", "description": "Non-cash loan amount (guarantees, LCs)" },
+        { "name": "our_bank_flag", "type": "boolean", "description": "True if this is our bank" },
+        { "name": "last_approval_date", "type": "date", "description": "Last credit approval date" },
+        { "name": "record_month", "type": "text", "description": "Record month (YYYY-MM)" }
+      ],
+      "loan_share_calculation": "loanShare = (sum of our_bank cash+non_cash) / (sum of all banks cash+non_cash) * 100"
+    },
+
+    {
+      "id": "db_primary_bank_pos",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Primary Bank POS Table",
+      "table_name": "primary_bank_pos",
+      "description": "POS (Point of Sale) transaction volume data showing our bank's share of the customer's total POS volume.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
+        { "name": "total_pos_volume", "type": "number", "description": "Total POS volume across all banks" },
+        { "name": "our_bank_pos_volume", "type": "number", "description": "Our bank's POS volume" },
+        { "name": "pos_share", "type": "number", "description": "Our share percentage" },
+        { "name": "number_of_banks", "type": "number", "description": "Number of banks customer uses for POS" },
+        { "name": "record_month", "type": "text", "description": "Record month" }
+      ]
+    },
+
+    {
+      "id": "db_primary_bank_cheque",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Primary Bank Cheque Table",
+      "table_name": "primary_bank_cheque",
+      "description": "Cheque processing volume data for customers.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
+        { "name": "cheque_volume_1m", "type": "number", "description": "Cheque volume last 1 month" },
+        { "name": "cheque_volume_3m", "type": "number", "description": "Cheque volume last 3 months" },
+        { "name": "cheque_volume_12m", "type": "number", "description": "Cheque volume last 12 months" },
+        { "name": "record_month", "type": "text", "description": "Record month" }
+      ],
+      "cheque_activity_check": "chequeActive = cheque_volume_12m > 0"
+    },
+
+    {
+      "id": "db_primary_bank_collateral",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Primary Bank Collateral Table",
+      "table_name": "primary_bank_collateral",
+      "description": "Collateral registration data showing pledged assets across different banks.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
+        { "name": "bank_code", "type": "text", "description": "Bank identifier" },
+        { "name": "group1_amount", "type": "number", "description": "Group 1 collateral amount" },
+        { "name": "group2_amount", "type": "number", "description": "Group 2 collateral amount" },
+        { "name": "group3_amount", "type": "number", "description": "Group 3 collateral amount" },
+        { "name": "group4_amount", "type": "number", "description": "Group 4 collateral amount" },
+        { "name": "our_bank_flag", "type": "boolean", "description": "True if this is our bank" },
+        { "name": "record_month", "type": "text", "description": "Record month" }
+      ],
+      "collateral_share_calculation": "collateralShare = (sum of our_bank groups) / (sum of all banks groups) * 100"
+    },
+
+    {
+      "id": "db_action_templates",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "Action Templates Table",
+      "table_name": "action_templates",
+      "description": "Pre-defined action types per product. Used by AI to suggest appropriate actions and by users when creating new actions.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "product_id", "type": "uuid", "description": "FK to products" },
+        { "name": "name", "type": "text", "description": "Template action name" },
+        { "name": "description", "type": "text", "description": "Template description" },
+        { "name": "display_order", "type": "number", "description": "UI display order" }
+      ],
+      "usage": "When AI suggests actions, it uses these templates to ensure actions are appropriate for each product"
+    },
+
+    {
+      "id": "db_ai_chat_sessions",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "AI Chat Sessions Table",
+      "table_name": "ai_chat_sessions",
+      "description": "Stores AI assistant conversation sessions for each portfolio manager.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "portfolio_manager_id", "type": "uuid", "description": "FK to portfolio_managers" },
+        { "name": "title", "type": "text", "description": "Session title (auto-generated from first message)" },
+        { "name": "provider", "type": "text", "description": "AI provider used" }
+      ]
+    },
+
+    {
+      "id": "db_ai_insights",
+      "category": "Database",
+      "audience": ["technical"],
+      "title": "AI Insights Table",
+      "table_name": "ai_insights",
+      "description": "Stores AI-generated portfolio insights with versioning for historical comparison.",
+      "columns": [
+        { "name": "id", "type": "uuid", "description": "Primary key" },
+        { "name": "portfolio_manager_id", "type": "uuid", "description": "FK to portfolio_managers" },
+        { "name": "record_date", "type": "date", "description": "Period date" },
+        { "name": "version", "type": "number", "description": "Version number (increments on regeneration)" },
+        { "name": "model_name", "type": "text", "description": "AI model used" },
+        { "name": "insights", "type": "json", "description": "Array of insight objects" },
+        { "name": "feedback", "type": "text", "description": "User feedback (like/dislike)" },
+        { "name": "provider", "type": "text", "description": "AI provider" }
+      ],
+      "insight_structure": {
+        "type": "critical | warning | info",
+        "title": "Short title",
+        "message": "Summary (max 15 words)",
+        "analysis": "Current situation analysis (2-3 sentences)",
+        "recommendations": ["Action item 1", "Action item 2"],
+        "products": [{ "name": "Product Name", "id": "uuid" }]
+      }
+    },
+
+    {
+      "id": "hook_usePortfolioSummary",
+      "category": "Hooks",
+      "audience": ["technical"],
+      "title": "usePortfolioSummary Hook",
+      "file": "src/hooks/usePortfolioSummary.ts",
+      "description": "Fetches aggregated portfolio metrics for the current user's portfolio.",
+      "returns": {
+        "totalCustomers": "Total number of customers",
+        "primaryBankCustomers": "Customers with status 'Ana Banka'",
+        "nonPrimaryCustomers": "totalCustomers - primaryBankCustomers",
+        "primaryBankScore": "Average principality_score across all customers",
+        "totalActionsPlanned": "Count of actions with status 'Planlandy'",
+        "totalActionsCompleted": "Count of actions with status 'Tamamlandy'",
+        "totalActionsPending": "Count of actions with status 'Beklemede'"
+      },
+      "data_sources": ["customers", "actions"],
+      "depends_on": ["usePortfolioManager"]
+    },
+
+    {
+      "id": "hook_usePrimaryBankData",
+      "category": "Hooks",
+      "audience": ["technical"],
+      "title": "usePrimaryBankData Hook",
+      "file": "src/hooks/usePrimaryBankData.ts",
+      "description": "Calculates share of wallet metrics for a set of customers.",
+      "parameters": {
+        "customerIds": "Array of customer UUIDs",
+        "recordMonth": "Optional record month filter"
+      },
+      "returns": {
+        "loanShare": "Our bank's share of total loans across all customers",
+        "posShare": "Average POS share across customers with POS data",
+        "chequeShare": "Percentage of customers with cheque activity",
+        "collateralShare": "Our bank's share of total collateral",
+        "overallScore": "Weighted average: loan*0.4 + pos*0.3 + cheque*0.2 + collateral*0.1"
+      },
+      "calculation_details": {
+        "loanShare": "(sum of our_bank cash_loan + non_cash_loan) / (sum of all banks) * 100",
+        "posShare": "average of pos_share field across customers with POS volume > 0",
+        "chequeShare": "(customers with cheque_volume_12m > 0) / (total customers) * 100",
+        "collateralShare": "(sum of our_bank groups 1-4) / (sum of all banks groups 1-4) * 100"
+      },
+      "data_sources": ["primary_bank_loan_summary", "primary_bank_pos", "primary_bank_cheque", "primary_bank_collateral"]
+    },
+
+    {
+      "id": "hook_useCustomerProducts",
+      "category": "Hooks",
+      "audience": ["technical"],
+      "title": "useCustomerProducts Hook",
+      "file": "src/hooks/useCustomerProducts.ts",
+      "description": "Fetches products for a specific customer with threshold comparison and gap calculation.",
+      "parameters": {
+        "customerId": "Customer UUID"
+      },
+      "returns": "Array of customer products with computed threshold and gap fields",
+      "computation": {
+        "threshold": "Looked up from product_thresholds for customer's sector/segment",
+        "gap": "threshold - current_value (positive gap = opportunity)"
+      },
+      "data_sources": ["customer_products", "products", "product_thresholds", "customers"]
+    },
+
+    {
+      "id": "hook_useInsights",
+      "category": "Hooks",
+      "audience": ["technical"],
+      "title": "useInsights Hook",
+      "file": "src/hooks/useInsights.ts",
+      "description": "Fetches or generates AI portfolio insights. Calculates product status and triggers AI generation if no insights exist.",
+      "status_calculation": {
+        "function": "calculateStatus(stockCountTar, stockVolumeTar, flowCountTar, flowVolumeTar)",
+        "logic": "Returns: melting, growing, ticket_size, diversity, critical, at_risk, or on_track based on threshold comparisons",
+        "thresholds": { "GOOD_THRESHOLD": 80, "BAD_THRESHOLD": 50 }
+      },
+      "features": [
+        "Auto-generates insights if none exist for the period",
+        "Supports version selection for historical comparison",
+        "Refresh/regenerate with new version number",
+        "Feedback submission (like/dislike)"
+      ],
+      "edge_function": "generate-insights",
+      "data_sources": ["portfolio_targets", "actions", "ai_insights"]
+    },
+
+    {
+      "id": "edge_function_ai_action_assistant",
+      "category": "Edge Functions",
+      "audience": ["technical"],
+      "title": "AI Action Assistant Edge Function",
+      "file": "supabase/functions/ai-action-assistant/index.ts",
+      "description": "Main AI chat handler that processes user messages and generates responses with portfolio context. Supports 'Plan My Day' feature.",
+      "endpoint": "POST /functions/v1/ai-action-assistant",
+      "request_body": {
+        "message": "User's message",
+        "customers": "Array of customer data with products and actions",
+        "actionTemplates": "Available action templates",
+        "chatHistory": "Previous messages in session"
+      },
+      "ai_providers": {
+        "lovable": "Default - uses Lovable AI Gateway",
+        "openai": "Direct OpenAI API",
+        "openrouter": "OpenRouter API",
+        "local": "Local OpenAI-compatible server"
+      },
+      "plan_my_day_feature": {
+        "trigger": "Message contains 'plan my day' or 'gunumu planla'",
+        "date_extraction": "Extracts target date from 'for YYYY-MM-DD' pattern",
+        "customer_prioritization": "Ranks customers by: status progression potential, principality score, below-threshold products",
+        "output": "Structured plan with customer names, products, and action recommendations"
+      }
+    },
+
+    {
+      "id": "edge_function_generate_insights",
+      "category": "Edge Functions",
+      "audience": ["technical"],
+      "title": "Generate Insights Edge Function",
+      "file": "supabase/functions/generate-insights/index.ts",
+      "description": "Generates portfolio-level AI insights based on product performance data.",
+      "endpoint": "POST /functions/v1/generate-insights",
+      "request_body": {
+        "products": "Array of product summaries with status, HGO%, pending actions"
+      },
+      "insight_types": {
+        "critical": "Urgent action required (critical or melting products)",
+        "warning": "Attention needed (at_risk, growing, ticket_size, diversity)",
+        "info": "Opportunities (pending actions, growth potential)"
+      },
+      "response": {
+        "insights": "Array of insight objects with type, title, message, analysis, recommendations, products"
+      },
+      "language": "Turkish (system prompt and output)"
+    },
+
+    {
+      "id": "kpi_benchmark_score",
+      "category": "KPIs",
+      "audience": ["business", "technical"],
+      "title": "Benchmark Score KPI",
+      "business_description": "Measures portfolio performance by counting how many product metrics achieve at least 75% of their target (HGO >= 75%).",
+      "formula": "benchmarkScore = (count of HGO% >= 75) / (total HGO metrics count)",
+      "components": ["Stock Count HGO%", "Stock Volume HGO%", "Flow Count HGO%", "Flow Volume HGO%"],
+      "calculation_location": "src/components/dashboard/SummaryCards.tsx",
+      "data_source": "portfolio_targets table",
+      "display_format": "X/Y (where X = metrics meeting threshold, Y = total metrics)",
+      "good_threshold": ">=75%",
+      "interpretation": "Higher ratio indicates better target achievement across the portfolio"
+    },
+
+    {
+      "id": "kpi_primary_bank_score",
+      "category": "KPIs",
+      "audience": ["business", "technical"],
+      "title": "Primary Bank Score KPI",
+      "business_description": "Percentage of customers where our bank is the primary banking partner (status = 'Ana Banka').",
+      "formula": "primaryBankScore = (customers with status 'Ana Banka') / (total customers) * 100",
+      "calculation_location": "src/components/dashboard/SummaryCards.tsx",
+      "data_source": "customers table, status column",
+      "display_format": "X% (count shown as X/Y)",
+      "interpretation": "Higher percentage indicates stronger customer relationships and deeper wallet share"
+    },
+
+    {
+      "id": "kpi_principality_score",
+      "category": "KPIs",
+      "audience": ["business", "technical"],
+      "title": "Principality Score (Share of Wallet)",
+      "business_description": "Weighted measure of how much of a customer's banking business is with our bank. Combines external market data (loans, POS, cheques, collateral) into a single score.",
+      "formula": "overallScore = loanShare*0.4 + posShare*0.3 + chequeShare*0.2 + collateralShare*0.1",
+      "weights": {
+        "loanShare": "40% - Most important factor",
+        "posShare": "30% - Second most important",
+        "chequeShare": "20% - Medium importance",
+        "collateralShare": "10% - Supplementary factor"
+      },
+      "calculation_location": "src/hooks/usePrimaryBankData.ts, src/hooks/useCustomerPrimaryBankData.ts",
+      "data_sources": ["primary_bank_loan_summary", "primary_bank_pos", "primary_bank_cheque", "primary_bank_collateral"],
+      "display_format": "X% (0-100 scale)",
+      "interpretation": "Higher score indicates we are the dominant banking partner for that customer"
+    },
+
+    {
+      "id": "kpi_hgo_tar",
+      "category": "KPIs",
+      "audience": ["business", "technical"],
+      "title": "HGO% (Target Achievement Ratio)",
+      "business_description": "Hedef Gerceklesme Orani - Percentage of target achieved. Used for both stock and flow metrics at portfolio level.",
+      "formula": "HGO% = (actual value / target value) * 100",
+      "variants": ["stock_count_tar", "stock_volume_tar", "flow_count_tar", "flow_volume_tar"],
+      "calculation_location": "Stored in portfolio_targets table, also calculated in usePortfolioTargets hook",
+      "thresholds": {
+        "good": ">=80% (On Track)",
+        "medium": "50-80% (At Risk)",
+        "bad": "<50% (Critical)"
+      },
+      "interpretation": "100% means target fully achieved; above 100% means exceeded target"
+    },
+
+    {
+      "id": "kpi_gap",
+      "category": "KPIs",
+      "audience": ["business", "technical"],
+      "title": "Product Gap",
+      "business_description": "Difference between the threshold value and customer's current product value. Positive gap indicates opportunity to grow.",
+      "formula": "gap = threshold_value - current_value",
+      "calculation_location": "src/hooks/useCustomerProducts.ts",
+      "data_sources": ["customer_products", "product_thresholds"],
+      "interpretation": "Positive gap = customer below threshold (opportunity). Negative gap = customer above threshold (achieved)."
+    },
+
+    {
+      "id": "enum_customer_status",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Customer Status Values",
+      "enum_name": "customer_status",
+      "values": [
+        { "value": "Yeni Musteri", "english": "New Customer", "description": "Recently acquired customer, initial relationship" },
+        { "value": "Aktif", "english": "Active", "description": "Customer with regular transactions but limited product penetration" },
+        { "value": "Target", "english": "Target", "description": "Customer identified for growth, has cross-sell potential" },
+        { "value": "Strong Target", "english": "Strong Target", "description": "High-value customer close to becoming primary bank" },
+        { "value": "Ana Banka", "english": "Primary Bank", "description": "Customer where we are the main banking partner" }
+      ],
+      "progression": "Yeni Musteri -> Aktif -> Target -> Strong Target -> Ana Banka",
+      "used_in": ["customers table", "Customer Journey page", "filtering across the app"]
+    },
+
+    {
+      "id": "enum_action_status",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Action Status Values",
+      "enum_name": "action_status",
+      "values": [
+        { "value": "Beklemede", "english": "Pending", "description": "Action created but not yet planned" },
+        { "value": "Planlandy", "english": "Planned", "description": "Action scheduled with a date" },
+        { "value": "Tamamlandy", "english": "Completed", "description": "Action successfully completed" },
+        { "value": "Ertelendi", "english": "Postponed", "description": "Action postponed to later date" },
+        { "value": "Ilgilenmiyor", "english": "Not Interested", "description": "Customer not interested in the offer" },
+        { "value": "Uygun Degil", "english": "Not Suitable", "description": "Product not suitable for customer" }
+      ],
+      "flow": "Beklemede -> Planlandy -> (Tamamlandy | Ertelendi | Ilgilenmiyor | Uygun Degil)",
+      "used_in": ["actions table", "Actions Agenda", "Customer Detail Actions tab"]
+    },
+
+    {
+      "id": "enum_action_priority",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Action Priority Values",
+      "enum_name": "action_priority",
+      "values": [
+        { "value": "high", "description": "Urgent, high-value opportunities. Red badge in UI." },
+        { "value": "medium", "description": "Standard priority. Yellow/amber badge in UI." },
+        { "value": "low", "description": "Lower urgency items. Gray badge in UI." }
+      ],
+      "used_in": ["actions table", "Action cards", "Action Planning Modal"]
+    },
+
+    {
+      "id": "enum_action_type",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Action Type Values",
+      "enum_name": "action_type",
+      "values": [
+        { "value": "model_based", "label": "Model", "description": "AI-generated action recommendation" },
+        { "value": "rm_action", "label": "RM Action", "description": "Created by relationship manager" },
+        { "value": "ad_hoc", "label": "Ad-Hoc", "description": "One-time action, often from file upload" },
+        { "value": "recursive", "label": "Recursive", "description": "Recurring/scheduled action" }
+      ],
+      "used_in": ["actions table", "Action creation", "AI action generation"]
+    },
+
+    {
+      "id": "enum_customer_segment",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Customer Segment Values",
+      "enum_name": "customer_segment",
+      "values": [
+        { "value": "MIKRO", "english": "Micro", "description": "Micro businesses - smallest segment" },
+        { "value": "KI", "english": "Small", "description": "Small businesses" },
+        { "value": "OBI", "english": "SME", "description": "Small and Medium Enterprises" },
+        { "value": "TICARI", "english": "Commercial", "description": "Commercial/Corporate - largest segment" }
+      ],
+      "used_in": ["customers table", "product_thresholds (threshold varies by segment)", "filtering"]
+    },
+
+    {
+      "id": "enum_customer_sector",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Customer Sector Values",
+      "enum_name": "customer_sector",
+      "values": [
+        { "value": "Turizm", "english": "Tourism" },
+        { "value": "Ulasim", "english": "Transportation" },
+        { "value": "Perakende", "english": "Retail" },
+        { "value": "Gayrimenkul", "english": "Real Estate" },
+        { "value": "Tarim Hayvancilik", "english": "Agriculture" },
+        { "value": "Saglik", "english": "Healthcare" },
+        { "value": "Enerji", "english": "Energy" }
+      ],
+      "used_in": ["customers table", "product_thresholds (threshold varies by sector)", "filtering", "Primary Bank page"]
+    },
+
+    {
+      "id": "enum_product_category",
+      "category": "Enums",
+      "audience": ["business", "technical"],
+      "title": "Product Category Values",
+      "enum_name": "product_category",
+      "values": [
+        { "value": "Kredi", "english": "Loans", "description": "Cash and non-cash credit products" },
+        { "value": "Kaynak", "english": "Deposits", "description": "Deposit and resource products" },
+        { "value": "Odeme", "english": "Payments", "description": "Payment services" },
+        { "value": "Tahsilat", "english": "Collections", "description": "Collection services" },
+        { "value": "Sigorta", "english": "Insurance", "description": "Insurance products" },
+        { "value": "Istirak", "english": "Affiliates", "description": "Investment/affiliate products" }
+      ],
+      "used_in": ["products table", "Product Performance filtering", "product grouping"]
+    },
+
+    {
+      "id": "ui_action_planning_modal",
+      "category": "UI Components",
+      "audience": ["business", "technical"],
+      "title": "Action Planning Modal",
+      "component": "ActionPlanningModal",
+      "file": "src/components/actions/ActionPlanningModal.tsx",
+      "business_description": "Full action lifecycle management interface. Allows updating action status, setting planned date, recording achieved value, and adding response notes. Supports navigating through multiple actions for the same customer.",
+      "features": [
+        "Carousel navigation for multiple actions",
+        "Customer information header",
+        "Product context with threshold/gap",
+        "Status selector (Beklemede, Planlandy, Tamamlandy, etc.)",
+        "Date picker for planned date",
+        "Volume/value input with thousand separators",
+        "Response text/notes field",
+        "AI hints display (collapsible)",
+        "Action history timeline"
+      ],
+      "data_displayed": [
+        "Customer name, segment, sector",
+        "Product name and category",
+        "Current value vs threshold vs gap",
+        "Action name, description, priority",
+        "Creation reason and customer hints",
+        "Historical updates"
+      ],
+      "hooks_used": ["useCustomerById", "useProducts", "useCustomerProducts", "useActionsByCustomer", "useActionUpdates", "useCreateActionUpdate"]
+    },
+
+    {
+      "id": "ui_add_action_modal",
+      "category": "UI Components",
+      "audience": ["business", "technical"],
+      "title": "Add Action Modal",
+      "component": "AddActionModal",
+      "file": "src/components/actions/AddActionModal.tsx",
+      "business_description": "Quick action creation interface. Allows creating new actions for a customer by selecting a product and action template, setting priority, and optionally adding description.",
+      "features": [
+        "Product selector",
+        "Action template selector (filtered by product)",
+        "Priority selector",
+        "Target date picker",
+        "Description field",
+        "Target value input"
+      ],
+      "hooks_used": ["useProducts", "useActionTemplates", "useCreateAction"]
+    },
+
+    {
+      "id": "ui_insights_panel",
+      "category": "UI Components",
+      "audience": ["business", "technical"],
+      "title": "Insights Panel",
+      "component": "InsightsPanel",
+      "file": "src/components/dashboard/InsightsPanel.tsx",
+      "business_description": "Displays AI-generated portfolio insights with type badges (critical/warning/info), analysis, and actionable recommendations. Supports version history and feedback.",
+      "features": [
+        "Insight cards with type badges",
+        "Expandable analysis section",
+        "Recommendations list",
+        "Related products with links",
+        "Version selector",
+        "Regenerate button",
+        "Like/dislike feedback"
+      ],
+      "insight_types": {
+        "critical": "Red badge - urgent action required",
+        "warning": "Amber badge - attention needed",
+        "info": "Blue badge - opportunities"
+      },
+      "hooks_used": ["useInsights", "useLanguage"]
+    },
+
+    {
+      "id": "ui_daily_plan_panel",
+      "category": "UI Components",
+      "audience": ["business", "technical"],
+      "title": "Daily Plan Panel",
+      "component": "DailyPlanPanel",
+      "file": "src/components/dashboard/DailyPlanPanel.tsx",
+      "business_description": "Mini calendar showing action density (completed actions visualized with gradient blue) and daily/weekly/monthly action list. Includes 'Plan My Day' AI integration button.",
+      "features": [
+        "Mini calendar with action density visualization",
+        "View toggle (day/week/month)",
+        "Action list for selected period",
+        "Plan My Day button (navigates to AI Assistant)",
+        "Empty state with AI suggestion"
+      ],
+      "hooks_used": ["useActions", "useLanguage"]
+    },
+
+    {
+      "id": "feature_plan_my_day",
+      "category": "Features",
+      "audience": ["business", "technical"],
+      "title": "Plan My Day Feature",
+      "business_description": "AI-powered daily planning assistant that analyzes the customer portfolio and recommends which customers to contact and what actions to take. Prioritizes customers based on relationship status, principality score, and product gaps.",
+      "how_to_use": [
+        "Click 'Plan My Day' button on Dashboard or AI Assistant page",
+        "AI analyzes your customer portfolio",
+        "Receives prioritized list of customers with recommended actions",
+        "Can save recommended actions directly from the response",
+        "Supports specific date targeting (e.g., 'plan my day for 2026-01-20')"
+      ],
+      "prioritization_factors": [
+        "Customer status (Strong Target and Target prioritized)",
+        "Principality score (lower scores = more opportunity)",
+        "Products below threshold (more gaps = more opportunity)",
+        "Recent activity date"
+      ],
+      "technical_implementation": {
+        "trigger": "Message containing 'plan my day' or 'gunumu planla'",
+        "edge_function": "ai-action-assistant",
+        "url_trigger": "/ai-assistant?prompt=plan-my-day&date=YYYY-MM-DD"
+      },
+      "related_files": ["src/pages/AIAssistant.tsx", "supabase/functions/ai-action-assistant/index.ts", "src/components/ai/PlanMyDayDisplay.tsx"]
+    },
+
+    {
+      "id": "feature_autopilot",
+      "category": "Features",
+      "audience": ["business", "technical"],
+      "title": "Autopilot Workflows",
+      "business_description": "Pre-configured workflow templates for common banking processes. Each workflow has defined steps, some automatic (system-executed) and some requiring human intervention. Helps standardize customer engagement processes.",
+      "available_workflows": [
+        "Installment Loan Workflow",
+        "Credit Card Workflow",
+        "Term Deposit Workflow",
+        "Trade Finance Workflow"
+      ],
+      "workflow_structure": {
+        "steps": "Ordered list of steps to complete",
+        "step_types": ["automatic (system)", "human (requires RM action)"],
+        "tracking": "Progress indicator showing completed vs pending steps"
+      },
+      "component": "AutoPilotPanel",
+      "file": "src/components/customer/AutoPilotPanel.tsx"
+    },
+
+    {
+      "id": "auth_and_rls",
+      "category": "Security",
+      "audience": ["technical"],
+      "title": "Authentication and Row Level Security",
+      "authentication": {
+        "provider": "Supabase Auth",
+        "flow": "Email/password authentication with auto-confirm enabled",
+        "session_management": "JWT tokens with automatic refresh via useSessionValidator hook"
+      },
+      "row_level_security": {
+        "principle": "Users can only access data belonging to their portfolio",
+        "implementation": "RLS policies on all tables check portfolio_manager_id matches the authenticated user's portfolio manager record",
+        "admin_bypass": "Admin role can access additional functionality like threshold editing"
+      },
+      "protected_routes": {
+        "component": "ProtectedRoute",
+        "behavior": "Redirects unauthenticated users to /auth"
+      },
+      "roles": {
+        "user": "Standard portfolio manager access",
+        "admin": "Threshold editing, SQL queries, system configuration"
+      },
+      "related_files": ["src/components/ProtectedRoute.tsx", "src/contexts/AuthContext.tsx", "src/hooks/useSessionValidator.ts", "src/hooks/useUserRole.ts"]
+    },
+
+    {
+      "id": "i18n_languages",
+      "category": "Internationalization",
+      "audience": ["business", "technical"],
+      "title": "Multi-language Support",
+      "supported_languages": [
+        { "code": "tr", "name": "Turkish", "native": "Turkce" },
+        { "code": "en", "name": "English", "native": "English" },
+        { "code": "es", "name": "Spanish", "native": "Espanol" }
+      ],
+      "implementation": {
+        "context": "LanguageContext provides t() function for translations",
+        "file": "src/i18n/translations.ts contains all translation strings",
+        "component": "LanguageSelector allows users to switch languages",
+        "persistence": "Selected language saved to user_settings table"
+      },
+      "translation_namespaces": ["common", "nav", "dashboard", "customers", "actions", "primaryBank", "settings", "thresholds", "ai", "statusLabels", "customerStatusLabels", "sectorLabels", "segmentLabels", "categoryLabels"],
+      "related_files": ["src/i18n/translations.ts", "src/contexts/LanguageContext.tsx", "src/components/LanguageSelector.tsx"]
+    }
+  ]
+}
