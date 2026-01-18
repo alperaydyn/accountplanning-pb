@@ -8,7 +8,8 @@ import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { useAuth } from "@/contexts/AuthContext";
 import { DemoProvider } from "@/demo/contexts/DemoContext";
 import { DemoOverlay, DemoTooltip, DemoControls } from "@/demo/components";
-
+import { InspectorProvider } from "@/contexts/InspectorContext";
+import { InspectorOverlay, InspectorSidebar } from "@/components/inspector";
 const SIDEBAR_COOKIE_NAME = "sidebar:state";
 
 interface AppLayoutProps {
@@ -37,20 +38,24 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   return (
-    <DemoProvider>
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full bg-background">
-          <AppSidebar />
-          <div className="flex-1 flex flex-col">
-            <AppHeader />
-            <main className="flex-1 p-6 overflow-auto">{children}</main>
+    <InspectorProvider>
+      <DemoProvider>
+        <SidebarProvider defaultOpen={defaultOpen}>
+          <div className="min-h-screen flex w-full bg-background">
+            <AppSidebar />
+            <div className="flex-1 flex flex-col">
+              <AppHeader />
+              <main className="flex-1 p-6 overflow-auto">{children}</main>
+            </div>
           </div>
-        </div>
-      </SidebarProvider>
-      <DemoOverlay />
-      <DemoTooltip />
-      <DemoControls />
-    </DemoProvider>
+        </SidebarProvider>
+        <DemoOverlay />
+        <DemoTooltip />
+        <DemoControls />
+        <InspectorOverlay />
+        <InspectorSidebar />
+      </DemoProvider>
+    </InspectorProvider>
   );
 }
 

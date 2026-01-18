@@ -29,3 +29,15 @@ verify_jwt = false
 
 [functions.upload-file]
 verify_jwt = false
+
+[functions.test-prompt]
+verify_jwt = false
+
+[functions.test-elevenlabs-voice]
+verify_jwt = false
+
+[functions.seed-demo-users]
+verify_jwt = false
+
+[functions.rag-assistant]
+verify_jwt = false
