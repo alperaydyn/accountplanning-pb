@@ -270,63 +270,132 @@ Respond with ONLY one word: business, technical, or out_of_context
       });
     }
 
-    // Step 2: For technical queries, fetch relevant source code if needed
+    // Step 2: Find relevant chunks using improved matching
+    const questionLower = question.toLowerCase();
+    const questionWords = questionLower
+      .split(/\s+/)
+      .filter(w => w.length > 2)
+      .map(w => w.replace(/[^a-z0-9]/g, ''));
+
+    // Score each chunk by relevance
+    const scoredChunks = availableChunks.map(chunk => {
+      const content = `${chunk.title} ${chunk.business_description || ''} ${chunk.technical_description || ''} ${chunk.keywords?.join(' ') || ''}`.toLowerCase();
+      
+      let score = 0;
+      
+      // Exact phrase match (highest priority)
+      if (content.includes(questionLower)) score += 10;
+      
+      // Word matches
+      for (const word of questionWords) {
+        if (content.includes(word)) score += 2;
+        if (chunk.title?.toLowerCase().includes(word)) score += 3;
+        if (chunk.keywords?.some(k => k.toLowerCase().includes(word))) score += 4;
+      }
+      
+      // Route match bonus
+      if (currentRoute && chunk.route === currentRoute) score += 5;
+      
+      // Category match for query type
+      if (queryType === 'technical' && chunk.category?.toLowerCase().includes('technical')) score += 2;
+      if (queryType === 'business' && (chunk.category?.toLowerCase().includes('business') || chunk.category?.toLowerCase().includes('kpi'))) score += 2;
+      
+      return { chunk, score };
+    });
+
+    // Get top relevant chunks (minimum score of 2)
+    const relevantChunks = scoredChunks
+      .filter(sc => sc.score >= 2)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5)
+      .map(sc => sc.chunk);
+
+    console.log(`Found ${relevantChunks.length} relevant chunks for question`);
+
+    // Build focused context from relevant chunks only
+    let focusedContext = "";
+    let rawSources: { title: string; category: string; content: string }[] = [];
+
+    if (relevantChunks.length > 0) {
+      focusedContext = relevantChunks.map(chunk => {
+        let content = `## ${chunk.title} (${chunk.category})\n`;
+        if (chunk.route) content += `Route: ${chunk.route}\n`;
+        if (chunk.business_description) content += `Business: ${chunk.business_description}\n`;
+        if (chunk.technical_description) content += `Technical: ${chunk.technical_description}\n`;
+        return content;
+      }).join("\n---\n");
+
+      // Prepare raw sources for citation
+      rawSources = relevantChunks.map(chunk => ({
+        title: chunk.title,
+        category: chunk.category,
+        content: chunk.business_description || chunk.technical_description || '',
+      }));
+    }
+
+    // Step 3: For technical queries, fetch relevant source code if needed
     let codeContext = "";
     if (queryType === 'technical' && currentRoute) {
       const routeChunk = availableChunks.find(c => c.route === currentRoute);
       if (routeChunk?.related_files?.length) {
-        // For security, we'll describe what files are relevant but not expose full code
-        codeContext = `
-Related source files for this page:
-${routeChunk.related_files.map(f => `- ${f}`).join('\n')}
-`;
+        codeContext = `\nRelated source files: ${routeChunk.related_files.join(', ')}`;
       }
     }
 
-    // Step 3: Generate the answer
-    const answerPrompt = `
-You are a helpful assistant for the "Account Planning System", a corporate banking portfolio management application.
+    // Step 4: Generate the answer - only if we have sufficient sources
+    let answer: string;
+    let needsInvestigation = false;
+    const usedChunkIds = relevantChunks.map(c => c.chunk_id);
 
-Your knowledge base:
-${ragContent}
+    if (relevantChunks.length === 0) {
+      // No relevant sources found
+      answer = "I couldn't find relevant information about this in the documentation. This question has been marked for review by administrators.";
+      needsInvestigation = true;
+    } else {
+      const answerPrompt = `You are a helpful assistant for the "Account Planning System", a corporate banking application.
+
+IMPORTANT: You MUST only answer based on the provided sources below. Do NOT make up or infer information not explicitly stated in these sources.
+
+### SOURCES:
+${focusedContext}
 
 ${elementContext}
 ${routeContext}
 ${codeContext}
 
-User Question: "${question}"
+### USER QUESTION:
+"${question}"
 
-Instructions:
-- Provide a clear, concise answer based on the documentation
-- If the question is about a clicked element, explain what that specific element shows or does
-- For business questions, focus on metrics, KPIs, and workflows
-- For technical questions, explain the implementation and relevant files
-- If you cannot find the answer in the documentation, say "I don't have specific information about this. This question has been marked for review."
-- Keep responses under 300 words
-- Use bullet points for clarity when listing features or steps
+### INSTRUCTIONS:
+1. Answer ONLY using information from the provided sources
+2. Keep the answer SHORT (2-4 sentences maximum)
+3. If the sources don't contain the answer, respond with: "I don't have specific information about this in my documentation."
+4. Do NOT add any information not present in the sources
+5. Be direct and factual
 
-Answer:
-`;
+### ANSWER:`;
 
-    const answerResponse = await callAI(aiConfig, {
-      messages: [{ role: 'user', content: answerPrompt }],
-      max_tokens: 500,
-    });
+      const answerResponse = await callAI(aiConfig, {
+        messages: [{ role: 'user', content: answerPrompt }],
+        max_tokens: 300,
+      });
 
-    let answer = answerResponse.choices?.[0]?.message?.content || "I couldn't generate an answer. Please try rephrasing your question.";
+      answer = answerResponse.choices?.[0]?.message?.content || "I couldn't generate an answer. Please try rephrasing your question.";
 
-    // Check if answer indicates missing information
-    const needsInvestigation = answer.toLowerCase().includes("marked for review") || 
-                               answer.toLowerCase().includes("don't have specific information");
+      // Check if answer indicates missing information
+      needsInvestigation = answer.toLowerCase().includes("don't have specific information") || 
+                                 answer.toLowerCase().includes("marked for review") ||
+                                 answer.toLowerCase().includes("not in my documentation");
+    }
 
-    // Determine which chunks were used
-    const usedChunkIds = availableChunks
-      .filter(chunk => {
-        const content = `${chunk.title} ${chunk.business_description} ${chunk.technical_description}`.toLowerCase();
-        const questionWords = question.toLowerCase().split(' ').filter(w => w.length > 3);
-        return questionWords.some(word => content.includes(word));
-      })
-      .map(chunk => chunk.chunk_id);
+    // Append raw sources at the end
+    if (rawSources.length > 0) {
+      const sourcesList = rawSources.map((s, i) => 
+        `**[${i + 1}] ${s.title}** (${s.category})\n${s.content.substring(0, 200)}${s.content.length > 200 ? '...' : ''}`
+      ).join('\n\n');
+      
+      answer += `\n\n---\n📚 **Sources (${rawSources.length}):**\n\n${sourcesList}`;
+    }
 
     // Save feedback record
     const { data: feedback, error: feedbackError } = await supabase
