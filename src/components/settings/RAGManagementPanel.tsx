@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Database, MessageSquare, ThumbsDown, AlertTriangle, Plus, Loader2, CheckCircle, XCircle } from "lucide-react";
-import { useUserRole } from "@/hooks/useUserRole";
+import { useIsAdmin } from "@/hooks/useUserRole";
 
 interface RAGChunk {
   id: string;
@@ -36,7 +36,7 @@ interface RAGFeedback {
 }
 
 export function RAGManagementPanel() {
-  const { isAdmin } = useUserRole();
+  const { isAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
   const [newChunk, setNewChunk] = useState({ chunk_id: "", title: "", category: "General", business_description: "", technical_description: "" });
 
