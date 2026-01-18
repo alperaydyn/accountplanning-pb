@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,8 +38,55 @@ interface RAGFeedback {
 
 export function RAGManagementPanel() {
   const { isAdmin } = useIsAdmin();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [newChunk, setNewChunk] = useState({ chunk_id: "", title: "", category: "General", business_description: "", technical_description: "" });
+
+  const importBuiltInDocsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch("/rag-documentation.json", { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch rag-documentation.json (HTTP ${res.status})`);
+      }
+
+      const json = (await res.json()) as { chunks?: unknown[] };
+      const rawChunks = Array.isArray(json.chunks) ? json.chunks : [];
+
+      if (rawChunks.length === 0) {
+        throw new Error("rag-documentation.json did not contain any chunks");
+      }
+
+      const mapped = rawChunks.map((c: any) => ({
+        chunk_id: String(c.id),
+        category: String(c.category ?? "General"),
+        audience: Array.isArray(c.audience) ? c.audience.map(String) : ["business", "technical"],
+        title: String(c.title ?? c.id),
+        business_description: c.business_description ?? null,
+        technical_description: c.technical_description ?? null,
+        route: c.route ?? null,
+        related_files: Array.isArray(c.related_files) ? c.related_files.map(String) : null,
+        keywords: Array.isArray(c.keywords) ? c.keywords.map(String) : null,
+        metadata: c,
+        is_active: true,
+        created_by: user?.id ?? null,
+      }));
+
+      const batchSize = 50;
+      for (let i = 0; i < mapped.length; i += batchSize) {
+        const batch = mapped.slice(i, i + batchSize);
+        const { error } = await supabase
+          .from("rag_chunks")
+          .upsert(batch as any, { onConflict: "chunk_id" });
+
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Imported RAG documentation successfully");
+      queryClient.invalidateQueries({ queryKey: ["rag-chunks"] });
+    },
+    onError: (error) => toast.error(`Import failed: ${error.message}`),
+  });
 
   const { data: chunks, isLoading: chunksLoading } = useQuery({
     queryKey: ["rag-chunks"],
@@ -62,7 +110,10 @@ export function RAGManagementPanel() {
 
   const addChunkMutation = useMutation({
     mutationFn: async (chunk: typeof newChunk) => {
-      const { error } = await supabase.from("rag_chunks").insert(chunk);
+      const { error } = await supabase.from("rag_chunks").insert({
+        ...chunk,
+        created_by: user?.id ?? null,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -75,7 +126,10 @@ export function RAGManagementPanel() {
 
   const resolveFeedbackMutation = useMutation({
     mutationFn: async (feedbackId: string) => {
-      const { error } = await supabase.from("rag_feedback").update({ resolved: true, resolved_at: new Date().toISOString() }).eq("id", feedbackId);
+      const { error } = await supabase
+        .from("rag_feedback")
+        .update({ resolved: true, resolved_at: new Date().toISOString() })
+        .eq("id", feedbackId);
       if (error) throw error;
     },
     onSuccess: () => {

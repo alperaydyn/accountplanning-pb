@@ -5,6 +5,7 @@ import { AIProviderSettings } from "@/components/settings/AIProviderSettings";
 import { ElevenLabsSettings } from "@/components/settings/ElevenLabsSettings";
 import { VersionInfo } from "@/components/settings/VersionInfo";
 import { PromptManagementPanel } from "@/components/settings/PromptManagementPanel";
+import { RAGManagementPanel } from "@/components/settings/RAGManagementPanel";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const Settings = () => {
