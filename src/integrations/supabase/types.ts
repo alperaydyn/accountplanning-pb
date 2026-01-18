@@ -1203,6 +1203,141 @@ export type Database = {
           },
         ]
       }
+      rag_chunks: {
+        Row: {
+          audience: string[]
+          business_description: string | null
+          category: string
+          chunk_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          keywords: string[] | null
+          metadata: Json | null
+          related_files: string[] | null
+          route: string | null
+          technical_description: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          audience?: string[]
+          business_description?: string | null
+          category: string
+          chunk_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          keywords?: string[] | null
+          metadata?: Json | null
+          related_files?: string[] | null
+          route?: string | null
+          technical_description?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          audience?: string[]
+          business_description?: string | null
+          category?: string
+          chunk_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          keywords?: string[] | null
+          metadata?: Json | null
+          related_files?: string[] | null
+          route?: string | null
+          technical_description?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rag_feedback: {
+        Row: {
+          admin_notes: string | null
+          answer: string
+          chunk_ids_used: string[] | null
+          created_at: string
+          feedback_score: number | null
+          id: string
+          needs_investigation: boolean
+          query_type: string | null
+          question: string
+          resolved: boolean
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          answer: string
+          chunk_ids_used?: string[] | null
+          created_at?: string
+          feedback_score?: number | null
+          id?: string
+          needs_investigation?: boolean
+          query_type?: string | null
+          question: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          answer?: string
+          chunk_ids_used?: string[] | null
+          created_at?: string
+          feedback_score?: number | null
+          id?: string
+          needs_investigation?: boolean
+          query_type?: string | null
+          question?: string
+          resolved?: boolean
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      rag_user_limits: {
+        Row: {
+          blocked_until: string | null
+          created_at: string
+          id: string
+          out_of_context_count: number
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          out_of_context_count?: number
+          updated_at?: string
+          user_id: string
+          window_start?: string
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string
+          id?: string
+          out_of_context_count?: number
+          updated_at?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       saved_queries: {
         Row: {
           created_at: string

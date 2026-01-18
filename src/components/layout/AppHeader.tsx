@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { DemoTrigger } from "@/demo/components/DemoTrigger";
+import { InspectorTrigger } from "@/components/inspector";
 
 export function AppHeader() {
   const { t } = useLanguage();
@@ -23,7 +23,7 @@ export function AppHeader() {
       </div>
       
       <div className="flex items-center gap-2">
-        <DemoTrigger />
+        <InspectorTrigger />
         <Button variant="ghost" size="icon" asChild>
           <Link to="/settings">
             <Settings className="h-5 w-5" />
