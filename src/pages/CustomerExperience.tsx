@@ -196,9 +196,9 @@ const CustomerExperience = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="h-20 w-full">
+                    <div className="h-24 w-full">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={trendData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                        <LineChart data={trendData} margin={{ top: 20, right: 15, bottom: 5, left: 15 }}>
                           <defs>
                             <linearGradient id="scoreGradient" x1="0" y1="0" x2="1" y2="0">
                               <stop offset="0%" stopColor="hsl(var(--muted-foreground))" />
