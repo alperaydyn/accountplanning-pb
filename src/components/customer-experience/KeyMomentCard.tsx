@@ -105,11 +105,22 @@ export function KeyMomentCard({ keyMoment, index, onClick }: KeyMomentCardProps)
               Hedef: {keyMoment.target}%
             </span>
           </div>
-          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-            <div
-              className={cn("h-full rounded-full transition-all", getProgressColor())}
-              style={{ width: `${Math.min(100, (keyMoment.score / keyMoment.target) * 100)}%` }}
-            />
+          {/* Progress bar with target marker - max 100% */}
+          <div className="relative">
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className={cn("h-full rounded-full transition-all", getProgressColor())}
+                style={{ width: `${Math.min(100, keyMoment.score)}%` }}
+              />
+            </div>
+            {/* Target marker */}
+            <div 
+              className="absolute top-0 h-full flex flex-col items-center"
+              style={{ left: `${Math.min(100, keyMoment.target)}%`, transform: 'translateX(-50%)' }}
+            >
+              <div className="w-0.5 h-1.5 bg-foreground" />
+              <div className="w-0 h-0 border-l-[2px] border-r-[2px] border-t-[3px] border-l-transparent border-r-transparent border-t-foreground" />
+            </div>
           </div>
         </div>
 
