@@ -432,6 +432,146 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_experience_actions: {
+        Row: {
+          ai_reasoning: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          key_moment: string
+          portfolio_manager_id: string
+          priority: string
+          recommendation: string
+          record_month: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          key_moment: string
+          portfolio_manager_id: string
+          priority?: string
+          recommendation: string
+          record_month: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ai_reasoning?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          key_moment?: string
+          portfolio_manager_id?: string
+          priority?: string
+          recommendation?: string
+          record_month?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_experience_actions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_experience_actions_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_experience_metrics: {
+        Row: {
+          active_customers: number
+          branch_help_tickets: number
+          created_at: string
+          customers_with_open_limit: number
+          digital_salary_payments: number
+          ete_product_score: number
+          help_desk_tickets: number
+          id: string
+          overall_score: number | null
+          portfolio_manager_id: string
+          positive_nps: number
+          record_month: string
+          successful_logins: number
+          successful_payments: number
+          total_complaints: number
+          total_logins: number
+          total_payments: number
+          total_requests: number
+          total_salary_payments: number
+          total_surveys: number
+          updated_at: string
+          visit_count: number
+        }
+        Insert: {
+          active_customers?: number
+          branch_help_tickets?: number
+          created_at?: string
+          customers_with_open_limit?: number
+          digital_salary_payments?: number
+          ete_product_score?: number
+          help_desk_tickets?: number
+          id?: string
+          overall_score?: number | null
+          portfolio_manager_id: string
+          positive_nps?: number
+          record_month: string
+          successful_logins?: number
+          successful_payments?: number
+          total_complaints?: number
+          total_logins?: number
+          total_payments?: number
+          total_requests?: number
+          total_salary_payments?: number
+          total_surveys?: number
+          updated_at?: string
+          visit_count?: number
+        }
+        Update: {
+          active_customers?: number
+          branch_help_tickets?: number
+          created_at?: string
+          customers_with_open_limit?: number
+          digital_salary_payments?: number
+          ete_product_score?: number
+          help_desk_tickets?: number
+          id?: string
+          overall_score?: number | null
+          portfolio_manager_id?: string
+          positive_nps?: number
+          record_month?: string
+          successful_logins?: number
+          successful_payments?: number
+          total_complaints?: number
+          total_logins?: number
+          total_payments?: number
+          total_requests?: number
+          total_salary_payments?: number
+          total_surveys?: number
+          updated_at?: string
+          visit_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_experience_metrics_portfolio_manager_id_fkey"
+            columns: ["portfolio_manager_id"]
+            isOneToOne: false
+            referencedRelation: "portfolio_managers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_groups: {
         Row: {
           created_at: string
