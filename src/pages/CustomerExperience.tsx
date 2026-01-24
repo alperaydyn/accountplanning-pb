@@ -178,81 +178,90 @@ const CustomerExperience = () => {
                 const last = historicalScores[historicalScores.length - 1]?.score || 0;
                 const diff = last - first;
                 const isUp = diff >= 0;
-                const min = Math.min(...historicalScores.map(h => h.score));
-                const max = Math.max(...historicalScores.map(h => h.score));
+                const min = Math.min(...historicalScores.map(h => h.score)) - 5;
+                const max = Math.max(...historicalScores.map(h => h.score)) + 5;
                 const range = max - min || 1;
+                const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                
+                // Generate smooth curve points using cardinal spline
+                const points = historicalScores.map((hs, idx) => ({
+                  x: idx * 50,
+                  y: 50 - ((hs.score - min) / range) * 40
+                }));
+                
+                // Create smooth bezier curve path
+                const createSmoothPath = (pts: {x: number, y: number}[]) => {
+                  if (pts.length < 2) return '';
+                  let path = `M ${pts[0].x} ${pts[0].y}`;
+                  for (let i = 0; i < pts.length - 1; i++) {
+                    const p0 = pts[i];
+                    const p1 = pts[i + 1];
+                    const midX = (p0.x + p1.x) / 2;
+                    path += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
+                  }
+                  return path;
+                };
+                
+                const linePath = createSmoothPath(points);
+                const areaPath = `${linePath} L ${points[points.length - 1].x} 55 L ${points[0].x} 55 Z`;
                 
                 return (
-                  <div className="w-40 flex-shrink-0">
-                    <div className="flex items-center gap-3">
-                      {/* Sparkline */}
-                      <div className="flex-1">
-                        <svg viewBox="0 0 100 40" className="w-full h-10" preserveAspectRatio="none">
-                          {/* Gradient fill */}
-                          <defs>
-                            <linearGradient id="sparklineGradient" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0.3" />
-                              <stop offset="100%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0" />
-                            </linearGradient>
-                          </defs>
-                          
-                          {/* Area fill */}
-                          <path
-                            d={`M 0 ${40 - ((historicalScores[0].score - min) / range) * 32} ${historicalScores.map((hs, idx) => {
-                              const x = (idx / (historicalScores.length - 1)) * 100;
-                              const y = 40 - ((hs.score - min) / range) * 32;
-                              return `L ${x} ${y}`;
-                            }).join(' ')} L 100 40 L 0 40 Z`}
-                            fill="url(#sparklineGradient)"
-                          />
-                          
-                          {/* Line */}
-                          <polyline
-                            fill="none"
-                            stroke={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points={historicalScores.map((hs, idx) => {
-                              const x = (idx / (historicalScores.length - 1)) * 100;
-                              const y = 40 - ((hs.score - min) / range) * 32;
-                              return `${x},${y}`;
-                            }).join(' ')}
-                          />
-                          
-                          {/* End dot */}
-                          <circle
-                            cx="100"
-                            cy={40 - ((last - min) / range) * 32}
-                            r="4"
-                            fill={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
-                          />
-                        </svg>
-                      </div>
+                  <div className="flex items-end gap-4">
+                    {/* Chart area */}
+                    <div className="flex flex-col items-center">
+                      <svg 
+                        viewBox="0 0 100 55" 
+                        className="w-28 h-12"
+                        preserveAspectRatio="xMidYMid meet"
+                      >
+                        {/* Gradient definition */}
+                        <defs>
+                          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0.4" />
+                            <stop offset="100%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0.05" />
+                          </linearGradient>
+                        </defs>
+                        
+                        {/* Area fill */}
+                        <path
+                          d={areaPath}
+                          fill="url(#areaGradient)"
+                        />
+                        
+                        {/* Smooth line */}
+                        <path
+                          d={linePath}
+                          fill="none"
+                          stroke={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
                       
-                      {/* Delta indicator */}
-                      <div className={cn(
-                        "flex flex-col items-center justify-center px-2 py-1 rounded-md",
-                        isUp ? "bg-success/10" : "bg-destructive/10"
-                      )}>
-                        {isUp ? (
-                          <TrendingUp className={cn("h-4 w-4", isUp ? "text-success" : "text-destructive")} />
-                        ) : (
-                          <TrendingDown className={cn("h-4 w-4", isUp ? "text-success" : "text-destructive")} />
-                        )}
-                        <span className={cn("text-sm font-bold", isUp ? "text-success" : "text-destructive")}>
-                          {isUp ? '+' : ''}{diff}
-                        </span>
+                      {/* Month labels */}
+                      <div className="flex justify-between w-28 mt-0.5">
+                        {historicalScores.map((hs, idx) => (
+                          <span key={idx} className="text-[10px] text-muted-foreground font-medium">
+                            {monthNames[parseInt(hs.month.split('-')[1]) - 1]}
+                          </span>
+                        ))}
                       </div>
                     </div>
                     
-                    {/* Month labels */}
-                    <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
-                      {historicalScores.map((hs, idx) => {
-                        const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                        const month = parseInt(hs.month.split('-')[1]) - 1;
-                        return <span key={idx}>{monthNames[month]}</span>;
-                      })}
+                    {/* Delta badge */}
+                    <div className={cn(
+                      "flex items-center gap-1 px-2 py-1 rounded-md mb-3",
+                      isUp ? "bg-success/10" : "bg-destructive/10"
+                    )}>
+                      {isUp ? (
+                        <TrendingUp className="h-3.5 w-3.5 text-success" />
+                      ) : (
+                        <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+                      )}
+                      <span className={cn("text-sm font-semibold", isUp ? "text-success" : "text-destructive")}>
+                        {isUp ? '+' : ''}{diff}
+                      </span>
                     </div>
                   </div>
                 );
