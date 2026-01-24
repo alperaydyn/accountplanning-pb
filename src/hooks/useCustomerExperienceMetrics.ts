@@ -215,6 +215,29 @@ export const useCustomerExperienceMetrics = (recordMonth?: string) => {
   });
 };
 
+// Fetch last 3 months of metrics for trend chart
+export const useCustomerExperienceHistory = () => {
+  const { data: portfolioManager } = usePortfolioManager();
+
+  return useQuery({
+    queryKey: ['customer-experience-history', portfolioManager?.id],
+    queryFn: async () => {
+      if (!portfolioManager?.id) return [];
+
+      const { data, error } = await supabase
+        .from('customer_experience_metrics')
+        .select('*')
+        .eq('portfolio_manager_id', portfolioManager.id)
+        .order('record_month', { ascending: true })
+        .limit(3);
+
+      if (error) throw error;
+      return (data || []) as CustomerExperienceMetrics[];
+    },
+    enabled: !!portfolioManager?.id,
+  });
+};
+
 export const useCreateCustomerExperienceMetrics = () => {
   const queryClient = useQueryClient();
   const { data: portfolioManager } = usePortfolioManager();

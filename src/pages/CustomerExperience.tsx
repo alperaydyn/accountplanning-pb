@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Sparkles, ArrowLeft, Users, Target, TrendingUp, AlertCircle, CheckCircle2, XCircle, ChevronRight, Loader2, RefreshCw } from "lucide-react";
+import { Calendar, Sparkles, ArrowLeft, Users, Target, TrendingUp, TrendingDown, AlertCircle, CheckCircle2, XCircle, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,12 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useCustomerExperienceMetrics, calculateKeyMoments, calculateOverallScore, KeyMomentScore } from "@/hooks/useCustomerExperienceMetrics";
+import { useCustomerExperienceMetrics, useCustomerExperienceHistory, calculateKeyMoments, calculateOverallScore, KeyMomentScore } from "@/hooks/useCustomerExperienceMetrics";
 import { useCustomerExperienceActions } from "@/hooks/useCustomerExperienceActions";
 import { cn } from "@/lib/utils";
 import { KeyMomentCard } from "@/components/customer-experience/KeyMomentCard";
 import { AIActionPanel } from "@/components/customer-experience/AIActionPanel";
+import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
 
 // Generate fixed date options
 const generateDateOptions = (currentLabel: string) => {
@@ -52,9 +53,24 @@ const CustomerExperience = () => {
 
   const { data: metrics, isLoading: metricsLoading } = useCustomerExperienceMetrics(selectedDate);
   const { data: actions = [], isLoading: actionsLoading } = useCustomerExperienceActions(selectedDate);
+  const { data: historyData = [] } = useCustomerExperienceHistory();
 
   const keyMoments = useMemo(() => calculateKeyMoments(metrics), [metrics]);
   const overallScore = useMemo(() => calculateOverallScore(keyMoments), [keyMoments]);
+
+  // Calculate historical scores for trend chart
+  const trendData = useMemo(() => {
+    return historyData.map(m => {
+      const km = calculateKeyMoments(m);
+      const score = calculateOverallScore(km);
+      const monthName = new Date(m.record_month + '-01').toLocaleDateString('tr-TR', { month: 'short' });
+      return { month: monthName, score };
+    });
+  }, [historyData]);
+
+  const trendDirection = trendData.length >= 2 
+    ? trendData[trendData.length - 1].score - trendData[0].score 
+    : 0;
 
   const getStatusIcon = (status: 'success' | 'warning' | 'critical') => {
     switch (status) {
@@ -124,8 +140,9 @@ const CustomerExperience = () => {
         {/* Overall Score Hero */}
         <Card className="border-border bg-card">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
+            <div className="flex items-center justify-between gap-6">
+              {/* Left: Score info */}
+              <div className="space-y-4 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-muted">
                     <Target className="h-6 w-6 text-foreground" />
@@ -159,8 +176,69 @@ const CustomerExperience = () => {
                 </div>
               </div>
 
-              {/* Circular progress visualization */}
-              <div className="relative w-40 h-40">
+              {/* Center: Trend Line Chart */}
+              <div className="flex-1 max-w-xs">
+                {trendData.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Son 3 Ay Trendi</span>
+                      <div className="flex items-center gap-1">
+                        {trendDirection >= 0 ? (
+                          <TrendingUp className="h-3.5 w-3.5 text-success" />
+                        ) : (
+                          <TrendingDown className="h-3.5 w-3.5 text-destructive" />
+                        )}
+                        <span className={cn(
+                          "text-xs font-medium",
+                          trendDirection >= 0 ? "text-success" : "text-destructive"
+                        )}>
+                          {trendDirection >= 0 ? '+' : ''}{trendDirection} puan
+                        </span>
+                      </div>
+                    </div>
+                    <div className="h-20 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={trendData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                          <defs>
+                            <linearGradient id="scoreGradient" x1="0" y1="0" x2="1" y2="0">
+                              <stop offset="0%" stopColor="hsl(var(--muted-foreground))" />
+                              <stop offset="100%" stopColor="hsl(var(--primary))" />
+                            </linearGradient>
+                          </defs>
+                          <Line 
+                            type="monotone" 
+                            dataKey="score" 
+                            stroke="url(#scoreGradient)" 
+                            strokeWidth={3}
+                            dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
+                            activeDot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))', r: 6 }}
+                          />
+                          <Tooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-card border border-border rounded-md px-2 py-1 shadow-sm">
+                                    <p className="text-xs font-medium">{payload[0].payload.month}: <span className="text-primary">{payload[0].value}%</span></p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex justify-between text-[10px] text-muted-foreground px-1">
+                      {trendData.map((d, i) => (
+                        <span key={i}>{d.month}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Circular progress visualization */}
+              <div className="relative w-40 h-40 flex-shrink-0">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
@@ -170,6 +248,18 @@ const CustomerExperience = () => {
                     strokeWidth="6"
                     fill="none"
                     className="text-muted"
+                  />
+                  {/* Target threshold line at 75% */}
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                    fill="none"
+                    strokeDasharray="2 2"
+                    strokeDashoffset={-75 * 2.64}
+                    className="text-muted-foreground/30"
                   />
                   <circle
                     cx="50"
@@ -255,10 +345,21 @@ const CustomerExperience = () => {
                           {variable.value.toFixed(1)}{variable.unit}
                         </Badge>
                       </div>
-                      <Progress 
-                        value={Math.min(100, (variable.value / variable.target) * 100)} 
-                        className="h-2"
-                      />
+                      {/* Progress bar with target marker - max 100% */}
+                      <div className="relative">
+                        <Progress 
+                          value={Math.min(100, variable.value)} 
+                          className="h-2"
+                        />
+                        {/* Target marker */}
+                        <div 
+                          className="absolute top-0 h-full flex flex-col items-center"
+                          style={{ left: `${Math.min(100, variable.target)}%`, transform: 'translateX(-50%)' }}
+                        >
+                          <div className="w-0.5 h-2 bg-foreground" />
+                          <div className="w-0 h-0 border-l-[3px] border-r-[3px] border-t-[4px] border-l-transparent border-r-transparent border-t-foreground" />
+                        </div>
+                      </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Hedef: {variable.target}{variable.unit}</span>
                         {variable.formula && <code className="px-1 py-0.5 rounded bg-muted text-[10px]">{variable.formula}</code>}
