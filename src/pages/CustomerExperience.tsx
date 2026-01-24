@@ -14,7 +14,7 @@ import { useCustomerExperienceActions } from "@/hooks/useCustomerExperienceActio
 import { cn } from "@/lib/utils";
 import { KeyMomentCard } from "@/components/customer-experience/KeyMomentCard";
 import { AIActionPanel } from "@/components/customer-experience/AIActionPanel";
-import { LineChart, Line, ResponsiveContainer, Tooltip } from 'recharts';
+import { LineChart, Line, ResponsiveContainer, Tooltip, LabelList } from 'recharts';
 
 // Generate fixed date options
 const generateDateOptions = (currentLabel: string) => {
@@ -212,7 +212,15 @@ const CustomerExperience = () => {
                             strokeWidth={3}
                             dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 4 }}
                             activeDot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))', r: 6 }}
-                          />
+                          >
+                            <LabelList 
+                              dataKey="score" 
+                              position="top" 
+                              offset={8}
+                              formatter={(value: number) => `${value}%`}
+                              style={{ fontSize: '11px', fontWeight: 600, fill: 'hsl(var(--foreground))' }}
+                            />
+                          </Line>
                           <Tooltip 
                             content={({ active, payload }) => {
                               if (active && payload && payload.length) {
