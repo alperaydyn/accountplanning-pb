@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Sparkles, ArrowLeft, Users, Target, TrendingUp, AlertCircle, CheckCircle2, XCircle, ChevronRight, Loader2, RefreshCw } from "lucide-react";
+import { Calendar, Sparkles, ArrowLeft, Users, Target, TrendingUp, AlertCircle, CheckCircle2, XCircle, ChevronRight, Loader2, RefreshCw, CreditCard, Smartphone, Wallet, Banknote, HeadphonesIcon } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -124,8 +124,9 @@ const CustomerExperience = () => {
         {/* Overall Score Hero */}
         <Card className="border-border bg-card">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
+            <div className="flex items-center justify-between gap-8">
+              {/* Left: Score Info */}
+              <div className="space-y-4 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-muted">
                     <Target className="h-6 w-6 text-foreground" />
@@ -159,8 +160,71 @@ const CustomerExperience = () => {
                 </div>
               </div>
 
-              {/* Circular progress visualization */}
-              <div className="relative w-40 h-40">
+              {/* Center: Timeline Visualization */}
+              <div className="flex-1 px-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>Kritik Anlar Timeline</span>
+                    <span className="font-medium">{successCount}/6 Başarılı</span>
+                  </div>
+                  <div className="relative flex items-center justify-between">
+                    {/* Timeline Line */}
+                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 bg-muted" />
+                    
+                    {/* Timeline Points */}
+                    {keyMoments.map((km, idx) => {
+                      const KMIcon = {
+                        'customer-visit': Users,
+                        'urgent-financial-support': CreditCard,
+                        'digital-channel': Smartphone,
+                        'critical-payments': Wallet,
+                        'cash-management': Banknote,
+                        'quick-support': HeadphonesIcon,
+                      }[km.id] || Users;
+                      
+                      return (
+                        <div key={km.id} className="relative z-10 flex flex-col items-center gap-1">
+                          <div 
+                            className={cn(
+                              "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all",
+                              km.status === 'success' 
+                                ? "bg-success/10 border-success" 
+                                : km.status === 'warning' 
+                                  ? "bg-warning/10 border-warning" 
+                                  : "bg-destructive/10 border-destructive"
+                            )}
+                          >
+                            <KMIcon className={cn(
+                              "h-3.5 w-3.5",
+                              km.status === 'success' 
+                                ? "text-success" 
+                                : km.status === 'warning' 
+                                  ? "text-warning" 
+                                  : "text-destructive"
+                            )} />
+                          </div>
+                          <span className="text-[10px] text-muted-foreground text-center max-w-[60px] truncate">
+                            {km.name.split(' ')[0]}
+                          </span>
+                          <span className={cn(
+                            "text-[10px] font-semibold",
+                            km.status === 'success' 
+                              ? "text-success" 
+                              : km.status === 'warning' 
+                                ? "text-warning" 
+                                : "text-destructive"
+                          )}>
+                            {km.score}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right: Circular progress visualization */}
+              <div className="relative w-32 h-32 flex-shrink-0">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
@@ -187,7 +251,7 @@ const CustomerExperience = () => {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={cn("text-2xl font-bold", getOverallStatusColor(overallScore))}>
+                  <span className={cn("text-xl font-bold", getOverallStatusColor(overallScore))}>
                     {overallScore}%
                   </span>
                 </div>
@@ -255,10 +319,23 @@ const CustomerExperience = () => {
                           {variable.value.toFixed(1)}{variable.unit}
                         </Badge>
                       </div>
-                      <Progress 
-                        value={Math.min(100, (variable.value / variable.target) * 100)} 
-                        className="h-2"
-                      />
+                      {/* Progress bar with 100% max and target marker */}
+                      <div className="relative">
+                        <Progress 
+                          value={Math.min(100, variable.value)} 
+                          className="h-2"
+                        />
+                        {/* Target marker */}
+                        <div 
+                          className="absolute top-0 h-2 w-0.5 bg-foreground/70"
+                          style={{ left: `${variable.target}%` }}
+                          title={`Hedef: ${variable.target}${variable.unit}`}
+                        />
+                        <div 
+                          className="absolute -top-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-foreground/70"
+                          style={{ left: `calc(${variable.target}% - 4px)` }}
+                        />
+                      </div>
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Hedef: {variable.target}{variable.unit}</span>
                         {variable.formula && <code className="px-1 py-0.5 rounded bg-muted text-[10px]">{variable.formula}</code>}
