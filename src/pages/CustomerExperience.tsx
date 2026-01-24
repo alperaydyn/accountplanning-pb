@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, ArrowLeft, Users, Target, AlertCircle, CheckCircle2, XCircle, ChevronRight } from "lucide-react";
+import { Calendar, ArrowLeft, Users, Target, AlertCircle, CheckCircle2, XCircle, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -171,102 +172,75 @@ const CustomerExperience = () => {
                 </div>
               </div>
 
-              {/* Center: Historical Timeline */}
-              <div className="flex-1 px-6">
-                <div className="space-y-3">
+              {/* Center: Mini Line Chart */}
+              <div className="flex-1 px-4 min-w-0">
+                <div className="space-y-1">
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-medium">Son 3 Ay Trendi</span>
-                    {historicalScores.length >= 2 && (
-                      <span className={cn(
-                        "font-medium",
-                        historicalScores[historicalScores.length - 1]?.score >= historicalScores[0]?.score 
-                          ? "text-success" 
-                          : "text-destructive"
-                      )}>
-                        {historicalScores[historicalScores.length - 1]?.score >= historicalScores[0]?.score ? "↑" : "↓"}{" "}
-                        {Math.abs((historicalScores[historicalScores.length - 1]?.score || 0) - (historicalScores[0]?.score || 0))} puan
-                      </span>
-                    )}
+                    <span className="font-medium">Son 3 Ay</span>
+                    {historicalScores.length >= 2 && (() => {
+                      const diff = (historicalScores[historicalScores.length - 1]?.score || 0) - (historicalScores[0]?.score || 0);
+                      const isUp = diff >= 0;
+                      return (
+                        <div className={cn("flex items-center gap-0.5 font-medium", isUp ? "text-success" : "text-destructive")}>
+                          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                          <span>{isUp ? '+' : ''}{diff}</span>
+                        </div>
+                      );
+                    })()}
                   </div>
                   
                   {historicalScores.length > 0 ? (
-                    <div className="relative flex items-end justify-between h-24 pt-4">
-                      {/* Connecting line */}
-                      <svg className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none">
-                        <polyline
-                          fill="none"
-                          stroke="hsl(var(--muted-foreground))"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={historicalScores.map((hs, idx) => {
-                            const x = historicalScores.length === 1 
-                              ? 50 
-                              : (idx / (historicalScores.length - 1)) * 100;
-                            const y = 100 - (hs.score / 100) * 80; // Scale score to 80% of height
-                            return `${x}%,${y}%`;
-                          }).join(' ')}
-                        />
-                      </svg>
-                      
-                      {/* Timeline Points */}
-                      {historicalScores.map((hs, idx) => {
-                        const isCurrentMonth = hs.month === selectedDate;
-                        const scoreStatus = hs.score >= 75 ? 'success' : hs.score >= 50 ? 'warning' : 'critical';
-                        
-                        // Format month label (e.g., "2026-01" -> "Oca 26")
-                        const [year, month] = hs.month.split('-');
-                        const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                        const monthLabel = `${monthNames[parseInt(month) - 1]} '${year.slice(-2)}`;
-                        
-                        return (
-                          <div 
-                            key={hs.month} 
-                            className="relative z-10 flex flex-col items-center"
-                            style={{ 
-                              position: 'absolute',
-                              left: historicalScores.length === 1 
-                                ? '50%' 
-                                : `${(idx / (historicalScores.length - 1)) * 100}%`,
-                              transform: 'translateX(-50%)',
-                              bottom: `${(hs.score / 100) * 80}%`
+                    <div className="h-16">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart 
+                          data={historicalScores.map(hs => {
+                            const [year, month] = hs.month.split('-');
+                            const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                            return {
+                              name: `${monthNames[parseInt(month) - 1]}`,
+                              score: hs.score,
+                              month: hs.month,
+                            };
+                          })}
+                          margin={{ top: 5, right: 5, left: 5, bottom: 0 }}
+                        >
+                          <XAxis 
+                            dataKey="name" 
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                            dy={5}
+                          />
+                          <YAxis 
+                            domain={[0, 100]} 
+                            hide 
+                          />
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--popover))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              padding: '6px 10px',
                             }}
-                          >
-                            <div 
-                              className={cn(
-                                "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all bg-background",
-                                isCurrentMonth && "ring-2 ring-offset-2 ring-offset-background",
-                                scoreStatus === 'success' 
-                                  ? "border-success ring-success/50" 
-                                  : scoreStatus === 'warning' 
-                                    ? "border-warning ring-warning/50" 
-                                    : "border-destructive ring-destructive/50"
-                              )}
-                            >
-                              <span className={cn(
-                                "text-sm font-bold",
-                                scoreStatus === 'success' 
-                                  ? "text-success" 
-                                  : scoreStatus === 'warning' 
-                                    ? "text-warning" 
-                                    : "text-destructive"
-                              )}>
-                                {hs.score}
-                              </span>
-                            </div>
-                            <span className={cn(
-                              "text-[10px] mt-1 whitespace-nowrap",
-                              isCurrentMonth ? "font-semibold text-foreground" : "text-muted-foreground"
-                            )}>
-                              {monthLabel}
-                            </span>
-                          </div>
-                        );
-                      })}
+                            labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 500 }}
+                            formatter={(value: number) => [`${value}%`, 'Skor']}
+                          />
+                          <ReferenceLine y={75} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
+                          <Line
+                            type="monotone"
+                            dataKey="score"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2}
+                            dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 0 }}
+                            activeDot={{ r: 5, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))' }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
                     </div>
                   ) : (
-                    <div className="h-24 flex items-center justify-center text-sm text-muted-foreground">
-                      Geçmiş veri yükleniyor...
+                    <div className="h-16 flex items-center justify-center text-xs text-muted-foreground">
+                      Yükleniyor...
                     </div>
                   )}
                 </div>
