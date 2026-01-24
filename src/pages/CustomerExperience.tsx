@@ -1,7 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, ArrowLeft, Users, Target, AlertCircle, CheckCircle2, XCircle, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
-
+import { Calendar, Sparkles, ArrowLeft, Users, Target, TrendingUp, AlertCircle, CheckCircle2, XCircle, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useCustomerExperienceMetrics, useCustomerExperienceHistory, calculateKeyMoments, calculateOverallScore, KeyMomentScore } from "@/hooks/useCustomerExperienceMetrics";
+import { useCustomerExperienceMetrics, calculateKeyMoments, calculateOverallScore, KeyMomentScore } from "@/hooks/useCustomerExperienceMetrics";
 import { useCustomerExperienceActions } from "@/hooks/useCustomerExperienceActions";
 import { cn } from "@/lib/utils";
 import { KeyMomentCard } from "@/components/customer-experience/KeyMomentCard";
@@ -53,20 +52,9 @@ const CustomerExperience = () => {
 
   const { data: metrics, isLoading: metricsLoading } = useCustomerExperienceMetrics(selectedDate);
   const { data: actions = [], isLoading: actionsLoading } = useCustomerExperienceActions(selectedDate);
-  const { data: historicalMetrics = [] } = useCustomerExperienceHistory(3);
 
   const keyMoments = useMemo(() => calculateKeyMoments(metrics), [metrics]);
   const overallScore = useMemo(() => calculateOverallScore(keyMoments), [keyMoments]);
-  
-  // Calculate historical scores for timeline (sorted oldest to newest)
-  const historicalScores = useMemo(() => {
-    return historicalMetrics
-      .map(m => ({
-        month: m.record_month,
-        score: calculateOverallScore(calculateKeyMoments(m)),
-      }))
-      .sort((a, b) => a.month.localeCompare(b.month));
-  }, [historicalMetrics]);
 
   const getStatusIcon = (status: 'success' | 'warning' | 'critical') => {
     switch (status) {
@@ -136,9 +124,8 @@ const CustomerExperience = () => {
         {/* Overall Score Hero */}
         <Card className="border-border bg-card">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between gap-8">
-              {/* Left: Score Info */}
-              <div className="space-y-4 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-lg bg-muted">
                     <Target className="h-6 w-6 text-foreground" />
@@ -172,103 +159,8 @@ const CustomerExperience = () => {
                 </div>
               </div>
 
-              {/* Center: Mini Trend Chart */}
-              {historicalScores.length >= 2 && (() => {
-                const first = historicalScores[0]?.score || 0;
-                const last = historicalScores[historicalScores.length - 1]?.score || 0;
-                const diff = last - first;
-                const isUp = diff >= 0;
-                const min = Math.min(...historicalScores.map(h => h.score)) - 5;
-                const max = Math.max(...historicalScores.map(h => h.score)) + 5;
-                const range = max - min || 1;
-                const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                
-                // Generate smooth curve points using cardinal spline
-                const points = historicalScores.map((hs, idx) => ({
-                  x: idx * 50,
-                  y: 50 - ((hs.score - min) / range) * 40
-                }));
-                
-                // Create smooth bezier curve path
-                const createSmoothPath = (pts: {x: number, y: number}[]) => {
-                  if (pts.length < 2) return '';
-                  let path = `M ${pts[0].x} ${pts[0].y}`;
-                  for (let i = 0; i < pts.length - 1; i++) {
-                    const p0 = pts[i];
-                    const p1 = pts[i + 1];
-                    const midX = (p0.x + p1.x) / 2;
-                    path += ` C ${midX} ${p0.y}, ${midX} ${p1.y}, ${p1.x} ${p1.y}`;
-                  }
-                  return path;
-                };
-                
-                const linePath = createSmoothPath(points);
-                const areaPath = `${linePath} L ${points[points.length - 1].x} 55 L ${points[0].x} 55 Z`;
-                
-                return (
-                  <div className="flex items-end gap-4">
-                    {/* Chart area */}
-                    <div className="flex flex-col items-center">
-                      <svg 
-                        viewBox="0 0 100 55" 
-                        className="w-28 h-12"
-                        preserveAspectRatio="xMidYMid meet"
-                      >
-                        {/* Gradient definition */}
-                        <defs>
-                          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0.4" />
-                            <stop offset="100%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0.05" />
-                          </linearGradient>
-                        </defs>
-                        
-                        {/* Area fill */}
-                        <path
-                          d={areaPath}
-                          fill="url(#areaGradient)"
-                        />
-                        
-                        {/* Smooth line */}
-                        <path
-                          d={linePath}
-                          fill="none"
-                          stroke={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      
-                      {/* Month labels */}
-                      <div className="flex justify-between w-28 mt-0.5">
-                        {historicalScores.map((hs, idx) => (
-                          <span key={idx} className="text-[10px] text-muted-foreground font-medium">
-                            {monthNames[parseInt(hs.month.split('-')[1]) - 1]}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Delta badge */}
-                    <div className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded-md mb-3",
-                      isUp ? "bg-success/10" : "bg-destructive/10"
-                    )}>
-                      {isUp ? (
-                        <TrendingUp className="h-3.5 w-3.5 text-success" />
-                      ) : (
-                        <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-                      )}
-                      <span className={cn("text-sm font-semibold", isUp ? "text-success" : "text-destructive")}>
-                        {isUp ? '+' : ''}{diff}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })()}
-
-              {/* Right: Circular progress visualization */}
-              <div className="relative w-32 h-32 flex-shrink-0">
+              {/* Circular progress visualization */}
+              <div className="relative w-40 h-40">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
@@ -295,7 +187,7 @@ const CustomerExperience = () => {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <span className={cn("text-xl font-bold", getOverallStatusColor(overallScore))}>
+                  <span className={cn("text-2xl font-bold", getOverallStatusColor(overallScore))}>
                     {overallScore}%
                   </span>
                 </div>
@@ -363,23 +255,10 @@ const CustomerExperience = () => {
                           {variable.value.toFixed(1)}{variable.unit}
                         </Badge>
                       </div>
-                      {/* Progress bar with 100% max and target marker */}
-                      <div className="relative">
-                        <Progress 
-                          value={Math.min(100, variable.value)} 
-                          className="h-2"
-                        />
-                        {/* Target marker */}
-                        <div 
-                          className="absolute top-0 h-2 w-0.5 bg-foreground/70"
-                          style={{ left: `${variable.target}%` }}
-                          title={`Hedef: ${variable.target}${variable.unit}`}
-                        />
-                        <div 
-                          className="absolute -top-1 w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[5px] border-t-foreground/70"
-                          style={{ left: `calc(${variable.target}% - 4px)` }}
-                        />
-                      </div>
+                      <Progress 
+                        value={Math.min(100, (variable.value / variable.target) * 100)} 
+                        className="h-2"
+                      />
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>Hedef: {variable.target}{variable.unit}</span>
                         {variable.formula && <code className="px-1 py-0.5 rounded bg-muted text-[10px]">{variable.formula}</code>}
