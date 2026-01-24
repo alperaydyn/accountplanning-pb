@@ -81,114 +81,105 @@ const CustomerExperience = () => {
     <AppLayout>
       <div className="space-y-6">
         {/* Page Header */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary/5 via-accent/5 to-primary/5 p-6 border border-border/50">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+        <div className="flex items-center justify-between gap-4 pb-4 border-b border-border">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => navigate('/')}
+                className="gap-1 text-muted-foreground hover:text-foreground -ml-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Dashboard
+              </Button>
+            </div>
+            <h1 className="text-2xl font-semibold text-foreground tracking-tight flex items-center gap-2">
+              <Users className="h-6 w-6 text-muted-foreground" />
+              Müşteri Deneyim Skoru
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Customer Experience Index - 6 Kritik An, 9 Değişken
+            </p>
+          </div>
           
-          <div className="relative flex items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={() => navigate('/')}
-                  className="gap-1 text-muted-foreground hover:text-foreground"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Dashboard
-                </Button>
-              </div>
-              <h1 className="text-3xl font-bold text-foreground tracking-tight flex items-center gap-3">
-                <Users className="h-8 w-8 text-primary" />
-                Müşteri Deneyim Skoru
-              </h1>
-              <p className="text-muted-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-primary" />
-                Customer Experience Index - 6 Kritik An, 9 Değişken
-              </p>
-            </div>
-            
-            {/* Date Selector */}
-            <div className="flex items-center gap-3 bg-background/80 backdrop-blur-sm border border-border rounded-xl px-4 py-2.5 shadow-sm">
-              <div className="p-1.5 rounded-lg bg-primary/10">
-                <Calendar className="h-4 w-4 text-primary" />
-              </div>
-              <Select value={selectedDate} onValueChange={setSelectedDate}>
-                <SelectTrigger className="w-[160px] border-0 bg-transparent h-auto p-0 focus:ring-0 font-medium">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {dateOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Date Selector */}
+          <div className="flex items-center gap-2 border border-border rounded-lg px-3 py-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select value={selectedDate} onValueChange={setSelectedDate}>
+              <SelectTrigger className="w-[140px] border-0 bg-transparent h-auto p-0 focus:ring-0 text-sm font-medium">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {dateOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Overall Score Hero */}
-        <Card className="relative overflow-hidden bg-gradient-to-br from-card via-card to-primary/5 border-border">
-          <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-3xl" />
-          <CardContent className="relative p-8">
+        <Card className="border-border bg-card">
+          <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-3 rounded-xl bg-primary/10">
-                    <Target className="h-8 w-8 text-primary" />
+                  <div className="p-2.5 rounded-lg bg-muted">
+                    <Target className="h-6 w-6 text-foreground" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-foreground">Genel Deneyim Skoru</h2>
+                    <h2 className="text-lg font-semibold text-foreground">Genel Deneyim Skoru</h2>
                     <p className="text-sm text-muted-foreground">6 kritik an ortalaması</p>
                   </div>
                 </div>
                 
                 <div className="flex items-baseline gap-2">
-                  <span className={cn("text-6xl font-bold", getOverallStatusColor(overallScore))}>
+                  <span className={cn("text-5xl font-bold", getOverallStatusColor(overallScore))}>
                     {metricsLoading ? '...' : overallScore}
                   </span>
-                  <span className="text-2xl text-muted-foreground">/100</span>
+                  <span className="text-xl text-muted-foreground">/100</span>
                 </div>
 
-                <div className="flex items-center gap-4 mt-4">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <span className="text-sm font-medium text-success">{successCount} Yolunda</span>
+                <div className="flex items-center gap-3 mt-4">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                    <span className="text-xs font-medium text-foreground">{successCount} Yolunda</span>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-warning/10">
-                    <AlertCircle className="h-4 w-4 text-warning" />
-                    <span className="text-sm font-medium text-warning">{warningCount} Riskli</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted">
+                    <AlertCircle className="h-3.5 w-3.5 text-warning" />
+                    <span className="text-xs font-medium text-foreground">{warningCount} Riskli</span>
                   </div>
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/10">
-                    <XCircle className="h-4 w-4 text-destructive" />
-                    <span className="text-sm font-medium text-destructive">{criticalCount} Kritik</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted">
+                    <XCircle className="h-3.5 w-3.5 text-destructive" />
+                    <span className="text-xs font-medium text-foreground">{criticalCount} Kritik</span>
                   </div>
                 </div>
               </div>
 
               {/* Circular progress visualization */}
-              <div className="relative w-48 h-48">
+              <div className="relative w-40 h-40">
                 <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                   <circle
                     cx="50"
                     cy="50"
-                    r="45"
+                    r="42"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="none"
-                    className="text-muted/20"
+                    className="text-muted"
                   />
                   <circle
                     cx="50"
                     cy="50"
-                    r="45"
+                    r="42"
                     stroke="currentColor"
-                    strokeWidth="8"
+                    strokeWidth="6"
                     fill="none"
                     strokeLinecap="round"
-                    strokeDasharray={`${overallScore * 2.83} ${283 - overallScore * 2.83}`}
+                    strokeDasharray={`${overallScore * 2.64} ${264 - overallScore * 2.64}`}
                     className={cn(
                       "transition-all duration-1000",
                       overallScore >= 75 ? "text-success" : overallScore >= 50 ? "text-warning" : "text-destructive"
@@ -196,7 +187,9 @@ const CustomerExperience = () => {
                   />
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <TrendingUp className={cn("h-12 w-12", getOverallStatusColor(overallScore))} />
+                  <span className={cn("text-2xl font-bold", getOverallStatusColor(overallScore))}>
+                    {overallScore}%
+                  </span>
                 </div>
               </div>
             </div>

@@ -131,36 +131,36 @@ export function AIActionPanel({ actions, isLoading, recordMonth, keyMoments }: A
   const pendingActions = actions.filter(a => a.status === 'pending' || a.status === 'in_progress');
 
   return (
-    <Card className="relative overflow-hidden">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-3xl" />
-      
-      <CardHeader className="relative">
+    <Card className="border-border bg-card">
+      <CardHeader>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-lg bg-muted">
+              <Sparkles className="h-4 w-4 text-foreground" />
             </div>
             <div>
-              <CardTitle>AI Aksiyon Önerileri</CardTitle>
-              <CardDescription>Müşteri deneyimini iyileştirmek için yapay zeka önerileri</CardDescription>
+              <CardTitle className="text-base">AI Aksiyon Önerileri</CardTitle>
+              <CardDescription className="text-xs">Müşteri deneyimini iyileştirmek için öneriler</CardDescription>
             </div>
           </div>
           <Button 
             onClick={handleGenerateActions} 
             disabled={generating || isLoading}
-            className="gap-2"
+            size="sm"
+            variant="outline"
+            className="gap-1.5"
           >
             {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
-              <Zap className="h-4 w-4" />
+              <Zap className="h-3.5 w-3.5" />
             )}
             {generating ? 'Oluşturuluyor...' : 'Öneri Oluştur'}
           </Button>
         </div>
       </CardHeader>
 
-      <CardContent className="relative">
+      <CardContent>
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
