@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Calendar, Sparkles, ArrowLeft, Users, Target, TrendingUp, AlertCircle, CheckCircle2, XCircle, ChevronRight, Loader2, RefreshCw, CreditCard, Smartphone, Wallet, Banknote, HeadphonesIcon } from "lucide-react";
+import { Calendar, ArrowLeft, Users, Target, AlertCircle, CheckCircle2, XCircle, ChevronRight } from "lucide-react";
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useCustomerExperienceMetrics, calculateKeyMoments, calculateOverallScore, KeyMomentScore } from "@/hooks/useCustomerExperienceMetrics";
+import { useCustomerExperienceMetrics, useCustomerExperienceHistory, calculateKeyMoments, calculateOverallScore, KeyMomentScore } from "@/hooks/useCustomerExperienceMetrics";
 import { useCustomerExperienceActions } from "@/hooks/useCustomerExperienceActions";
 import { cn } from "@/lib/utils";
 import { KeyMomentCard } from "@/components/customer-experience/KeyMomentCard";
@@ -52,9 +52,20 @@ const CustomerExperience = () => {
 
   const { data: metrics, isLoading: metricsLoading } = useCustomerExperienceMetrics(selectedDate);
   const { data: actions = [], isLoading: actionsLoading } = useCustomerExperienceActions(selectedDate);
+  const { data: historicalMetrics = [] } = useCustomerExperienceHistory(3);
 
   const keyMoments = useMemo(() => calculateKeyMoments(metrics), [metrics]);
   const overallScore = useMemo(() => calculateOverallScore(keyMoments), [keyMoments]);
+  
+  // Calculate historical scores for timeline (sorted oldest to newest)
+  const historicalScores = useMemo(() => {
+    return historicalMetrics
+      .map(m => ({
+        month: m.record_month,
+        score: calculateOverallScore(calculateKeyMoments(m)),
+      }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+  }, [historicalMetrics]);
 
   const getStatusIcon = (status: 'success' | 'warning' | 'critical') => {
     switch (status) {
@@ -160,66 +171,104 @@ const CustomerExperience = () => {
                 </div>
               </div>
 
-              {/* Center: Timeline Visualization */}
-              <div className="flex-1 px-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                    <span>Kritik Anlar Timeline</span>
-                    <span className="font-medium">{successCount}/6 Başarılı</span>
+              {/* Center: Historical Timeline */}
+              <div className="flex-1 px-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span className="font-medium">Son 3 Ay Trendi</span>
+                    {historicalScores.length >= 2 && (
+                      <span className={cn(
+                        "font-medium",
+                        historicalScores[historicalScores.length - 1]?.score >= historicalScores[0]?.score 
+                          ? "text-success" 
+                          : "text-destructive"
+                      )}>
+                        {historicalScores[historicalScores.length - 1]?.score >= historicalScores[0]?.score ? "↑" : "↓"}{" "}
+                        {Math.abs((historicalScores[historicalScores.length - 1]?.score || 0) - (historicalScores[0]?.score || 0))} puan
+                      </span>
+                    )}
                   </div>
-                  <div className="relative flex items-center justify-between">
-                    {/* Timeline Line */}
-                    <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 bg-muted" />
-                    
-                    {/* Timeline Points */}
-                    {keyMoments.map((km, idx) => {
-                      const KMIcon = {
-                        'customer-visit': Users,
-                        'urgent-financial-support': CreditCard,
-                        'digital-channel': Smartphone,
-                        'critical-payments': Wallet,
-                        'cash-management': Banknote,
-                        'quick-support': HeadphonesIcon,
-                      }[km.id] || Users;
+                  
+                  {historicalScores.length > 0 ? (
+                    <div className="relative flex items-end justify-between h-24 pt-4">
+                      {/* Connecting line */}
+                      <svg className="absolute inset-0 w-full h-full overflow-visible" preserveAspectRatio="none">
+                        <polyline
+                          fill="none"
+                          stroke="hsl(var(--muted-foreground))"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          points={historicalScores.map((hs, idx) => {
+                            const x = historicalScores.length === 1 
+                              ? 50 
+                              : (idx / (historicalScores.length - 1)) * 100;
+                            const y = 100 - (hs.score / 100) * 80; // Scale score to 80% of height
+                            return `${x}%,${y}%`;
+                          }).join(' ')}
+                        />
+                      </svg>
                       
-                      return (
-                        <div key={km.id} className="relative z-10 flex flex-col items-center gap-1">
+                      {/* Timeline Points */}
+                      {historicalScores.map((hs, idx) => {
+                        const isCurrentMonth = hs.month === selectedDate;
+                        const scoreStatus = hs.score >= 75 ? 'success' : hs.score >= 50 ? 'warning' : 'critical';
+                        
+                        // Format month label (e.g., "2026-01" -> "Oca 26")
+                        const [year, month] = hs.month.split('-');
+                        const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                        const monthLabel = `${monthNames[parseInt(month) - 1]} '${year.slice(-2)}`;
+                        
+                        return (
                           <div 
-                            className={cn(
-                              "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all",
-                              km.status === 'success' 
-                                ? "bg-success/10 border-success" 
-                                : km.status === 'warning' 
-                                  ? "bg-warning/10 border-warning" 
-                                  : "bg-destructive/10 border-destructive"
-                            )}
+                            key={hs.month} 
+                            className="relative z-10 flex flex-col items-center"
+                            style={{ 
+                              position: 'absolute',
+                              left: historicalScores.length === 1 
+                                ? '50%' 
+                                : `${(idx / (historicalScores.length - 1)) * 100}%`,
+                              transform: 'translateX(-50%)',
+                              bottom: `${(hs.score / 100) * 80}%`
+                            }}
                           >
-                            <KMIcon className={cn(
-                              "h-3.5 w-3.5",
-                              km.status === 'success' 
-                                ? "text-success" 
-                                : km.status === 'warning' 
-                                  ? "text-warning" 
-                                  : "text-destructive"
-                            )} />
+                            <div 
+                              className={cn(
+                                "w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all bg-background",
+                                isCurrentMonth && "ring-2 ring-offset-2 ring-offset-background",
+                                scoreStatus === 'success' 
+                                  ? "border-success ring-success/50" 
+                                  : scoreStatus === 'warning' 
+                                    ? "border-warning ring-warning/50" 
+                                    : "border-destructive ring-destructive/50"
+                              )}
+                            >
+                              <span className={cn(
+                                "text-sm font-bold",
+                                scoreStatus === 'success' 
+                                  ? "text-success" 
+                                  : scoreStatus === 'warning' 
+                                    ? "text-warning" 
+                                    : "text-destructive"
+                              )}>
+                                {hs.score}
+                              </span>
+                            </div>
+                            <span className={cn(
+                              "text-[10px] mt-1 whitespace-nowrap",
+                              isCurrentMonth ? "font-semibold text-foreground" : "text-muted-foreground"
+                            )}>
+                              {monthLabel}
+                            </span>
                           </div>
-                          <span className="text-[10px] text-muted-foreground text-center max-w-[60px] truncate">
-                            {km.name.split(' ')[0]}
-                          </span>
-                          <span className={cn(
-                            "text-[10px] font-semibold",
-                            km.status === 'success' 
-                              ? "text-success" 
-                              : km.status === 'warning' 
-                                ? "text-warning" 
-                                : "text-destructive"
-                          )}>
-                            {km.score}%
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="h-24 flex items-center justify-center text-sm text-muted-foreground">
+                      Geçmiş veri yükleniyor...
+                    </div>
+                  )}
                 </div>
               </div>
 

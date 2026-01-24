@@ -215,6 +215,29 @@ export const useCustomerExperienceMetrics = (recordMonth?: string) => {
   });
 };
 
+// Fetch last N months of metrics for historical timeline
+export const useCustomerExperienceHistory = (months: number = 3) => {
+  const { data: portfolioManager } = usePortfolioManager();
+
+  return useQuery({
+    queryKey: ['customer-experience-history', portfolioManager?.id, months],
+    queryFn: async () => {
+      if (!portfolioManager?.id) return [];
+
+      const { data, error } = await supabase
+        .from('customer_experience_metrics')
+        .select('*')
+        .eq('portfolio_manager_id', portfolioManager.id)
+        .order('record_month', { ascending: false })
+        .limit(months);
+
+      if (error) throw error;
+      return (data as CustomerExperienceMetrics[]) || [];
+    },
+    enabled: !!portfolioManager?.id,
+  });
+};
+
 export const useCreateCustomerExperienceMetrics = () => {
   const queryClient = useQueryClient();
   const { data: portfolioManager } = usePortfolioManager();
