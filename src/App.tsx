@@ -13,6 +13,7 @@ import PrimaryBank from "./pages/PrimaryBank";
 import PrimaryBankEngine from "./pages/PrimaryBankEngine";
 import Customers from "./pages/Customers";
 import CustomerDetail from "./pages/CustomerDetail";
+import CustomerExperience from "./pages/CustomerExperience";
 import ActionsAgenda from "./pages/ActionsAgenda";
 import AIAssistant from "./pages/AIAssistant";
 import Settings from "./pages/Settings";
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/primary-bank/engine" element={<ProtectedRoute><PrimaryBankEngine /></ProtectedRoute>} />
               <Route path="/customers" element={<ProtectedRoute><Customers /></ProtectedRoute>} />
               <Route path="/customers/:customerId" element={<ProtectedRoute><CustomerDetail /></ProtectedRoute>} />
+              <Route path="/customer-experience" element={<ProtectedRoute><CustomerExperience /></ProtectedRoute>} />
               <Route path="/agenda" element={<ProtectedRoute><ActionsAgenda /></ProtectedRoute>} />
               <Route path="/ai-assistant" element={<ProtectedRoute><AIAssistant /></ProtectedRoute>} />
               <Route path="/thresholds" element={<ProtectedRoute><Thresholds /></ProtectedRoute>} />

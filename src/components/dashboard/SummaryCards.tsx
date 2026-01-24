@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield, ArrowRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield, ArrowRight, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useAllCustomerProducts } from "@/hooks/useAllCustomerProducts";
 import { useProductThresholds } from "@/hooks/useProductThresholds";
 import { useProducts } from "@/hooks/useProducts";
 import { usePortfolioTargets } from "@/hooks/usePortfolioTargets";
+import { useCustomerExperienceMetrics, calculateKeyMoments, calculateOverallScore } from "@/hooks/useCustomerExperienceMetrics";
 import { cn } from "@/lib/utils";
 
 interface ScoreAxis {
@@ -50,6 +51,12 @@ const cardAccents = {
     iconColor: "text-success",
     border: "hover:border-success/30",
   },
+  "customer-experience": {
+    gradient: "from-pink-500/10 via-transparent to-transparent",
+    iconBg: "bg-pink-500/10",
+    iconColor: "text-pink-500",
+    border: "hover:border-pink-500/30",
+  },
   "actions-card": {
     gradient: "from-warning/10 via-transparent to-transparent",
     iconBg: "bg-warning/10",
@@ -67,7 +74,12 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
   const { data: thresholds = [] } = useProductThresholds();
   const { data: products = [] } = useProducts();
   const { data: portfolioTargets = [] } = usePortfolioTargets(recordDate);
+  const { data: experienceMetrics } = useCustomerExperienceMetrics(recordDate);
   const [showScoreModal, setShowScoreModal] = useState(false);
+
+  // Calculate Customer Experience Score
+  const experienceKeyMoments = useMemo(() => calculateKeyMoments(experienceMetrics), [experienceMetrics]);
+  const experienceScore = useMemo(() => calculateOverallScore(experienceKeyMoments), [experienceKeyMoments]);
 
   // Mock total portfolio volume
   const totalVolume = 125000000;
@@ -303,6 +315,14 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       subtitle: isLoading ? undefined : `${primaryCount} / ${totalCustomerCount}`,
       icon: Building,
       onClick: () => navigate("/primary-bank"),
+    },
+    {
+      id: "customer-experience" as const,
+      title: "Müşteri Deneyimi",
+      value: `${experienceScore}%`,
+      subtitle: `${experienceKeyMoments.filter(k => k.status === 'success').length}/6 Yolunda`,
+      icon: Heart,
+      onClick: () => navigate("/customer-experience"),
     },
     {
       id: "actions-card" as const,
