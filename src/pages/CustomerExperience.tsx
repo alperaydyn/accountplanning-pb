@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Calendar, ArrowLeft, Users, Target, AlertCircle, CheckCircle2, XCircle, ChevronRight, TrendingUp, TrendingDown } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+
 import { AppLayout, PageBreadcrumb } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -172,79 +172,91 @@ const CustomerExperience = () => {
                 </div>
               </div>
 
-              {/* Center: Mini Line Chart */}
-              <div className="flex-1 px-4 min-w-0">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="font-medium">Son 3 Ay</span>
-                    {historicalScores.length >= 2 && (() => {
-                      const diff = (historicalScores[historicalScores.length - 1]?.score || 0) - (historicalScores[0]?.score || 0);
-                      const isUp = diff >= 0;
-                      return (
-                        <div className={cn("flex items-center gap-0.5 font-medium", isUp ? "text-success" : "text-destructive")}>
-                          {isUp ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                          <span>{isUp ? '+' : ''}{diff}</span>
-                        </div>
-                      );
-                    })()}
+              {/* Center: Mini Trend Chart */}
+              {historicalScores.length >= 2 && (() => {
+                const first = historicalScores[0]?.score || 0;
+                const last = historicalScores[historicalScores.length - 1]?.score || 0;
+                const diff = last - first;
+                const isUp = diff >= 0;
+                const min = Math.min(...historicalScores.map(h => h.score));
+                const max = Math.max(...historicalScores.map(h => h.score));
+                const range = max - min || 1;
+                
+                return (
+                  <div className="w-40 flex-shrink-0">
+                    <div className="flex items-center gap-3">
+                      {/* Sparkline */}
+                      <div className="flex-1">
+                        <svg viewBox="0 0 100 40" className="w-full h-10" preserveAspectRatio="none">
+                          {/* Gradient fill */}
+                          <defs>
+                            <linearGradient id="sparklineGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0.3" />
+                              <stop offset="100%" stopColor={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'} stopOpacity="0" />
+                            </linearGradient>
+                          </defs>
+                          
+                          {/* Area fill */}
+                          <path
+                            d={`M 0 ${40 - ((historicalScores[0].score - min) / range) * 32} ${historicalScores.map((hs, idx) => {
+                              const x = (idx / (historicalScores.length - 1)) * 100;
+                              const y = 40 - ((hs.score - min) / range) * 32;
+                              return `L ${x} ${y}`;
+                            }).join(' ')} L 100 40 L 0 40 Z`}
+                            fill="url(#sparklineGradient)"
+                          />
+                          
+                          {/* Line */}
+                          <polyline
+                            fill="none"
+                            stroke={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            points={historicalScores.map((hs, idx) => {
+                              const x = (idx / (historicalScores.length - 1)) * 100;
+                              const y = 40 - ((hs.score - min) / range) * 32;
+                              return `${x},${y}`;
+                            }).join(' ')}
+                          />
+                          
+                          {/* End dot */}
+                          <circle
+                            cx="100"
+                            cy={40 - ((last - min) / range) * 32}
+                            r="4"
+                            fill={isUp ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+                          />
+                        </svg>
+                      </div>
+                      
+                      {/* Delta indicator */}
+                      <div className={cn(
+                        "flex flex-col items-center justify-center px-2 py-1 rounded-md",
+                        isUp ? "bg-success/10" : "bg-destructive/10"
+                      )}>
+                        {isUp ? (
+                          <TrendingUp className={cn("h-4 w-4", isUp ? "text-success" : "text-destructive")} />
+                        ) : (
+                          <TrendingDown className={cn("h-4 w-4", isUp ? "text-success" : "text-destructive")} />
+                        )}
+                        <span className={cn("text-sm font-bold", isUp ? "text-success" : "text-destructive")}>
+                          {isUp ? '+' : ''}{diff}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Month labels */}
+                    <div className="flex justify-between mt-1 text-[10px] text-muted-foreground">
+                      {historicalScores.map((hs, idx) => {
+                        const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+                        const month = parseInt(hs.month.split('-')[1]) - 1;
+                        return <span key={idx}>{monthNames[month]}</span>;
+                      })}
+                    </div>
                   </div>
-                  
-                  {historicalScores.length > 0 ? (
-                    <div className="h-16">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart 
-                          data={historicalScores.map(hs => {
-                            const [year, month] = hs.month.split('-');
-                            const monthNames = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
-                            return {
-                              name: `${monthNames[parseInt(month) - 1]}`,
-                              score: hs.score,
-                              month: hs.month,
-                            };
-                          })}
-                          margin={{ top: 5, right: 5, left: 5, bottom: 0 }}
-                        >
-                          <XAxis 
-                            dataKey="name" 
-                            axisLine={false}
-                            tickLine={false}
-                            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                            dy={5}
-                          />
-                          <YAxis 
-                            domain={[0, 100]} 
-                            hide 
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: 'hsl(var(--popover))',
-                              border: '1px solid hsl(var(--border))',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              padding: '6px 10px',
-                            }}
-                            labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 500 }}
-                            formatter={(value: number) => [`${value}%`, 'Skor']}
-                          />
-                          <ReferenceLine y={75} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" strokeOpacity={0.5} />
-                          <Line
-                            type="monotone"
-                            dataKey="score"
-                            stroke="hsl(var(--primary))"
-                            strokeWidth={2}
-                            dot={{ r: 4, fill: 'hsl(var(--primary))', strokeWidth: 0 }}
-                            activeDot={{ r: 5, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: 'hsl(var(--background))' }}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  ) : (
-                    <div className="h-16 flex items-center justify-center text-xs text-muted-foreground">
-                      Yükleniyor...
-                    </div>
-                  )}
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Right: Circular progress visualization */}
               <div className="relative w-32 h-32 flex-shrink-0">
