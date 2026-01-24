@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { TrendingUp, TrendingDown, Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield, ArrowRight, Heart } from "lucide-react";
+import { Users, Building, ClipboardCheck, Target, Package, CreditCard, Wallet, PiggyBank, Factory, Landmark, Store, FileCheck, Shield, ArrowRight, Heart } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -282,29 +282,7 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       id: "scale-up-enterprise" as const,
       title: t.dashboard.customerJourney,
       value: isLoading ? "..." : (summary?.totalCustomers ?? 0),
-      customSubtitle: (
-        <div className="flex items-center gap-2 mt-2">
-          <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels.Aktif}</span>
-            <span className="text-sm font-semibold">{activeCount}</span>
-          </div>
-          <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
-          <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels.Target}</span>
-            <span className="text-sm font-semibold">{targetCount}</span>
-          </div>
-          <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
-          <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">Strong</span>
-            <span className="text-sm font-semibold">{strongTargetCount}</span>
-          </div>
-          <ArrowRight className="h-3 w-3 text-muted-foreground/50" />
-          <div className="text-center">
-            <span className="text-[10px] text-muted-foreground whitespace-nowrap block">{t.customerStatusLabels["Ana Banka"]}</span>
-            <span className="text-sm font-semibold text-success">{primaryCount}</span>
-          </div>
-        </div>
-      ),
+      subtitle: `${activeCount} → ${targetCount} → ${strongTargetCount} → ${primaryCount}`,
       icon: Users,
       onClick: () => navigate("/customer-journey"),
     },
@@ -328,18 +306,15 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
       id: "actions-card" as const,
       title: t.common.actions,
       value: isLoading ? "..." : (summary?.totalActionsPlanned ?? 0),
-      subtitle: `${summary?.totalActionsPlanned ?? 0} ${t.dashboard.planned} | ${summary?.totalActionsPending ?? 0} ${t.dashboard.pending}`,
-      change: summary?.totalActionsCompleted ?? 0,
-      changeLabel: t.dashboard.completed,
+      subtitle: `${summary?.totalActionsCompleted ?? 0} ${t.dashboard.completed}`,
       icon: ClipboardCheck,
-      positive: true,
       onClick: () => navigate("/agenda"),
     },
   ];
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {cards.map((card, index) => {
           const accent = cardAccents[card.id];
           return (
@@ -373,31 +348,10 @@ export function SummaryCards({ recordDate }: SummaryCardsProps) {
                 </div>
               </CardHeader>
               <CardContent className="relative">
-                <div className="text-3xl font-bold text-card-foreground tracking-tight">{card.value}</div>
-                {card.change !== undefined && (
-                  <div className="flex items-center gap-1.5 mt-2">
-                    {card.positive ? (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-success/10">
-                        <TrendingUp className="h-3.5 w-3.5 text-success" />
-                        <span className="text-xs font-medium text-success">
-                          +{card.change}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/10">
-                        <TrendingDown className="h-3.5 w-3.5 text-destructive" />
-                        <span className="text-xs font-medium text-destructive">
-                          {card.change}
-                        </span>
-                      </div>
-                    )}
-                    <span className="text-xs text-muted-foreground">{card.changeLabel}</span>
-                  </div>
-                )}
+                <div className="text-2xl font-bold text-card-foreground tracking-tight">{card.value}</div>
                 {card.subtitle && (
-                  <p className="text-sm text-muted-foreground mt-2">{card.subtitle}</p>
+                  <p className="text-xs text-muted-foreground mt-1.5 truncate">{card.subtitle}</p>
                 )}
-                {card.customSubtitle && card.customSubtitle}
                 
                 {/* Hover arrow indicator */}
                 {card.onClick && (
