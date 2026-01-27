@@ -1163,16 +1163,42 @@
       "audience": ["business", "technical"],
       "title": "Preferences Page",
       "route": "/preferences",
-      "business_description": "User personalization settings including language selection (Turkish, English, Spanish), preferred agenda view mode, and access to documentation.",
-      "technical_description": "Located at src/pages/Preferences.tsx. Uses useUserSettings hook for language and agenda view preference.",
+      "business_description": "User personalization settings including action priority weight customization, language selection, preferred agenda view mode, and access to documentation. Portfolio managers can adjust the relative importance of the four priority pillars within centrally-managed limits.",
+      "technical_description": "Located at src/pages/Preferences.tsx. Uses useUserSettings hook for settings persistence. PriorityWeightsPanel component provides slider interface for weight customization.",
+      "features": [
+        "Action priority weights panel at top of page with 4 adjustable sliders",
+        "Modern 2-column grid layout with compact slider cards",
+        "Each slider allows adjustment between 10% and 40% (centrally managed limits)",
+        "Default weights: Portfolio 30%, Ad-hoc 20%, Customer 25%, Profitability 25%",
+        "Total weight indicator warns when sum ≠ 100% (system applies normalization)",
+        "Save button persists to user_settings table",
+        "Reset button returns to default values",
+        "Weight changes trigger dynamic recalculation of action priorities",
+        "Language selector (Turkish, English, Spanish)",
+        "Preferred agenda view dropdown (Daily, Weekly, Monthly, List)",
+        "Documentation access link"
+      ],
+      "priority_weights": {
+        "pillars": [
+          { "key": "priority_weight_portfolio", "label_tr": "Portföy Hedef Uyumu", "label_en": "Portfolio Target Alignment", "default": 0.30, "description": "Prioritizes actions for products where portfolio is behind target" },
+          { "key": "priority_weight_adhoc", "label_tr": "Ad-Hoc Banka Öncelikleri", "label_en": "Ad-hoc Bank Priorities", "default": 0.20, "description": "Supports bank's periodic strategic focus areas (e.g., APKO meeting decisions)" },
+          { "key": "priority_weight_customer", "label_tr": "Müşteri Memnuniyeti", "label_en": "Customer Satisfaction", "default": 0.25, "description": "Prioritizes retention-focused actions that strengthen customer relationships" },
+          { "key": "priority_weight_profitability", "label_tr": "Karlılık", "label_en": "Profitability", "default": 0.25, "description": "Prioritizes high-revenue potential customer-product combinations" }
+        ],
+        "min_weight": 0.10,
+        "max_weight": 0.40,
+        "step": 0.01,
+        "normalization": "System automatically normalizes weights to sum to 1.0 for priority calculation"
+      },
       "settings": [
+        { "name": "Priority Weights", "options": ["Portfolio (10-40%)", "Ad-hoc (10-40%)", "Customer (10-40%)", "Profitability (10-40%)"], "description": "Adjust relative importance of priority pillars" },
         { "name": "Language", "options": ["Turkish (tr)", "English (en)", "Spanish (es)"] },
         { "name": "Preferred Agenda View", "options": ["Daily", "Weekly", "Monthly", "List"] },
         { "name": "Documentation Link", "description": "Access to README documentation" }
       ],
-      "data_source": "user_settings table",
+      "data_source": "user_settings table (priority_weight_portfolio, priority_weight_adhoc, priority_weight_customer, priority_weight_profitability, language, preferred_agenda_view)",
       "hooks_used": ["useUserSettings", "useLanguage"],
-      "related_files": ["src/pages/Preferences.tsx"]
+      "related_files": ["src/pages/Preferences.tsx", "src/components/preferences/PriorityWeightsPanel.tsx", "src/hooks/useUserSettings.ts"]
     },
 
     {
@@ -1208,7 +1234,7 @@
       "audience": ["technical"],
       "title": "Actions Table",
       "table_name": "actions",
-      "description": "Stores sales and relationship actions for customers. Actions can be AI-generated (model_based), manually created (ad_hoc, rm_action), or recurring (recursive).",
+      "description": "Stores sales and relationship actions for customers. Actions can be AI-generated (model_based), manually created (ad_hoc, rm_action), or recurring (recursive). Includes multi-criteria priority scoring across four pillars.",
       "columns": [
         { "name": "id", "type": "uuid", "description": "Primary key" },
         { "name": "customer_id", "type": "uuid", "description": "FK to customers" },
@@ -1223,9 +1249,17 @@
         { "name": "type", "type": "action_type enum", "values": ["model_based", "ad_hoc", "rm_action", "recursive"], "description": "Action source type" },
         { "name": "priority", "type": "action_priority enum", "values": ["high", "medium", "low"], "description": "Priority level" },
         { "name": "target_value", "type": "number", "description": "Target transaction value" },
-        { "name": "current_status", "type": "action_status enum", "values": ["Beklemede", "Planlandy", "Tamamlandy", "Ertelendi", "Ilgilenmiyor", "Uygun Degil"], "description": "Current action status" },
+        { "name": "current_status", "type": "action_status enum", "values": ["Beklemede", "Planlandı", "Tamamlandı", "Ertelendi", "İlgilenmiyor", "Uygun Değil"], "description": "Current action status" },
         { "name": "current_planned_date", "type": "date", "description": "Current planned date (may differ from target)" },
         { "name": "current_value", "type": "number", "description": "Current achieved value" },
+        { "name": "priority_portfolio_score", "type": "number", "description": "Portfolio target alignment score (0-1)", "nullable": true },
+        { "name": "priority_portfolio_reason", "type": "text", "description": "Turkish explanation for portfolio score", "nullable": true },
+        { "name": "priority_adhoc_score", "type": "number", "description": "Ad-hoc bank priorities score (0-1)", "nullable": true },
+        { "name": "priority_adhoc_reason", "type": "text", "description": "Turkish explanation for ad-hoc score", "nullable": true },
+        { "name": "priority_customer_score", "type": "number", "description": "Customer satisfaction score (0-1)", "nullable": true },
+        { "name": "priority_customer_reason", "type": "text", "description": "Turkish explanation for customer score", "nullable": true },
+        { "name": "priority_profitability_score", "type": "number", "description": "Profitability impact score (0-1)", "nullable": true },
+        { "name": "priority_profitability_reason", "type": "text", "description": "Turkish explanation for profitability score", "nullable": true },
         { "name": "is_recursive", "type": "boolean", "description": "Whether action repeats" },
         { "name": "recurrence_pattern", "type": "text", "description": "Recurrence pattern (daily, weekly, monthly)" },
         { "name": "recurrence_interval", "type": "number", "description": "Interval between recurrences" },
@@ -1233,12 +1267,108 @@
         { "name": "next_recurrence_date", "type": "date", "description": "Next occurrence date" },
         { "name": "parent_action_id", "type": "uuid", "description": "FK to parent action for recurring" }
       ],
+      "priority_scoring": {
+        "description": "Multi-criteria priority scoring system based on four strategic pillars",
+        "pillars": [
+          { "field": "priority_portfolio_score", "label": "Portfolio Target Alignment", "purpose": "Higher scores for actions on products where portfolio is behind target" },
+          { "field": "priority_adhoc_score", "label": "Ad-hoc Bank Priorities", "purpose": "Supports bank's periodic strategic focus areas" },
+          { "field": "priority_customer_score", "label": "Customer Satisfaction", "purpose": "Retention-focused actions strengthening customer relationships" },
+          { "field": "priority_profitability_score", "label": "Profitability", "purpose": "High-revenue potential customer-product combinations" }
+        ],
+        "score_range": "0.0 to 1.0",
+        "overall_calculation": "Weighted average using user-defined weights from user_settings table",
+        "visualization": "PriorityScoreCard component in ActionPlanningModal"
+      },
       "relationships": [
         { "table": "customers", "type": "many-to-one", "foreign_key": "customer_id" },
         { "table": "products", "type": "many-to-one", "foreign_key": "product_id" },
         { "table": "actions", "type": "self-reference", "foreign_key": "parent_action_id" }
       ],
-      "status_flow": "Beklemede -> Planlandy -> Tamamlandy / Ertelendi / Ilgilenmiyor / Uygun Degil"
+      "status_flow": "Beklemede -> Planlandı -> Tamamlandı / Ertelendi / İlgilenmiyor / Uygun Değil"
+    },
+
+    {
+      "id": "feature_action_priority_system",
+      "category": "Features",
+      "audience": ["business", "technical"],
+      "title": "Action Priority Scoring System",
+      "business_description": "Multi-criteria priority scoring system that ranks actions based on four strategic pillars: Portfolio Target Alignment, Ad-hoc Bank Priorities, Customer Satisfaction, and Profitability. Weights are centrally managed with user-level customization allowed within defined limits (10-40% per pillar).",
+      "technical_description": "Each action stores 8 fields (4 scores + 4 reasons) in the actions table. Visualization handled by PriorityScoreCard component. User weights stored in user_settings table and managed via PriorityWeightsPanel in Preferences page.",
+      "pillars": [
+        {
+          "key": "portfolio",
+          "label_tr": "Portföy Hedef Uyumu",
+          "label_en": "Portfolio Target Alignment",
+          "description": "Prioritizes actions for products where the portfolio is behind target. Low HGO% products receive higher priority scores.",
+          "score_field": "priority_portfolio_score",
+          "reason_field": "priority_portfolio_reason",
+          "weight_field": "priority_weight_portfolio",
+          "default_weight": 0.30,
+          "icon": "Target",
+          "color": "blue-500"
+        },
+        {
+          "key": "adhoc",
+          "label_tr": "Dönemsel Ad-Hoc Hedef",
+          "label_en": "Ad-hoc Bank Priorities",
+          "description": "Supports bank's periodic strategic focus areas (e.g., APKO meeting decisions to focus on insurance this week).",
+          "score_field": "priority_adhoc_score",
+          "reason_field": "priority_adhoc_reason",
+          "weight_field": "priority_weight_adhoc",
+          "default_weight": 0.20,
+          "icon": "Megaphone",
+          "color": "purple-500"
+        },
+        {
+          "key": "customer",
+          "label_tr": "Müşteri Memnuniyeti",
+          "label_en": "Customer Satisfaction",
+          "description": "Prioritizes retention-focused actions that strengthen customer relationships and loyalty.",
+          "score_field": "priority_customer_score",
+          "reason_field": "priority_customer_reason",
+          "weight_field": "priority_weight_customer",
+          "default_weight": 0.25,
+          "icon": "Heart",
+          "color": "rose-500"
+        },
+        {
+          "key": "profitability",
+          "label_tr": "Karlılık Etkisi",
+          "label_en": "Profitability",
+          "description": "Prioritizes high-revenue potential customer-product combinations.",
+          "score_field": "priority_profitability_score",
+          "reason_field": "priority_profitability_reason",
+          "weight_field": "priority_weight_profitability",
+          "default_weight": 0.25,
+          "icon": "TrendingUp",
+          "color": "emerald-500"
+        }
+      ],
+      "weight_customization": {
+        "location": "/preferences page - PriorityWeightsPanel",
+        "min_weight": 0.10,
+        "max_weight": 0.40,
+        "default_weights": { "portfolio": 0.30, "adhoc": 0.20, "customer": 0.25, "profitability": 0.25 },
+        "storage": "user_settings table",
+        "behavior": "When user changes weights, action priorities are dynamically recalculated using weighted average formula"
+      },
+      "overall_score_calculation": {
+        "formula": "(portfolioScore × portfolioWeight + adhocScore × adhocWeight + customerScore × customerWeight + profitabilityScore × profitabilityWeight) / (sum of weights)",
+        "normalization": "Weights normalized to sum to 1.0 for calculation",
+        "color_thresholds": { "success": ">=70%", "warning": ">=40%", "muted": "<40%" }
+      },
+      "visualization": {
+        "component": "PriorityScoreCard",
+        "location": "ActionPlanningModal - below Creation Reason block",
+        "display": ["Icon per pillar", "Label", "Percentage score", "Progress bar", "Turkish explanation text", "Overall weighted score"]
+      },
+      "related_files": [
+        "src/components/actions/PriorityScoreCard.tsx",
+        "src/components/actions/ActionPlanningModal.tsx",
+        "src/components/preferences/PriorityWeightsPanel.tsx",
+        "src/hooks/useUserSettings.ts",
+        "src/hooks/useActions.ts"
+      ]
     },
 
     {

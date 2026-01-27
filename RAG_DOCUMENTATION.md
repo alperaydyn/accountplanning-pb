@@ -577,6 +577,60 @@ overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateral
 
 ---
 
+### Action Priority System
+
+**Business Purpose:** Multi-criteria priority scoring system that ranks actions based on four strategic pillars: Portfolio Target Alignment, Ad-hoc Bank Priorities, Customer Satisfaction, and Profitability. Weights are centrally managed with user-level customization allowed within defined limits.
+
+**Key Features:**
+
+1. **Four Priority Pillars**
+   - **Portfolio Target Alignment (Portföy Hedef Uyumu)**: Prioritizes actions for products where the portfolio is behind target. Low HGO% products receive higher priority scores.
+   - **Ad-hoc Bank Priorities (Dönemsel Banka Hedefleri)**: Supports bank's periodic strategic focus areas (e.g., APKO meeting decisions to focus on insurance this week).
+   - **Customer Satisfaction (Müşteri Memnuniyeti)**: Prioritizes retention-focused actions that strengthen customer relationships and loyalty.
+   - **Profitability (Karlılık)**: Prioritizes high-revenue potential customer-product combinations.
+
+2. **Score Storage (per action)**
+   - Each action stores 8 fields in the `actions` table:
+     - `priority_portfolio_score`: 0-1 numeric score
+     - `priority_portfolio_reason`: Turkish explanation text
+     - `priority_adhoc_score`: 0-1 numeric score
+     - `priority_adhoc_reason`: Turkish explanation text
+     - `priority_customer_score`: 0-1 numeric score
+     - `priority_customer_reason`: Turkish explanation text
+     - `priority_profitability_score`: 0-1 numeric score
+     - `priority_profitability_reason`: Turkish explanation text
+
+3. **Priority Visualization (ActionPlanningModal)**
+   - Displayed in the "Prioritization Reason" block below "Creation Reason"
+   - Each pillar shows: icon, label, percentage score, progress bar, explanation
+   - Overall score calculated as weighted average of all four pillars
+   - Color coding: ≥70% green (success), ≥40% amber (warning), <40% muted
+
+4. **User Weight Customization (Preferences Page)**
+   - Portfolio managers can adjust pillar weights within defined limits
+   - Default weights: Portfolio 30%, Ad-hoc 20%, Customer 25%, Profitability 25%
+   - Allowed range: 10% to 40% per pillar
+   - Settings stored in `user_settings` table: `priority_weight_portfolio`, `priority_weight_adhoc`, `priority_weight_customer`, `priority_weight_profitability`
+   - Total weight indicator warns if sum ≠ 100% (system applies normalization)
+
+5. **Dynamic Priority Updates**
+   - When user changes weights in Preferences, action priorities are recalculated
+   - Weighted overall score = Σ(pillar_score × pillar_weight) / Σ(weights)
+   - Normalization ensures weights always sum to 1.0 for calculation
+
+**Score Calculation (Overall):**
+```
+overallScore = (portfolioScore × portfolioWeight + adhocScore × adhocWeight + 
+               customerScore × customerWeight + profitabilityScore × profitabilityWeight) / 
+              (portfolioWeight + adhocWeight + customerWeight + profitabilityWeight)
+```
+
+**Data Sources:** actions table (priority scores), user_settings table (weights)
+
+**Technical Files:** `src/components/actions/PriorityScoreCard.tsx`, `src/components/actions/ActionPlanningModal.tsx`, `src/components/preferences/PriorityWeightsPanel.tsx`, `src/hooks/useUserSettings.ts`
+
+---
+
 ### Actions Agenda (/agenda)
 
 **Business Purpose:** Calendar-based action planning and management with multiple view modes (Daily, Weekly, Monthly, List). Provides status filtering, AI-powered day planning, and seamless navigation to action details. View preferences are persisted to user settings.
@@ -933,14 +987,37 @@ overallScore = sum(all keyMoment scores) / 6
 
 ### Preferences (/preferences)
 
-**Business Purpose:** User personalization settings.
+**Business Purpose:** User personalization settings including action priority weight customization, language selection, and agenda view preferences.
 
-**Settings:**
-- Language (Turkish, English, Spanish)
-- Preferred Agenda View (Daily, Weekly, Monthly, List)
-- Documentation access
+**Key Features:**
 
-**Technical Files:** `src/pages/Preferences.tsx`
+1. **Action Priority Weights Panel (Top of page)**
+   - Adjust weights for the 4 priority pillars:
+     - **Portföy Hedef Uyumu (Portfolio Target Alignment)**: Default 30%
+     - **Ad-Hoc Banka Öncelikleri (Ad-hoc Bank Priorities)**: Default 20%
+     - **Müşteri Memnuniyeti (Customer Satisfaction)**: Default 25%
+     - **Karlılık (Profitability)**: Default 25%
+   - Modern slider interface with 2-column grid layout
+   - **Allowed range**: 10% to 40% per pillar (centrally managed limits)
+   - **Total weight indicator**: Shows if sum ≠ 100%, warns that normalization will be applied
+   - **Save button**: Persists weights to user_settings table
+   - **Reset button**: Returns to default values (30%, 20%, 25%, 25%)
+   - Changes trigger dynamic recalculation of action priorities
+
+2. **Language Settings**
+   - Options: Turkish (tr), English (en), Spanish (es)
+   - Uses LanguageSelector component
+
+3. **Preferred Agenda View**
+   - Options: Daily, Weekly, Monthly, List
+   - Saved to user_settings.preferred_agenda_view
+
+4. **Documentation Access**
+   - Link to documentation page
+
+**Data Sources:** user_settings table (priority weights, language, agenda view)
+
+**Technical Files:** `src/pages/Preferences.tsx`, `src/components/preferences/PriorityWeightsPanel.tsx`, `src/hooks/useUserSettings.ts`
 
 ---
 
