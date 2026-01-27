@@ -170,19 +170,73 @@ Else: 'on_track'
 
 ### Customer Journey (/customer-journey)
 
-**Business Purpose:** Visual customer progression roadmap showing how customers move through relationship stages from new customer to primary bank status.
+**Business Purpose:** Visual customer progression roadmap showing how customers move through relationship stages from new customer to primary bank status. Provides actionable development strategies and one-click navigation to filtered customer lists.
+
+**Key Features:**
+
+1. **SVG Road Visualization**
+   - Curved road path with gradient background (muted/50 to muted)
+   - Dashed center line for visual effect
+   - Responsive SVG with viewBox="0 0 1200 200"
+   - Semi-transparent road stroke with 60px width
+
+2. **Pin Markers on Road**
+   - Five color-coded circular pins positioned along the curve
+   - Each pin has: rounded icon container, status icon, pin tail triangle
+   - Pins positioned at varying heights following the curve (60%, 45%, 35%, 20%, 10% from top)
+   - Hover effect: scale-110 transform with shadow-lg
+   - Customer count displayed below each marker
+
+3. **Stage Legend**
+   - Horizontal layout below road visualization
+   - Color dots with status labels
+   - Arrow separators between stages (hidden on mobile)
+   - Responsive wrap on smaller screens
+
+4. **Stage Description Cards (5-column grid)**
+   - Left border accent matching stage color
+   - Icon with light background tint
+   - Status title and detailed description
+   - Responsive: 1 column mobile, 2 tablet, 5 desktop
+
+5. **Development Strategy Cards**
+   - Shows "From → To" progression (e.g., "Aktif → Target")
+   - Customer count subtitle ("X müşteriyi bir üst seviyeye taşı")
+   - Actionable tips checklist with CheckCircle2 icons
+   - "View Customers" button with Sparkles icon
+   - Deep-links to /customers?status={status_key}
+   - Only shows 4 cards (first 4 stages, since Ana Banka has no next stage)
+
+6. **Summary Statistics Section**
+   - 5-column percentage breakdown per stage
+   - Shows percentage of total portfolio
+   - Customer count in parentheses
+   - Rounded muted background cards
 
 **Journey Stages:**
 
-| Stage | Turkish | Description |
-|-------|---------|-------------|
-| New Customer | Yeni Musteri | Recently acquired customers |
-| Active | Aktif | Customers with regular transactions |
-| Target | Target | Customers with growth potential |
-| Strong Target | Strong Target | High-value customers close to primary bank |
-| Primary Bank | Ana Banka | Customers where we are the main banking partner |
+| Stage | Icon | Color | Description (TR) | Description (EN) |
+|-------|------|-------|------------------|------------------|
+| Yeni Müşteri | Users | emerald-500 | Yeni kazanılmış ve aktif olan müşteriler | Newly acquired and active customers |
+| Aktif | TrendingUp | sky-500 | Aktiflik kriterlerinden en az birini sağlamış | Meeting at least one activity criteria |
+| Target | Target | blue-500 | Segmentin hedef müşteri tanımına göre etkin | Active based on segment target definitions |
+| Strong Target | Star | indigo-500 | Segmentin güçlü müşteri tanımına göre etkin | Active based on strong customer definitions |
+| Ana Banka | Building2 | primary | En yoğun çalışma yapılan ana banka | Primary bank with highest engagement |
 
-**Progression:** Yeni Musteri -> Aktif -> Target -> Strong Target -> Ana Banka
+**Development Tips by Stage:**
+
+| From Stage | Tips (TR) | Tips (EN) |
+|------------|-----------|-----------|
+| Yeni Müşteri | İlk görüşmeyi planla, İhtiyaç analizi yap, Temel ürünleri tanıt | Schedule first meeting, Conduct needs analysis, Introduce basic products |
+| Aktif | Ürün kullanımını artır, Çapraz satış fırsatları, Düzenli ziyaret planla | Increase product usage, Cross-sell opportunities, Plan regular visits |
+| Target | Cüzdan payını analiz et, Rekabet analizi yap, Özelleştirilmiş teklifler sun | Analyze wallet share, Conduct competitor analysis, Offer customized deals |
+| Strong Target | Premium ürünler sun, İlişkiyi derinleştir, Stratejik ortaklık kur | Offer premium products, Deepen relationship, Build strategic partnership |
+
+**Progression Flow:** Yeni Müşteri → Aktif → Target → Strong Target → Ana Banka
+
+**Navigation:** Clicking "View Customers" button navigates to `/customers?status={stage.key}` where Customers page reads URL parameter and pre-filters the list.
+
+**Data Sources:** customers table (status column for counts)
 
 **Technical Files:** `src/pages/CustomerJourney.tsx`
 

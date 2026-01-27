@@ -199,22 +199,98 @@
       "audience": ["business", "technical"],
       "title": "Customer Journey Page",
       "route": "/customer-journey",
-      "business_description": "Visual customer progression roadmap showing how customers move through relationship stages from new customer to primary bank status. Displays interactive road visualization with customer counts at each stage, development strategies, and tips for progression.",
-      "technical_description": "Located at src/pages/CustomerJourney.tsx. Uses useCustomers hook to get customer counts by status. SVG road visualization with animated markers.",
-      "journey_stages": [
-        { "name": "Yeni Musteri", "english": "New Customer", "description": "Recently acquired customers" },
-        { "name": "Aktif", "english": "Active", "description": "Customers with regular transactions" },
-        { "name": "Target", "english": "Target", "description": "Customers with growth potential" },
-        { "name": "Strong Target", "english": "Strong Target", "description": "High-value customers close to primary bank" },
-        { "name": "Ana Banka", "english": "Primary Bank", "description": "Customers where we are the main banking partner" }
-      ],
+      "business_description": "Visual customer progression roadmap showing how customers move through relationship stages from new customer to primary bank status. Features an interactive SVG road visualization with pin markers, stage description cards, development strategy cards with actionable tips, and summary statistics. Provides one-click navigation to filtered customer lists for each stage.",
+      "technical_description": "Located at src/pages/CustomerJourney.tsx. Uses useCustomers hook to aggregate customer counts by status field. Implements SVG path for curved road with quadratic bezier curves. Pin markers use dynamic vertical positioning (topOffsets array) to follow the curve. Uses statusColors object for consistent theming. Deep-links to /customers?status={key} which is read by Customers page useEffect.",
       "features": [
-        "Interactive SVG road with stage markers",
-        "Customer counts per stage with animated markers",
-        "Stage description cards",
-        "Development strategies for each stage",
-        "View Customers buttons with status filter deep-linking"
+        "SVG curved road visualization with gradient background and dashed center line",
+        "Five color-coded pin markers positioned at varying heights along the curve",
+        "Pin markers with rounded icon container, status icon (Users/TrendingUp/Target/Star/Building2), and pin tail triangle",
+        "Hover effect on pins: scale-110 transform with shadow elevation",
+        "Customer count displayed below each marker with loading state support",
+        "Stage legend with color dots, status labels, and arrow separators between stages",
+        "5-column stage description cards with left border accent matching stage color",
+        "Development strategy cards showing 'From → To' progression (4 cards, excludes Ana Banka)",
+        "Actionable tips checklist with CheckCircle2 icons for each progression step",
+        "View Customers button with Sparkles icon deep-links to /customers?status={status_key}",
+        "Summary statistics section with percentage breakdown per stage and customer counts",
+        "Full TR/EN localization for all labels, descriptions, and tips"
       ],
+      "journey_stages": [
+        { 
+          "key": "Yeni Müşteri", 
+          "english": "New Customer", 
+          "icon": "Users",
+          "color": "emerald-500",
+          "description_tr": "Yeni kazanılmış ve aktif olan müşteriler",
+          "description_en": "Newly acquired and active customers",
+          "tips_tr": ["İlk görüşmeyi planla", "İhtiyaç analizi yap", "Temel ürünleri tanıt"],
+          "tips_en": ["Schedule first meeting", "Conduct needs analysis", "Introduce basic products"]
+        },
+        { 
+          "key": "Aktif", 
+          "english": "Active", 
+          "icon": "TrendingUp",
+          "color": "sky-500",
+          "description_tr": "Aktiflik kriterlerinden en az birini sağlamış müşteriler",
+          "description_en": "Customers meeting at least one activity criteria",
+          "tips_tr": ["Ürün kullanımını artır", "Çapraz satış fırsatları", "Düzenli ziyaret planla"],
+          "tips_en": ["Increase product usage", "Cross-sell opportunities", "Plan regular visits"]
+        },
+        { 
+          "key": "Target", 
+          "english": "Target", 
+          "icon": "Target",
+          "color": "blue-500",
+          "description_tr": "İlgili segmentin hedef müşteri tanımına göre etkin olan müşteriler",
+          "description_en": "Customers active based on segment target definitions",
+          "tips_tr": ["Cüzdan payını analiz et", "Rekabet analizi yap", "Özelleştirilmiş teklifler sun"],
+          "tips_en": ["Analyze wallet share", "Conduct competitor analysis", "Offer customized deals"]
+        },
+        { 
+          "key": "Strong Target", 
+          "english": "Strong Target", 
+          "icon": "Star",
+          "color": "indigo-500",
+          "description_tr": "İlgili segmentin güçlü müşteri tanımına göre etkin olan müşteriler",
+          "description_en": "Customers active based on strong customer definitions",
+          "tips_tr": ["Premium ürünler sun", "İlişkiyi derinleştir", "Stratejik ortaklık kur"],
+          "tips_en": ["Offer premium products", "Deepen relationship", "Build strategic partnership"]
+        },
+        { 
+          "key": "Ana Banka", 
+          "english": "Primary Bank", 
+          "icon": "Building2",
+          "color": "primary",
+          "description_tr": "En yoğun çalışma yapılan ana banka olmak",
+          "description_en": "Being the primary bank with the highest engagement",
+          "tips_tr": ["İlişkiyi koru", "Yeni ihtiyaçları takip et", "Sadakat programları uygula"],
+          "tips_en": ["Maintain relationship", "Track new needs", "Implement loyalty programs"]
+        }
+      ],
+      "visual_design": {
+        "road_svg": {
+          "viewBox": "0 0 1200 200",
+          "road_stroke_width": 60,
+          "center_line_dash": "10 10",
+          "path": "M 0 150 Q 150 150 250 120 Q 400 70 550 90 Q 700 110 850 60 Q 1000 10 1200 30"
+        },
+        "pin_positions": ["top-[60%]", "top-[45%]", "top-[35%]", "top-[20%]", "top-[10%]"],
+        "pin_size": "w-12 h-12 md:w-16 md:h-16",
+        "status_colors": {
+          "Yeni Müşteri": { "bg": "emerald-500", "text": "emerald-500", "light": "emerald-500/10" },
+          "Aktif": { "bg": "sky-500", "text": "sky-500", "light": "sky-500/10" },
+          "Target": { "bg": "blue-500", "text": "blue-500", "light": "blue-500/10" },
+          "Strong Target": { "bg": "indigo-500", "text": "indigo-500", "light": "indigo-500/10" },
+          "Ana Banka": { "bg": "primary", "text": "primary", "light": "primary/10" }
+        }
+      },
+      "navigation": {
+        "view_customers_button": "Navigates to /customers?status={stage.key}",
+        "url_encoding": "encodeURIComponent(stage.key)",
+        "customers_page_sync": "Customers page reads status URL param in useEffect to pre-filter list"
+      },
+      "data_source": "customers table, aggregated by status column",
+      "hooks_used": ["useCustomers", "useLanguage", "useNavigate"],
       "related_files": ["src/pages/CustomerJourney.tsx"]
     },
 
