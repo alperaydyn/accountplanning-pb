@@ -244,7 +244,54 @@ Else: 'on_track'
 
 ### Primary Bank (/primary-bank)
 
-**Business Purpose:** Share of wallet analysis and competitive positioning dashboard. Shows overall principality score and breaks it down into external data (from market sources) and internal product metrics.
+**Business Purpose:** Share of wallet analysis and competitive positioning dashboard. Shows overall principality score aggregated across filtered customers, with breakdowns into external market data and internal product metrics. Provides navigation to the data generation engine.
+
+**Key Features:**
+
+1. **Header with Navigation**
+   - Back button (ArrowLeft) to return to previous page
+   - Page title and subtitle with localized text
+   - "Veri Motoru" (Engine) button with Cog icon navigates to /primary-bank/engine
+
+2. **Segment/Sector Filters**
+   - Two dropdown selectors in a card layout
+   - Segment filter: MİKRO, Kİ, OBİ, TİCARİ (from SEGMENTS constant)
+   - Sector filter: Turizm, Ulaşım, Perakende, etc. (from SECTORS constant)
+   - "Tümü" (All) option to show all customers
+   - Filters trigger refetch of customers and primary bank data
+   - Icons: Users for segment, Factory for sector
+
+3. **Main Score Card**
+   - Large percentage display (5xl font, primary color)
+   - Subtitle shows selected segment/sector labels with description
+   - Score explanation text below
+   - Loading state displays "..." while data fetching
+
+4. **External Data Section (Banka Dışı Veriler)**
+   - 4-column grid with metric cards
+   - **Loans (Krediler)**: Banknote icon, loan share percentage, progress bar
+   - **POS**: Receipt icon, POS share percentage, progress bar
+   - **Cheque (Çek)**: FileCheck icon, cheque share percentage, progress bar
+   - **Collateral (Teminat)**: Shield icon, collateral share percentage, progress bar
+   - Each card has: icon header, 3xl percentage value, progress bar, description text
+
+5. **Internal Data Section (Banka İçi Veriler)**
+   - 4-column grid with axis cards
+   - **Products Axis (Ürün Ekseni)**: Package icon
+   - **Transactional Axis (İşlem Ekseni)**: CreditCard icon
+   - **Liabilities Axis (Pasif Ekseni)**: PiggyBank icon
+   - **Assets Axis (Aktif Ekseni)**: Wallet icon
+   - Axis scores derived from overall score with ±15% random variance
+   - Each card has: icon header, 3xl percentage value, progress bar, description text
+
+6. **Progress Bar Color Logic**
+   - Score >= 80%: success (green)
+   - Score >= 60%: warning (amber)
+   - Score < 60%: destructive (red)
+
+7. **Bottom Explanation Card**
+   - Full-width card with contextual explanation
+   - Describes how principality score is calculated and used
 
 **Principality Score Formula:**
 ```
@@ -257,11 +304,15 @@ overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateral
 - Cheque Share: 20%
 - Collateral Share: 10%
 
-**External Data Metrics:**
-- **Loans Share** - Bank's share of customer total loans (cash + non-cash)
-- **POS Share** - Point-of-sale transaction volume share
-- **Cheque Share** - Percentage of customers with cheque activity at our bank
-- **Collateral Share** - Collateral registration share
+**Share Calculations:**
+- **Loan Share**: (our_bank cash + non_cash) / (all banks cash + non_cash) * 100
+- **POS Share**: Average of pos_share across customers with POS volume > 0
+- **Cheque Share**: (customers with cheque_volume_12m > 0) / (total customers) * 100
+- **Collateral Share**: (our_bank group1-4 amounts) / (all banks group1-4 amounts) * 100
+
+**Dynamic Weighting:** If a customer lacks data for a specific product category, that category's weight is excluded from the denominator to prevent unfair score penalties.
+
+**Data Sources:** primary_bank_loan_summary, primary_bank_pos, primary_bank_cheque, primary_bank_collateral, customers
 
 **Technical Files:** `src/pages/PrimaryBank.tsx`, `src/hooks/usePrimaryBankData.ts`
 
