@@ -60,6 +60,105 @@
     },
 
     {
+      "id": "feature_help_inspector",
+      "category": "Global Features",
+      "audience": ["business", "technical"],
+      "title": "Help Inspector Panel",
+      "business_description": "An interactive help system accessible from any page in the application. Allows users to get contextual help about the application by either selecting a specific UI element or asking questions directly. Uses AI-powered RAG (Retrieval-Augmented Generation) to provide accurate, source-cited answers.",
+      "technical_description": "Implemented via InspectorContext for state management, InspectorOverlay for element hover/click detection, InspectorSidebar for the chat UI, and useRAGChat hook for API communication. The rag-assistant edge function handles query classification, chunk matching, dynamic code analysis, and answer generation using Gemini models.",
+      "activation_methods": [
+        {
+          "name": "Header Help Button",
+          "icon": "HelpCircle",
+          "description": "Click to open dropdown menu with three options"
+        },
+        {
+          "name": "Inspect Element",
+          "icon": "MousePointer2",
+          "description": "Enter inspection mode to click on any UI element for contextual help"
+        },
+        {
+          "name": "Ask a Question",
+          "icon": "MessageCircleQuestion",
+          "description": "Open the chat sidebar directly without element selection"
+        },
+        {
+          "name": "Start Tour",
+          "icon": "Play",
+          "description": "Launch the guided dashboard tour"
+        }
+      ],
+      "features": [
+        "Inspection mode with crosshair cursor and element highlight box",
+        "Tooltip showing 'Click to ask about this element' on hover",
+        "Element metadata capture: tag name, CSS selector, ID, text content, data attributes, position",
+        "Escape key exits inspection mode without selecting",
+        "Selected element info displayed in sidebar header with tag name and ID badges",
+        "Text content preview (first 100 characters) shown below element info",
+        "Chat sidebar with w-96 (384px) fixed width on right side",
+        "Example prompts: 'What does this show?', 'How is this calculated?'",
+        "User messages with primary background (right-aligned), assistant messages with muted background (left-aligned)",
+        "Auto-scroll to bottom on new messages",
+        "Auto-focus on input when sidebar opens",
+        "Messages cleared when sidebar closes"
+      ],
+      "rate_limiting": {
+        "query_classification": ["business", "technical", "out_of_context"],
+        "out_of_context_limit": 3,
+        "window_duration_hours": 24,
+        "block_duration_hours": 24,
+        "warning_threshold": 2,
+        "warning_message": "Out of context warning: X attempts remaining before 24h block"
+      },
+      "feedback_system": {
+        "buttons": ["ThumbsUp", "ThumbsDown"],
+        "storage": "rag_feedback table",
+        "feedback_score_values": [-1, 1],
+        "query_type_badges": ["out_of_scope", "needs_review"],
+        "toast_messages": {
+          "positive": "Thanks for the positive feedback!",
+          "negative": "Thanks, we'll improve this answer"
+        }
+      },
+      "rag_assistant_logic": {
+        "step_1_classification": "Classify query as business/technical/out_of_context using Gemini",
+        "step_2_chunk_matching": "Score rag_chunks by keyword matches, route relevance, query type; minimum score 2 required",
+        "step_3_dynamic_code_analysis": "Build code context from route-to-files mapping and keyword-to-files mapping when documentation insufficient",
+        "step_4_context_building": "Combine clicked element info, current route, matched chunks, and code context",
+        "step_5_answer_generation": "Generate concise answer (3-5 sentences for business, longer for technical) with source citations",
+        "step_6_feedback_storage": "Save Q&A pair, chunks used, query type, and investigation flag to rag_feedback table"
+      },
+      "database_tables": {
+        "rag_chunks": "Documentation chunks indexed by route, keywords, and category",
+        "rag_feedback": "Stores Q&A pairs with feedback scores and investigation flags",
+        "rag_user_limits": "Tracks out-of-context query counts and block status per user"
+      },
+      "inspector_context_state": {
+        "isActive": "Boolean indicating if inspection mode is active",
+        "isSidebarOpen": "Boolean indicating if chat sidebar is visible",
+        "clickedElement": "Object containing captured element metadata (selector, tagName, className, id, textContent, dataAttributes, rect)",
+        "question": "Current question being asked"
+      },
+      "visual_design": {
+        "trigger_button": "Ghost variant, size icon, shows pulse animation when inspection active",
+        "overlay_highlight": "Primary color border (2px), primary/10 background, rounded-sm corners",
+        "sidebar": "Fixed right position, w-96 width, full height, card background with border-l",
+        "messages": {
+          "user": "Primary background, primary-foreground text, rounded-lg, right-aligned",
+          "assistant": "Muted background, foreground text, rounded-lg, left-aligned"
+        }
+      },
+      "related_files": [
+        "src/components/inspector/InspectorTrigger.tsx",
+        "src/components/inspector/InspectorOverlay.tsx", 
+        "src/components/inspector/InspectorSidebar.tsx",
+        "src/contexts/InspectorContext.tsx",
+        "src/hooks/useRAGChat.ts",
+        "supabase/functions/rag-assistant/index.ts"
+      ]
+    },
+
+    {
       "id": "component_summary_cards",
       "category": "Components",
       "audience": ["business", "technical"],
