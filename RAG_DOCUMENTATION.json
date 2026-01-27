@@ -844,27 +844,170 @@
       "audience": ["business", "technical"],
       "title": "AI Assistant Page",
       "route": "/ai-assistant",
-      "business_description": "Conversational AI interface for portfolio intelligence. Supports multiple chat sessions, 'Plan My Day' feature with automatic customer prioritization and action recommendations. Users can save suggested actions directly from AI responses.",
-      "technical_description": "Located at src/pages/AIAssistant.tsx. Uses ai-action-assistant edge function. Chat history stored in ai_chat_sessions and ai_chat_messages tables. Supports URL trigger ?prompt=plan-my-day&date=YYYY-MM-DD.",
+      "business_description": "Conversational AI interface for portfolio intelligence. Provides a persistent chat experience for portfolio managers to analyze customers, get prioritization recommendations, and plan their day with AI-generated action suggestions that can be saved directly to the database.",
+      "technical_description": "Located at src/pages/AIAssistant.tsx. Uses ai-action-assistant edge function. Chat history stored in ai_chat_sessions and ai_chat_messages tables. Supports URL trigger ?prompt=plan-my-day&date=YYYY-MM-DD. Uses useAIChatSessions hooks for session CRUD. PlanMyDayDisplay component renders structured AI responses with save buttons.",
+      "layout": {
+        "grid": "1/4 sidebar + 3/4 chat area",
+        "height": "calc(100vh - 220px)",
+        "sidebar": "Session list with new chat button",
+        "main": "Chat header with privacy panel, message area with auto-scroll, input form, token counter footer"
+      },
       "features": [
-        "Multiple conversation threads",
-        "Create/delete sessions",
-        "Auto-title based on first message",
-        "Plan My Day with date targeting",
-        "Save actions from AI suggestions",
-        "Token usage and cost tracking",
-        "Privacy panel (collapsible)"
+        "Multiple conversation threads stored in ai_chat_sessions table",
+        "Session list sorted by updated_at descending with active state highlighting",
+        "New session creation with Plus icon button",
+        "Auto-title based on first user message (first 50 chars + ellipsis)",
+        "Delete session via 3-dot dropdown menu",
+        "Welcome message with example prompts when no messages exist",
+        "User messages: primary background, right-aligned, rounded-br-md",
+        "Assistant messages: muted background, left-aligned, Bot icon with violet gradient",
+        "Provider/model metadata footer on assistant messages (e.g., 'lovable · openai/gpt-5-mini')",
+        "Customer temp IDs (C1, C2) parsed and converted to clickable customer links",
+        "Bold text parsing for **text** patterns",
+        "Plan My Day triggered by 'plan my day' or 'günümü planla' keywords",
+        "URL trigger: ?prompt=plan-my-day&date=YYYY-MM-DD from Agenda page",
+        "PlanMyDayDisplay component renders structured AI plan with save buttons per action",
+        "Token usage tracking: total tokens with input/output breakdown",
+        "Cost estimation at $0.15/1M input, $0.60/1M output",
+        "Collapsible privacy notice panel with 4 bullet points",
+        "Loading state with spinner and 'Portföyünüz analiz ediliyor...' message",
+        "Auto-scroll to bottom on new messages",
+        "Auto-focus input on session change"
       ],
-      "ai_context": [
-        "Customer portfolio data",
-        "Product holdings and thresholds",
-        "Existing actions and status",
-        "Action templates"
-      ],
-      "edge_function": "ai-action-assistant",
-      "data_tables": ["ai_chat_sessions", "ai_chat_messages"],
-      "hooks_used": ["useAIChatSessions", "useAIChatMessages", "useCustomers", "useActionTemplates"],
-      "related_files": ["src/pages/AIAssistant.tsx", "supabase/functions/ai-action-assistant/index.ts", "src/components/ai/PlanMyDayDisplay.tsx"]
+      "session_management": {
+        "table": "ai_chat_sessions",
+        "fields": ["id", "portfolio_manager_id", "title", "created_at", "updated_at"],
+        "operations": ["create", "update_title", "delete"],
+        "sorting": "updated_at DESC",
+        "item_display": {
+          "active_state": "bg-primary/10 text-primary shadow-sm border border-primary/20",
+          "hover_state": "hover:bg-muted/80 border border-transparent",
+          "icon": "MessageSquare",
+          "timestamp_format": "d MMM, HH:mm"
+        }
+      },
+      "chat_messages": {
+        "table": "ai_chat_messages",
+        "fields": ["id", "session_id", "role", "content", "customer_mapping", "usage", "provider", "model_name", "created_at"],
+        "role_types": ["user", "assistant"],
+        "customer_mapping": "Record<tempId, realId> for C1→uuid linking"
+      },
+      "plan_my_day": {
+        "triggers": ["'plan my day' keyword", "'günümü planla' keyword", "?prompt=plan-my-day URL param"],
+        "date_param": "?date=YYYY-MM-DD (defaults to today)",
+        "creates_new_session": true,
+        "session_title": "{date} Planı or 'Günümü Planla'",
+        "response_format": {
+          "greeting": "String",
+          "customers": [{
+            "tempId": "C1",
+            "reason": "Why selected (max 15 words)",
+            "actions": [{ "product": "Exact product name", "action": "Exact template action name", "note": "Optional note" }]
+          }],
+          "summary": "Daily goal summary (max 20 words)"
+        },
+        "display_component": "PlanMyDayDisplay",
+        "save_action_fields": {
+          "customer_id": "From mapping",
+          "product_id": "Matched by product name",
+          "name": "action.action",
+          "description": "action.note",
+          "priority": "medium",
+          "type": "rm_action",
+          "action_target_date": "targetDate or today",
+          "current_status": "Planlandı",
+          "creator_name": "AI Assistant",
+          "creation_reason": "customer.reason"
+        }
+      },
+      "plan_my_day_display_component": {
+        "location": "src/components/ai/PlanMyDayDisplay.tsx",
+        "features": [
+          "Greeting text display",
+          "Numbered customer list with clickable name links",
+          "Reason text with 📌 prefix",
+          "Actions list: 'Product → Action (note)' format",
+          "Save button per action (Save/Loader/Check icons)",
+          "Already-saved detection via normalized key matching",
+          "Key format: 'customerId|productName|actionName' normalized to lowercase"
+        ],
+        "button_states": {
+          "unsaved": { "icon": "Save", "color": "text-muted-foreground hover:text-primary" },
+          "saving": { "icon": "Loader2 animate-spin" },
+          "saved": { "icon": "Check", "color": "text-green-600 hover:bg-green-50" }
+        }
+      },
+      "ai_context_preparation": {
+        "customers": {
+          "included": "All customers with products",
+          "fields": ["id", "tempId (C1, C2...)", "name", "segment", "sector", "status", "principality_score"],
+          "products_per_customer": ["name", "category", "current_value", "threshold", "gap", "productId"],
+          "below_threshold_filter": "Products where gap > 0",
+          "actions_per_customer": ["name", "description", "priority", "status"]
+        },
+        "action_templates": {
+          "format": [{ "productId": "uuid", "productName": "string", "actionName": "string" }],
+          "purpose": "Restrict AI to valid product→action pairings"
+        },
+        "chat_history": "Last 5 messages for context continuity"
+      },
+      "edge_function": {
+        "name": "ai-action-assistant",
+        "authentication": "JWT via supabase.auth.getUser()",
+        "user_settings_fetch": "ai_provider, ai_model, ai_api_key_encrypted, ai_base_url from user_settings",
+        "provider_support": ["lovable", "openai", "openrouter", "local"],
+        "default_model": "openai/gpt-5-mini for lovable provider",
+        "plan_my_day_detection": "message.toLowerCase().includes('plan my day') or 'günümü planla'",
+        "date_extraction": "Regex for 'for YYYY-MM-DD' in message",
+        "customer_sorting": "Strong Target > Target > others, then by principality_score DESC",
+        "customer_limit": 20,
+        "prompt_rules": [
+          "Select top 5 customers",
+          "2-3 actions per customer",
+          "No product duplication within same customer",
+          "Product names must match exactly from allowed list",
+          "Action names must match exact template names"
+        ],
+        "response": {
+          "content": "AI response text or JSON",
+          "usage": { "prompt_tokens": "number", "completion_tokens": "number", "total_tokens": "number" },
+          "isPlanMyDay": "boolean",
+          "provider": "string",
+          "model": "string"
+        }
+      },
+      "token_tracking": {
+        "pricing": { "input": "$0.15 per 1M tokens", "output": "$0.60 per 1M tokens" },
+        "display": "Total tokens with (↑input / ↓output) and $X.XXXX est.",
+        "icon": "Coins with amber color"
+      },
+      "privacy_panel": {
+        "trigger": "ShieldCheck icon button, collapsible",
+        "border_color": "success/20",
+        "background": "success/5",
+        "details": [
+          "Customer data pseudonymized (C1, C2, etc.)",
+          "Only portfolio manager's own data sent",
+          "No persistent storage of raw prompts",
+          "User-controlled AI provider selection"
+        ]
+      },
+      "welcome_message": {
+        "displayed_when": "Session has no messages",
+        "content_tr": "Merhaba! Bugün hangi müşterilere odaklanmanız gerektiğini bulmanıza yardımcı olabilirim.",
+        "example_prompts": [
+          "Bu hafta hangi müşterilere öncelik vermeliyim?",
+          "Perakende sektöründeki yüksek potansiyelli müşterileri bul",
+          "Kredi ürünleri için takip gereken müşteriler kim?"
+        ]
+      },
+      "url_parameters": {
+        "prompt": "plan-my-day to trigger Plan My Day workflow",
+        "date": "YYYY-MM-DD target date for plan (optional, defaults to today)"
+      },
+      "data_sources": ["ai_chat_sessions", "ai_chat_messages", "customers", "customer_products", "products", "actions", "action_templates", "product_thresholds", "user_settings"],
+      "hooks_used": ["useAIChatSessions", "useAIChatMessages", "useCreateChatSession", "useUpdateChatSessionTitle", "useDeleteChatSession", "useAddChatMessage", "useCustomers", "useAllCustomerProducts", "useProducts", "useActions", "useAllActionTemplates", "useProductThresholds", "useUserSettings", "useLanguage"],
+      "related_files": ["src/pages/AIAssistant.tsx", "src/components/ai/PlanMyDayDisplay.tsx", "src/hooks/useAIChatSessions.ts", "src/lib/planMyDayMessage.ts", "supabase/functions/ai-action-assistant/index.ts"]
     },
 
     {
