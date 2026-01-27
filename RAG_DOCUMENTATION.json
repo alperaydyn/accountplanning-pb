@@ -126,26 +126,71 @@
       "audience": ["business", "technical"],
       "title": "Product Performance Page",
       "route": "/product-performance",
-      "business_description": "Shows portfolio-level product metrics and target achievement analysis. Products are categorized by status (On Track, At Risk, Critical) with sub-statuses (Growing, Melting, Diversity, Ticket Size). Clicking a status filters the product table.",
-      "technical_description": "Located at src/pages/ProductPerformance.tsx. Uses usePortfolioTargets hook. Hero panel shows status summary cards, main table shows detailed stock/flow metrics per product.",
+      "business_description": "Shows portfolio-level product metrics and target achievement analysis with an interactive hero panel for filtering by status. Products are categorized by 3 base statuses (On Track, At Risk, Critical) which group 7 sub-statuses (Growing, Melting, Diversity, Ticket Size, etc.). Clicking a base status reveals checkbox sub-filters to precisely filter the product table.",
+      "technical_description": "Located at src/pages/ProductPerformance.tsx. Uses usePortfolioTargets hook for metrics data. Implements hierarchical status filtering with activeBaseStatus and selectedDetailStatuses state. Hero panel uses 4-column grid layout with gradient glassmorphism styling. ProductPerformanceTable receives statusFilter prop as array for multi-status filtering.",
+      "features": [
+        "Date period selector: current month, last 3 months, last 4 quarter ends, last 2 year ends",
+        "Hero panel with 4-column KPI grid (Total, On Track, At Risk, Critical)",
+        "Clicking Total clears all filters and shows all products",
+        "Clicking base status (On Track/At Risk/Critical) expands sub-status checkbox panel",
+        "Sub-statuses auto-selected when base status clicked, can be individually toggled",
+        "Active filter indicator badge with comma-separated status names and clear button",
+        "Color-coded status cards: emerald (On Track), amber (At Risk), destructive (Critical)",
+        "Each sub-status has unique icon (CheckCircle, Zap, Users, Target, TrendingUp, Receipt, AlertTriangle)",
+        "Product table with dual rows per product (Stock row + Flow row)",
+        "Row click navigates to /customers?product={productId}",
+        "Create Records button generates sample data for selected period",
+        "Regenerate Insights button when data exists"
+      ],
+      "status_grouping": {
+        "on_track_group": {
+          "label": "Yolunda (On Track)",
+          "color": "emerald",
+          "sub_statuses": ["on_track", "growing", "diversity"]
+        },
+        "at_risk_group": {
+          "label": "Riskli (At Risk)", 
+          "color": "amber",
+          "sub_statuses": ["at_risk", "melting", "ticket_size"]
+        },
+        "critical_group": {
+          "label": "Kritik (Critical)",
+          "color": "destructive",
+          "sub_statuses": ["critical"]
+        }
+      },
       "status_definitions": {
-        "on_track": "Overall average HGO >= 80%",
-        "at_risk": "Overall average HGO >= 50% but < 80%",
-        "critical": "Overall average HGO < 50%",
-        "melting": "Stock metrics good (>= 80%) but flow metrics low (< 80%) - losing momentum",
-        "growing": "Flow metrics good (>= 80%) but stock metrics low (< 80%) - building up",
-        "ticket_size": "Customer count good but volume low - small transactions",
-        "diversity": "Volume good but customer count low - few large customers"
+        "on_track": "Overall average HGO >= 80% - product performing well",
+        "at_risk": "Overall average HGO >= 50% but < 80% - needs attention",
+        "critical": "Overall average HGO < 50% - requires immediate action",
+        "melting": "Stock metrics good (>= 80%) but flow metrics low (< 80%) - losing momentum, existing customers strong but not acquiring new",
+        "growing": "Flow metrics good (>= 80%) but stock metrics low (< 80%) - building up, acquiring well but stock base still small",
+        "ticket_size": "Customer count good but volume low - many customers with small transactions",
+        "diversity": "Volume good but customer count low - few large customers, concentration risk"
       },
       "status_calculation": {
         "function": "getProductStatus()",
-        "logic": "If stockAvg >= 80 && flowAvg < 80: 'melting'. If stockAvg < 80 && flowAvg >= 80: 'growing'. If countAvg >= 80 && volumeAvg < 80: 'ticket_size'. If countAvg < 80 && volumeAvg >= 80: 'diversity'. Else use overall average thresholds.",
+        "variables": {
+          "stockAvg": "(stock_count_tar + stock_volume_tar) / 2",
+          "flowAvg": "(flow_count_tar + flow_volume_tar) / 2",
+          "countAvg": "(stock_count_tar + flow_count_tar) / 2",
+          "volumeAvg": "(stock_volume_tar + flow_volume_tar) / 2",
+          "overallAvg": "(stock_count_tar + stock_volume_tar + flow_count_tar + flow_volume_tar) / 4"
+        },
+        "logic": "Check specific conditions first (melting, growing, ticket_size, diversity), then fall back to overall average thresholds",
         "thresholds": { "GOOD_THRESHOLD": 80, "BAD_THRESHOLD": 50 }
       },
-      "table_columns": ["Product Name", "Category", "Stock Count", "Stock Volume", "Stock HGO%", "Stock YoY%", "Stock MoM%", "Flow Count", "Flow Volume", "Flow HGO%", "Flow YoY%", "Flow MoM%", "Status"],
-      "data_source": "portfolio_targets table joined with products table",
-      "hooks_used": ["usePortfolioTargets", "useLanguage"],
-      "related_files": ["src/pages/ProductPerformance.tsx", "src/components/dashboard/ProductPerformanceTable.tsx"]
+      "table_structure": {
+        "row_per_product": 2,
+        "row_types": ["Stock", "Flow"],
+        "columns": ["Product Name", "Type", "Count", "HGO%", "YTD Delta", "MTD Delta", "Volume", "Volume HGO%", "Volume YTD", "Volume MTD", "Actions", "Status"],
+        "product_name_rowspan": 2,
+        "actions_rowspan": 2,
+        "status_rowspan": 2
+      },
+      "data_source": "portfolio_targets table joined with products table, actions table for counts",
+      "hooks_used": ["usePortfolioTargets", "useActions", "useLanguage", "useCreatePortfolioTargets"],
+      "related_files": ["src/pages/ProductPerformance.tsx", "src/components/dashboard/ProductPerformanceTable.tsx", "src/hooks/usePortfolioTargets.ts"]
     },
 
     {
