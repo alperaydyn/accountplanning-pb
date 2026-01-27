@@ -178,6 +178,14 @@ export type Database = {
           next_recurrence_date: string | null
           parent_action_id: string | null
           priority: Database["public"]["Enums"]["action_priority"]
+          priority_adhoc_reason: string | null
+          priority_adhoc_score: number | null
+          priority_customer_reason: string | null
+          priority_customer_score: number | null
+          priority_portfolio_reason: string | null
+          priority_portfolio_score: number | null
+          priority_profitability_reason: string | null
+          priority_profitability_score: number | null
           product_id: string
           recurrence_end_date: string | null
           recurrence_interval: number | null
@@ -206,6 +214,14 @@ export type Database = {
           next_recurrence_date?: string | null
           parent_action_id?: string | null
           priority: Database["public"]["Enums"]["action_priority"]
+          priority_adhoc_reason?: string | null
+          priority_adhoc_score?: number | null
+          priority_customer_reason?: string | null
+          priority_customer_score?: number | null
+          priority_portfolio_reason?: string | null
+          priority_portfolio_score?: number | null
+          priority_profitability_reason?: string | null
+          priority_profitability_score?: number | null
           product_id: string
           recurrence_end_date?: string | null
           recurrence_interval?: number | null
@@ -234,6 +250,14 @@ export type Database = {
           next_recurrence_date?: string | null
           parent_action_id?: string | null
           priority?: Database["public"]["Enums"]["action_priority"]
+          priority_adhoc_reason?: string | null
+          priority_adhoc_score?: number | null
+          priority_customer_reason?: string | null
+          priority_customer_score?: number | null
+          priority_portfolio_reason?: string | null
+          priority_portfolio_score?: number | null
+          priority_profitability_reason?: string | null
+          priority_profitability_score?: number | null
           product_id?: string
           recurrence_end_date?: string | null
           recurrence_interval?: number | null

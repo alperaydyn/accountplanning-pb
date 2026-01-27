@@ -30,6 +30,15 @@ export interface Action {
   current_value: number | null;
   created_at: string;
   updated_at: string;
+  // Priority scoring (0-1 scale)
+  priority_portfolio_score: number | null;
+  priority_portfolio_reason: string | null;
+  priority_adhoc_score: number | null;
+  priority_adhoc_reason: string | null;
+  priority_customer_score: number | null;
+  priority_customer_reason: string | null;
+  priority_profitability_score: number | null;
+  priority_profitability_reason: string | null;
   // Joined data
   customers?: {
     id: string;
