@@ -401,20 +401,76 @@
       "audience": ["business", "technical"],
       "title": "Customers Page",
       "route": "/customers",
-      "business_description": "Customer portfolio management with search, filtering, and navigation to individual customer details. Shows customer list with group membership, sector/segment, status badges, product count, action counts, and last activity date.",
-      "technical_description": "Located at src/pages/Customers.tsx. Uses useCustomers hook with filters. Supports URL parameters for deep-linking (?status=, ?product=, ?group=). Debounced search across customer names, action names, and group names.",
-      "filters": [
-        { "name": "Search", "description": "Debounced search across customer names, action names, and group names" },
-        { "name": "Status", "options": ["Yeni Musteri", "Aktif", "Target", "Strong Target", "Ana Banka"] },
-        { "name": "Product", "description": "Filter by product ownership" },
-        { "name": "Group", "description": "Customer group membership (holding companies)" },
-        { "name": "Action Status", "options": ["Beklemede", "Planlandy"] }
+      "business_description": "Customer portfolio management with advanced search, multi-filter capabilities, AI-powered customer generation, and seamless navigation to individual customer details. Features action-level search with deep-linking to auto-open action modals on customer detail page.",
+      "technical_description": "Located at src/pages/Customers.tsx. Uses custom useDebounce hook (300ms) for smooth search filtering. Implements client-side filtering with keepPreviousData pattern to prevent flickering. URL parameters sync via useSearchParams hook. Product counts fetched via separate query for performance. Action matching creates clickable links with ?action={id} deep-linking.",
+      "features": [
+        "AI-powered customer generation button (Sparkles icon) opens CreateCustomerModal",
+        "300ms debounced search across customer names, action names, and group names",
+        "Client-side filtering with keepPreviousData for flicker-free UX",
+        "Status filter dropdown (Yeni Müşteri, Aktif, Target, Strong Target, Ana Banka)",
+        "Product filter dropdown with all products from useProducts hook",
+        "Group filter dropdown with customer groups from useCustomerGroups hook",
+        "Action status filter (Beklemede, Planlandı, first 3 statuses)",
+        "URL parameter sync: ?status=, ?product=, ?group= for deep-linking",
+        "Matching action links displayed below customer name when search matches action names",
+        "Action links navigate to /customers/{id}?action={actionId} for auto-opening modal",
+        "Shows up to 3 matching actions with '+N more' for overflow",
+        "Group badge is clickable to filter by that group",
+        "Product count badge with Package icon",
+        "Action counts displayed as planned (green) / pending (amber)",
+        "Color-coded status badges (emerald, amber, sky, slate)",
+        "Empty state with Users icon and localized message",
+        "Row click navigates to /customers/{id}"
       ],
-      "table_columns": ["Customer Name", "Group", "Sector", "Segment", "Status", "Product Count", "Planned Actions", "Pending Actions", "Last Activity"],
-      "data_source": "customers table joined with customer_groups, actions aggregated",
-      "hooks_used": ["useCustomers", "useLanguage"],
+      "filters": {
+        "search": {
+          "type": "debounced_input",
+          "delay_ms": 300,
+          "targets": ["customer.name", "action.name", "customer_groups.name"],
+          "implementation": "custom useDebounce hook, client-side filtering"
+        },
+        "status": {
+          "options": ["all", "Yeni Müşteri", "Aktif", "Target", "Strong Target", "Ana Banka"],
+          "url_param": "status"
+        },
+        "product": {
+          "options": "dynamic from useProducts hook",
+          "url_param": "product"
+        },
+        "group": {
+          "options": "dynamic from useCustomerGroups hook",
+          "url_param": "group"
+        },
+        "action_status": {
+          "options": ["all", "Beklemede", "Planlandı"],
+          "implementation": "filters customerIdsWithActionStatus set"
+        }
+      },
+      "table_columns": {
+        "customer_name": { "display": "Customer Name + matching action links", "sortable": false },
+        "group": { "display": "Badge with Users icon, clickable to filter", "sortable": false },
+        "sector": { "display": "Localized sector label", "sortable": false },
+        "segment": { "display": "Localized segment label", "sortable": false },
+        "status": { "display": "Color-coded badge", "sortable": false },
+        "products": { "display": "Badge with Package icon + count", "sortable": false },
+        "actions": { "display": "planned (green) / pending (amber)", "sortable": false },
+        "last_activity": { "display": "Date or '-'", "sortable": false }
+      },
+      "status_badge_colors": {
+        "Ana Banka": { "bg": "emerald-600", "text": "white" },
+        "Strong Target": { "bg": "amber-500", "text": "white" },
+        "Target": { "bg": "sky-500", "text": "white" },
+        "Aktif": { "bg": "slate-400", "text": "white" },
+        "Yeni Müşteri": { "bg": "slate-200", "text": "slate-600" }
+      },
+      "action_deep_linking": {
+        "url_format": "/customers/{customerId}?action={actionId}",
+        "behavior": "Customer Detail page reads ?action param and auto-opens ActionPlanningModal"
+      },
+      "data_sources": ["customers", "customer_groups", "products", "actions", "customer_products"],
+      "hooks_used": ["useCustomers", "useCustomerGroups", "useProducts", "useActions", "useLanguage", "useDebounce (custom)"],
       "url_parameters": ["status", "product", "group"],
-      "related_files": ["src/pages/Customers.tsx"]
+      "related_files": ["src/pages/Customers.tsx", "src/components/customer/CreateCustomerModal.tsx"]
     },
 
     {

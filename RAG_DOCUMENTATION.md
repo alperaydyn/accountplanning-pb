@@ -336,18 +336,71 @@ overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateral
 
 ### Customers (/customers)
 
-**Business Purpose:** Customer portfolio management with search, filtering, and navigation to individual customer details.
+**Business Purpose:** Customer portfolio management with advanced search, multi-filter capabilities, AI-powered customer generation, and seamless navigation to individual customer details. Supports action-level search with deep-linking.
 
-**Filters:**
-- Search (customer names, action names, group names)
-- Status (Yeni Musteri, Aktif, Target, Strong Target, Ana Banka)
-- Product (filter by product ownership)
-- Group (customer group/holding company)
-- Action Status (Beklemede, Planlandy)
+**Key Features:**
+
+1. **Header with AI Customer Generation**
+   - Page title, description, breadcrumb
+   - "Generate Customer" button with Sparkles icon
+   - Opens CreateCustomerModal for AI-powered batch customer creation
+
+2. **Debounced Search (300ms)**
+   - Custom useDebounce hook for smooth, flicker-free filtering
+   - Searches across: customer names, action names, group names
+   - Client-side filtering for performance (keepPreviousData pattern)
+   - When action matches search, clickable action links appear below customer name
+
+3. **Multi-Filter System**
+   - **Status Filter**: Yeni Müşteri, Aktif, Target, Strong Target, Ana Banka
+   - **Product Filter**: Filter by product ownership (syncs with URL ?product=)
+   - **Group Filter**: Customer group/holding company (syncs with URL ?group=)
+   - **Action Status Filter**: Beklemede, Planlandı (first 3 action statuses)
+   - All filters sync with URL parameters for deep-linking
+
+4. **Customer Table**
+   - **Customer Name**: Font-medium name with matching action links below
+   - **Group**: Badge with Users icon, clickable to filter by group
+   - **Sector**: Localized sector label
+   - **Segment**: Localized segment label (MİKRO, Kİ, OBİ, TİCARİ)
+   - **Status**: Color-coded badge (emerald=Ana Banka, amber=Strong Target, sky=Target, slate=Aktif/Yeni)
+   - **Products**: Badge with Package icon showing product count
+   - **Actions**: Planned (green) / Pending (amber) format
+   - **Last Activity**: Date or '-' if null
+   - Row click navigates to /customers/{id}
+
+5. **Action Search Linking**
+   - When search matches action names, action links appear below customer name
+   - Links navigate to `/customers/{id}?action={actionId}`
+   - Customer Detail page reads ?action= param to auto-open action modal
+   - Shows up to 3 matching actions with "+N more" for overflow
+
+6. **URL Parameter Sync**
+   - ?status= for status filter
+   - ?product= for product filter
+   - ?group= for group filter
+   - Filters initialize from URL on page load
+   - URL updates as filters change
+
+7. **Empty State**
+   - Users icon with opacity-50
+   - "No customers" message with description
+   - Shown when filteredCustomers.length === 0
+
+**Status Badge Colors:**
+| Status | Background | Text |
+|--------|------------|------|
+| Ana Banka | bg-emerald-600 | text-white |
+| Strong Target | bg-amber-500 | text-white |
+| Target | bg-sky-500 | text-white |
+| Aktif | bg-slate-400 | text-white |
+| Yeni Müşteri | bg-slate-200 | text-slate-600 |
 
 **URL Parameters:** `?status=`, `?product=`, `?group=`
 
-**Technical Files:** `src/pages/Customers.tsx`
+**Data Sources:** customers, customer_groups, products, actions, customer_products
+
+**Technical Files:** `src/pages/Customers.tsx`, `src/components/customer/CreateCustomerModal.tsx`
 
 ---
 
