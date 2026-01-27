@@ -406,16 +406,88 @@ overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateral
 
 ### Customer Detail (/customers/:customerId)
 
-**Business Purpose:** Comprehensive single-customer view with four view modes.
+**Business Purpose:** Comprehensive single-customer view with four view modes for analyzing customer relationship, managing products, tracking actions, and automating workflows. Supports deep-linking to specific actions.
 
-**View Modes:**
+**Key Features:**
 
-1. **Primary Bank** - Customer-specific share of wallet analysis with principality score breakdown
-2. **Products** - All customer products with current value, threshold comparison, gap analysis
-3. **Actions** - All customer actions with management capabilities
-4. **Autopilot** - Pre-configured workflow templates
+1. **Customer Header**
+   - Breadcrumb: Customers → {customer.name}
+   - Customer name (2xl bold) with status badge
+   - Sector · Segment subtitle
+   - Clickable area opens PrincipalityScoreModal for detailed breakdown
 
-**Technical Files:** `src/pages/CustomerDetail.tsx`, `src/components/customer/PrimaryBankPanel.tsx`, `src/components/customer/AutoPilotPanel.tsx`
+2. **AI Customer Summary (Collapsible)**
+   - Collapsed by default showing only "Customer Status"
+   - Expands to reveal AI-generated insights
+   - Uses AICustomerSummary component
+   - Shows customer data, products summary, actions count
+
+3. **View Mode Navigation (Tab-style)**
+   - **Primary Bank** (Building2 icon): Customer-specific share of wallet analysis
+   - **Products**: Product cards with threshold comparison
+   - **Actions**: Sortable action table with filters
+   - **Autopilot** (Bot icon): Pre-configured workflow templates
+   - Click to switch, active mode highlighted with foreground color
+
+4. **Products View Mode**
+   - 3-column responsive grid of product cards
+   - **Owned Products**: Show current value, threshold, gap (green/red)
+   - **Not-Owned Products**: Show threshold from sector/segment lookup, "Not owned" label, muted styling
+   - Action badge: Shows "X/Y planned" or "X actions"
+   - Card click behavior:
+     - If has actions → Opens ActionPlanningModal with product's actions
+     - If no actions → Opens AddActionModal with product pre-selected
+   - Products sorted by display_order
+
+5. **Actions View Mode**
+   - **Filters**: Priority dropdown, Status dropdown
+   - **Buttons**: "Generate Actions" (AI, Sparkles icon), "Add New Action" (Plus icon)
+   - **Sortable Table** with 7 columns:
+     - Product (sortable)
+     - Action Name (sortable)
+     - Type (sortable with ACTION_TYPE_LABELS)
+     - Priority (sortable, color-coded badge)
+     - Status (sortable, variant badge)
+     - Gap (sortable, red if positive gap)
+     - Planned Date (sortable)
+   - Sort direction toggle (asc/desc)
+   - Row click opens ActionPlanningModal
+
+6. **Generate Actions (AI)**
+   - Calls `generate-actions` edge function
+   - Sends customer info + products + owned product IDs
+   - Creates actions with type 'model_based', creator 'AI Action Generator'
+   - Target date set to end of current month
+   - Toast notification on success/failure
+
+7. **Action Deep-linking**
+   - URL: `/customers/{id}?action={actionId}`
+   - On load, reads ?action= param
+   - Switches to Actions view mode
+   - Opens ActionPlanningModal with that action
+
+8. **Modals**
+   - **ActionPlanningModal**: Multi-action planning/editing
+   - **AddActionModal**: Create new action with product pre-selection
+   - **PrincipalityScoreModal**: Detailed principality breakdown
+
+**Priority Badge Colors:**
+| Priority | Variant |
+|----------|---------|
+| high | destructive (red) |
+| medium | default |
+| low | secondary |
+
+**Status Badge Variants:**
+| Status | Variant |
+|--------|---------|
+| Tamamlandı | default |
+| Planlandı | outline |
+| Beklemede | secondary |
+
+**Data Sources:** customers, customer_products, products, product_thresholds, actions
+
+**Technical Files:** `src/pages/CustomerDetail.tsx`, `src/components/customer/PrimaryBankPanel.tsx`, `src/components/customer/AICustomerSummary.tsx`, `src/components/customer/AutoPilotPanel.tsx`, `src/components/customer/PrincipalityScoreModal.tsx`, `src/components/actions/ActionPlanningModal.tsx`, `src/components/actions/AddActionModal.tsx`
 
 ---
 
