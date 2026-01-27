@@ -584,20 +584,101 @@
       "audience": ["business", "technical"],
       "title": "Actions Agenda Page",
       "route": "/agenda",
-      "business_description": "Calendar-based action planning and management with multiple view modes (daily, weekly, monthly, list). Shows action cards with priority badges, customer links, and status indicators. Supports filtering and 'Let AI Plan Your Day' feature.",
-      "technical_description": "Located at src/pages/ActionsAgenda.tsx. Uses useActions hook with filters. View mode preference saved to user_settings. Supports URL parameters (?status=Planlandy or ?status=Beklemede).",
-      "view_modes": ["Daily", "Weekly", "Monthly", "List"],
-      "filters": ["Status (Planlandy, Beklemede)", "Priority (high, medium, low)", "Search"],
+      "business_description": "Calendar-based action planning and management with four view modes (Daily, Weekly, Monthly, List). Features multi-select status filtering, AI-powered day planning, and seamless deep-linking to action details. View preferences are persisted across sessions.",
+      "technical_description": "Located at src/pages/ActionsAgenda.tsx. Uses useActions, useCustomers, useProducts hooks for data. View preference saved to user_settings.preferred_agenda_view via updateSettings. Implements Monday-based week grid. Status filter uses checkbox multi-select with at-least-one validation. List view includes debounced search, priority/status dropdowns, and paginated table.",
       "features": [
-        "Navigation (Previous/Next period, Today button)",
-        "Action cards with priority badges",
-        "Customer links from action cards",
-        "Empty state with AI suggestion",
-        "View mode saved to user preferences"
+        "4 view mode tabs (Daily, Weekly, Monthly, List) with persistence to user_settings",
+        "Multi-select status filter row with 6 statuses and action count badges",
+        "Default selection: Beklemede + Planlandı (at least one must remain selected)",
+        "Date navigation: Previous/Next by day/week/month, Today button",
+        "Header text adapts to view mode (full date, week range, or month/year)",
+        "Clicking day number in monthly/weekly view switches to daily view",
+        "AI 'Planla' button on empty date cells navigates to /ai-assistant?prompt=plan-my-day&date=YYYY-MM-DD",
+        "Global empty state with AI planning call-to-action",
+        "Monthly view: 7-column Monday-based grid with weekend styling",
+        "Weekly view: horizontal date sidebar with action chips",
+        "Daily view: full action cards with priority borders",
+        "List view: searchable, filterable, paginated 6-column table",
+        "Priority-colored action badges (destructive/warning/muted)",
+        "Status badges with icons (Clock, Calendar, CheckCircle, PauseCircle, XCircle)",
+        "Action links deep-link to /customers/{id}?action={actionId}",
+        "Customer name links to /customers/{id}"
       ],
-      "data_source": "actions table joined with customers and products",
-      "hooks_used": ["useActions", "useUserSettings", "useLanguage"],
-      "related_files": ["src/pages/ActionsAgenda.tsx"]
+      "view_modes": {
+        "daily": {
+          "description": "Single day view with full action cards",
+          "navigation_step": "±1 day",
+          "header_format": "EEEE, MMMM d, yyyy",
+          "layout": "Stacked cards with priority-colored borders",
+          "action_display": "Full card with action name, customer, product, status badge"
+        },
+        "weekly": {
+          "description": "7-day horizontal list with compact action chips",
+          "navigation_step": "±1 week",
+          "header_format": "MMM d - MMM d, yyyy range",
+          "layout": "Date sidebar + actions area per day",
+          "action_display": "Inline chips: customer • action name + status badge",
+          "week_start": "Monday (weekStartsOn: 1)"
+        },
+        "monthly": {
+          "description": "Calendar grid with Monday-based week start",
+          "navigation_step": "±1 month",
+          "header_format": "MMMM yyyy",
+          "layout": "7-column grid (Mon-Sun), day cells show up to 3 actions",
+          "action_display": "Priority-colored links with +N more overflow",
+          "weekend_styling": "Muted text and background colors"
+        },
+        "list": {
+          "description": "Searchable, filterable, paginated table view",
+          "navigation_step": "±1 month (filters current month's actions)",
+          "header_format": "MMMM yyyy",
+          "layout": "6-column table with filters header",
+          "filters": ["Search (action/customer/product names)", "Priority dropdown", "Status dropdown"],
+          "pagination": "10 items per page with Previous/Next",
+          "columns": ["Action (+ description)", "Customer", "Product", "Priority", "Status", "Date"]
+        }
+      },
+      "status_filter": {
+        "type": "multi-select checkbox buttons",
+        "statuses": [
+          { "key": "Beklemede", "label": "Pending", "icon": "Clock", "color": "amber" },
+          { "key": "Planlandı", "label": "Planned", "icon": "Calendar", "color": "primary" },
+          { "key": "Tamamlandı", "label": "Completed", "icon": "CheckCircle2", "color": "emerald" },
+          { "key": "Ertelendi", "label": "Postponed", "icon": "PauseCircle", "color": "slate" },
+          { "key": "İlgilenmiyor", "label": "Not Interested", "icon": "XCircle", "color": "destructive" },
+          { "key": "Uygun Değil", "label": "Not Suitable", "icon": "XCircle", "color": "destructive" }
+        ],
+        "default_selection": ["Beklemede", "Planlandı"],
+        "validation": "At least one status must remain selected"
+      },
+      "priority_colors": {
+        "high": { "bg": "bg-destructive/10", "text": "text-destructive", "border": "border-destructive/20" },
+        "medium": { "bg": "bg-warning/10", "text": "text-warning", "border": "border-warning/20" },
+        "low": { "bg": "bg-muted", "text": "text-muted-foreground", "border": "border-border" }
+      },
+      "action_date_logic": {
+        "primary": "current_planned_date (if set)",
+        "fallback": "action_target_date (for pending actions)",
+        "display_format": "d MMM yyyy"
+      },
+      "ai_integration": {
+        "trigger": "Empty date cells show 'Planla' button with Sparkles icon",
+        "navigation": "/ai-assistant?prompt=plan-my-day&date=YYYY-MM-DD",
+        "result": "AI suggestions saved as actions with target date from URL"
+      },
+      "deep_linking": {
+        "action_link": "/customers/{customerId}?action={actionId}",
+        "customer_link": "/customers/{customerId}",
+        "url_param_filter": "?status=Planlandı or ?status=Beklemede pre-filters on load"
+      },
+      "weekend_handling": {
+        "detection": "getDay(date) === 0 || getDay(date) === 6",
+        "styling": "Muted text color (text-muted-foreground/70), muted background (bg-muted/30)"
+      },
+      "data_sources": ["actions", "customers", "products"],
+      "hooks_used": ["useActions", "useCustomers", "useProducts", "useUserSettings", "useLanguage"],
+      "url_parameters": ["status"],
+      "related_files": ["src/pages/ActionsAgenda.tsx", "src/hooks/useActions.ts", "src/hooks/useUserSettings.ts"]
     },
 
     {
