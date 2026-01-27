@@ -21,8 +21,8 @@ const PriorityWeightsPanel = () => {
   const { settings, updateSettingsAsync, isUpdating, isLoading } = useUserSettings();
   
   const [weights, setWeights] = useState({
-    priority_weight_portfolio: 0.25,
-    priority_weight_adhoc: 0.25,
+    priority_weight_portfolio: 0.30,
+    priority_weight_adhoc: 0.20,
     priority_weight_customer: 0.25,
     priority_weight_profitability: 0.25,
   });
@@ -33,8 +33,8 @@ const PriorityWeightsPanel = () => {
   useEffect(() => {
     if (settings) {
       setWeights({
-        priority_weight_portfolio: (settings as any).priority_weight_portfolio ?? 0.25,
-        priority_weight_adhoc: (settings as any).priority_weight_adhoc ?? 0.25,
+        priority_weight_portfolio: (settings as any).priority_weight_portfolio ?? 0.30,
+        priority_weight_adhoc: (settings as any).priority_weight_adhoc ?? 0.20,
         priority_weight_customer: (settings as any).priority_weight_customer ?? 0.25,
         priority_weight_profitability: (settings as any).priority_weight_profitability ?? 0.25,
       });
@@ -100,8 +100,8 @@ const PriorityWeightsPanel = () => {
 
   const handleReset = () => {
     setWeights({
-      priority_weight_portfolio: 0.25,
-      priority_weight_adhoc: 0.25,
+      priority_weight_portfolio: 0.30,
+      priority_weight_adhoc: 0.20,
       priority_weight_customer: 0.25,
       priority_weight_profitability: 0.25,
     });
@@ -128,50 +128,53 @@ const PriorityWeightsPanel = () => {
           Aksiyon Öncelik Ağırlıkları
         </CardTitle>
         <CardDescription>
-          Aksiyon önceliklendirmesinde kullanılacak kriterlerin ağırlıklarını belirleyin. 
-          Her kriter için ağırlık %0 ile %50 arasında ayarlanabilir (varsayılan: %25).
-          Bu ayarlar sadece sizin portföyünüz için geçerli olacaktır.
+          Aksiyon önceliklendirmesinde kullanılacak kriterlerin ağırlıklarını belirleyin (%10-%40 arası).
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        {priorityWeights.map((priority) => (
-          <div key={priority.key} className="space-y-3">
-            <div className="flex items-start gap-3">
-              <div className={`mt-0.5 ${priority.color}`}>
-                {priority.icon}
-              </div>
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center justify-between">
-                  <Label className="text-sm font-medium">{priority.label}</Label>
-                  <span className="text-sm font-semibold tabular-nums text-foreground">
-                    %{Math.round(weights[priority.key] * 100)}
-                  </span>
+      <CardContent className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {priorityWeights.map((priority) => (
+            <div 
+              key={priority.key} 
+              className="p-4 rounded-lg border bg-muted/30 space-y-3"
+            >
+              <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-md bg-background ${priority.color}`}>
+                  {priority.icon}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {priority.description}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <Label className="text-sm font-medium truncate">{priority.label}</Label>
+                    <span className="text-lg font-bold tabular-nums text-foreground shrink-0">
+                      %{Math.round(weights[priority.key] * 100)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                {priority.description}
+              </p>
+              <div className="pt-1">
+                <Slider
+                  value={[weights[priority.key]]}
+                  onValueChange={(value) => handleWeightChange(priority.key, value)}
+                  min={0.10}
+                  max={0.40}
+                  step={0.01}
+                  className="w-full"
+                />
+                <div className="flex justify-between mt-1.5">
+                  <span className="text-[10px] text-muted-foreground">%10</span>
+                  <span className="text-[10px] text-muted-foreground">%25</span>
+                  <span className="text-[10px] text-muted-foreground">%40</span>
+                </div>
               </div>
             </div>
-            <div className="pl-8">
-              <Slider
-                value={[weights[priority.key]]}
-                onValueChange={(value) => handleWeightChange(priority.key, value)}
-                min={0}
-                max={0.50}
-                step={0.01}
-                className="w-full"
-              />
-              <div className="flex justify-between mt-1">
-                <span className="text-xs text-muted-foreground">%0</span>
-                <span className="text-xs text-muted-foreground">%25</span>
-                <span className="text-xs text-muted-foreground">%50</span>
-              </div>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
 
         {/* Total weight indicator */}
-        <div className="pt-4 border-t">
+        <div className="pt-4 border-t mt-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Toplam Ağırlık:</span>
             <span className={`font-semibold tabular-nums ${
