@@ -35,14 +35,55 @@ The Account Planning System is a corporate banking relationship management appli
 
 ### Dashboard (/)
 
-**Business Purpose:** The main landing page providing a portfolio overview with personalized greeting, key summary metrics, daily plan calendar, and AI-generated insights.
+**Business Purpose:** The main landing page providing a portfolio overview with personalized greeting, key summary metrics, daily action planning calendar, and AI-generated insights for portfolio optimization.
 
 **Key Features:**
-- Time-based personalized greeting (Good morning/afternoon/evening)
-- Date selector for historical periods (current month, last 3 months, quarter ends, year ends)
-- Summary cards with navigation to detailed pages
-- Mini calendar showing action density
-- AI insights panel with recommendations
+
+1. **Personalized Header**
+   - Time-based greeting (Good morning/afternoon/evening) with user's first name from portfolio_managers table
+   - Decorative gradient background with glassmorphism effects
+   - Staggered entrance animations for visual polish
+
+2. **Historical Date Selector**
+   - Current month with "(Current)" label
+   - Last 3 months (rolling)
+   - Last 4 completed quarter end months (Q1=March, Q2=June, Q3=September, Q4=December)
+   - Last 2 year ends (December)
+   - All data components sync with selected date
+
+3. **Summary Cards (5-column grid)**
+   - **Benchmark Score**: Count of HGO% >= 75% across all portfolio_targets metrics (stock_count, stock_volume, flow_count, flow_volume)
+   - **Customer Journey**: Customer distribution showing Aktif → Target → Strong Target → Ana Banka progression
+   - **Primary Bank Score**: Percentage of customers with status 'Ana Banka' over total customers
+   - **Customer Experience**: Overall experience score from customer_experience_metrics with X/6 key moments on track
+   - **Actions**: Count of planned actions with completed count subtitle
+   - Each card is clickable and navigates to the relevant detailed page
+
+4. **Daily Plan Panel (3-column layout)**
+   - **Monthly Pending Actions**: Paginated list (4 per page) of pending/planned actions for the selected month
+   - **Day's Actions**: Actions for the selected day with inline date dropdown selector
+   - **Action Calendar (Mini Calendar)**:
+     - Blue intensity gradient (darker = more completed actions) for visualizing daily performance
+     - Amber background for days with only pending actions
+     - Circular badge on top-right corner showing planned action count
+     - Hover tooltip showing completed/total ratio
+     - Legend explaining: Completed (blue), Pending (amber), Planned (badge)
+     - Monthly stats: completed this month and active days count
+
+5. **AI Insights Panel (2-column layout)**
+   - **Product Performance Insights**: AI-generated analysis of portfolio product metrics
+     - Three insight types: critical (red), warning (yellow), info (blue)
+     - Click to expand details with affected products and recommendations
+     - Navigate to filtered customer list from product links
+   - **Action Quality Insights**: AI analysis of action portfolio quality
+     - Four categories: Sufficiency, Alignment, Balance, Quality
+     - Category badges with icons for quick identification
+     - Click to expand with metrics and suggestions
+   - **Version Management**: View historical insight versions, switch between versions
+   - **Feedback System**: Like/dislike buttons with persistence
+   - **Refresh**: Regenerate insights with AI
+
+**Data Sources:** portfolio_managers, customers, actions, portfolio_targets, ai_insights, ai_action_insights, customer_experience_metrics
 
 **Technical Files:** `src/pages/Dashboard.tsx`, `src/components/dashboard/SummaryCards.tsx`, `src/components/dashboard/DailyPlanPanel.tsx`, `src/components/dashboard/InsightsPanel.tsx`
 
