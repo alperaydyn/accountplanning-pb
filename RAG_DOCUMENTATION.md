@@ -688,17 +688,133 @@ overallScore = sum(all keyMoment scores) / 6
 
 ### AI Assistant (/ai-assistant)
 
-**Business Purpose:** Conversational AI interface for portfolio intelligence with Plan My Day feature.
+**Business Purpose:** Conversational AI interface for portfolio intelligence. Provides a persistent chat experience for portfolio managers to analyze customers, get prioritization recommendations, and plan their day with AI-generated action suggestions that can be saved directly to the database.
 
-**Features:**
-- Multiple conversation threads
-- Plan My Day with automatic customer prioritization
-- Save actions from AI suggestions
-- Token usage tracking
+**Key Features:**
 
-**URL Trigger:** `?prompt=plan-my-day&date=YYYY-MM-DD`
+1. **Page Layout (2-panel grid)**
+   - Left sidebar (1/4 width): Session list with new chat button
+   - Main chat area (3/4 width): Message display, input form, token counter
+   - Fixed height: `calc(100vh - 220px)` for optimal scrolling
 
-**Technical Files:** `src/pages/AIAssistant.tsx`, `supabase/functions/ai-action-assistant/index.ts`
+2. **Chat Session Management**
+   - Sessions stored in `ai_chat_sessions` table, linked to portfolio_manager_id
+   - Session list sorted by `updated_at` descending (newest first)
+   - Each session shows: title (truncated), date/time, 3-dot dropdown menu
+   - Auto-select first session on page load if exists
+   - New session button (Plus icon) creates session with default title "Yeni Sohbet"
+   - Session title auto-updates to first user message (first 50 chars + ellipsis)
+   - Delete session via dropdown menu with confirmation toast
+
+3. **Session List Item Design**
+   - Active session: Primary background with border, bold title
+   - Hover state: Muted background
+   - MessageSquare icon, title, timestamp display
+   - Delete button appears on hover (trash icon)
+
+4. **Chat Header**
+   - Sparkles icon with violet gradient background
+   - Title "Aksiyon Asistanı" with subtitle
+   - Collapsible privacy notice panel (ShieldCheck icon)
+   - Privacy details: 4 bullet points explaining data handling
+
+5. **Welcome Message**
+   - Displayed when session has no messages
+   - Static content with example prompts:
+     - "Bu hafta hangi müşterilere öncelik vermeliyim?"
+     - "Perakende sektöründeki yüksek potansiyelli müşterileri bul"
+     - "Kredi ürünleri için takip gereken müşteriler kim?"
+
+6. **Message Display**
+   - User messages: Primary background, right-aligned, rounded corners (rounded-br-md)
+   - Assistant messages: Muted background, left-aligned, rounded corners (rounded-bl-md)
+   - Bot icon with violet gradient for assistant messages
+   - User icon with primary background for user messages
+   - fade-in animation for new messages
+   - Provider/model metadata footer for assistant messages (e.g., "lovable · openai/gpt-5-mini")
+   - Auto-scroll to bottom when new messages arrive
+
+7. **Message Parsing & Customer Links**
+   - Customer temp IDs (C1, C2, etc.) in responses converted to clickable links
+   - Links navigate to `/customers/{customerId}`
+   - Customer name displayed instead of temp ID
+   - Bold text parsing for `**text**` patterns
+
+8. **Plan My Day Feature**
+   - Triggered by: typing "plan my day" or "günümü planla" 
+   - URL trigger: `?prompt=plan-my-day&date=YYYY-MM-DD` (from Agenda page)
+   - Creates new session with title "{date} Planı" or "Günümü Planla"
+   - AI response parsed as JSON with: greeting, customers array, summary
+   - Renders `PlanMyDayDisplay` component for structured output
+   - Target date passed through for action creation
+
+9. **PlanMyDayDisplay Component**
+   - Structured display of AI plan response
+   - Each customer shows: numbered name (clickable link), reason, action list
+   - Actions format: "Product → Action (note)"
+   - Save button per action: Save/Check/Loader states
+   - Normalized key matching to detect already-saved actions
+   - Saved actions create database records with:
+     - `action_target_date`: Target date from plan or current date
+     - `current_status`: "Planlandı"
+     - `creator_name`: "AI Assistant"
+     - `creation_reason`: Customer reason from AI
+     - `type`: "rm_action"
+
+10. **Chat Input Form**
+    - Text input with rounded styling
+    - Send button (icon only)
+    - Disabled state when loading or no active session
+    - Enter key submits message
+    - Auto-focus on session change
+
+11. **Token Usage & Cost Tracking**
+    - Footer bar showing: total tokens, input/output breakdown
+    - Estimated cost calculation: $0.15/1M input, $0.60/1M output
+    - Coins icon with amber accent
+    - Format: "1,234 tokens (↑800 / ↓434) $0.0012 est."
+
+12. **AI Context Preparation**
+    - All customers with products included
+    - Each customer includes:
+      - tempId (C1, C2, etc.) for privacy
+      - name, segment, sector, status, principality_score
+      - products array with threshold and gap calculations
+      - belowThresholdProducts filtered list
+      - existing actions
+    - Action templates with product→action mappings
+    - Chat history (last 5 messages)
+
+13. **Loading States**
+    - Loader spinner in chat area with message "Portföyünüz analiz ediliyor..."
+    - Disabled input and send button during API call
+    - Session creation disabled during pending state
+
+**Edge Function (ai-action-assistant):**
+- Authenticates via JWT
+- Fetches user's AI provider settings from user_settings
+- Builds system prompt based on request type:
+  - Plan My Day: Structured JSON output with 5 customers, 2-3 actions each
+  - Regular query: Conversational response with customer references
+- Includes action templates for valid product→action pairings
+- Returns: content, usage, isPlanMyDay flag, provider, model
+
+**Plan My Day Prompt Rules:**
+- Select top 5 customers by priority (Strong Target > Target > others) and PS score
+- 2-3 actions per customer using exact template names
+- No product duplication within same customer
+- Product names must match exactly from allowed list
+- JSON format: `{ greeting, customers[], summary }`
+
+**Data Sources:** ai_chat_sessions, ai_chat_messages, customers, customer_products, products, actions, action_templates, product_thresholds, user_settings
+
+**Hooks Used:** useAIChatSessions, useAIChatMessages, useCreateChatSession, useUpdateChatSessionTitle, useDeleteChatSession, useAddChatMessage, useCustomers, useAllCustomerProducts, useProducts, useActions, useAllActionTemplates, useProductThresholds, useUserSettings, useLanguage
+
+**URL Parameters:**
+- `?prompt=plan-my-day` - Triggers Plan My Day workflow
+- `?date=YYYY-MM-DD` - Target date for plan (optional, defaults to today)
+
+**Technical Files:** `src/pages/AIAssistant.tsx`, `src/components/ai/PlanMyDayDisplay.tsx`, `src/hooks/useAIChatSessions.ts`, `src/lib/planMyDayMessage.ts`, `supabase/functions/ai-action-assistant/index.ts`
 
 ---
 
