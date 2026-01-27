@@ -1566,6 +1566,10 @@ export type Database = {
           language: string
           notifications_enabled: boolean
           preferred_agenda_view: string
+          priority_weight_adhoc: number | null
+          priority_weight_customer: number | null
+          priority_weight_portfolio: number | null
+          priority_weight_profitability: number | null
           theme: string
           updated_at: string
           user_id: string
@@ -1588,6 +1592,10 @@ export type Database = {
           language?: string
           notifications_enabled?: boolean
           preferred_agenda_view?: string
+          priority_weight_adhoc?: number | null
+          priority_weight_customer?: number | null
+          priority_weight_portfolio?: number | null
+          priority_weight_profitability?: number | null
           theme?: string
           updated_at?: string
           user_id: string
@@ -1610,6 +1618,10 @@ export type Database = {
           language?: string
           notifications_enabled?: boolean
           preferred_agenda_view?: string
+          priority_weight_adhoc?: number | null
+          priority_weight_customer?: number | null
+          priority_weight_portfolio?: number | null
+          priority_weight_profitability?: number | null
           theme?: string
           updated_at?: string
           user_id?: string
