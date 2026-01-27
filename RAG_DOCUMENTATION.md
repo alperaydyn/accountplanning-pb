@@ -586,6 +586,106 @@ overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateral
 
 ---
 
+### Customer Experience (/customer-experience)
+
+**Business Purpose:** Comprehensive customer experience index tracking 9 variables across 6 critical "key moments" in the customer lifecycle. Provides overall score visualization, trend analysis, detailed breakdowns, and AI-powered action recommendations to improve underperforming metrics.
+
+**Key Features:**
+
+1. **Page Header**
+   - Back button to Dashboard
+   - Title: "Müşteri Deneyim Skoru" with Users icon
+   - Subtitle: "Customer Experience Index - 6 Kritik An, 9 Değişken"
+   - Date selector (current month + last 3 months) syncs all components
+
+2. **Overall Score Hero Card**
+   - Left section: Target icon, title, score display (X/100)
+   - Status summary badges: Yolunda (success), Riskli (warning), Kritik (critical) with counts
+   - Center: 3-month trend line chart with value labels
+     - Gradient line from muted-foreground to primary
+     - Trend direction indicator (TrendingUp/Down) with point difference
+     - Month labels on x-axis
+   - Right: Circular progress visualization
+     - SVG donut chart with score arc
+     - Target threshold dashed line at 75%
+     - Color-coded by status (success/warning/destructive)
+     - Center percentage label
+
+3. **Score Status Thresholds**
+   - Success (Green): score >= 75%
+   - Warning (Amber): score >= 50% but < 75%
+   - Critical (Red): score < 50%
+
+4. **Key Moments Grid (6 cards)**
+   - 3-column responsive grid
+   - Each card displays: icon, name (TR + EN), score, target, status icon, progress bar with target marker
+   - Variable count footer with "Detay" link
+   - Clickable to open detail dialog
+   - Corporate design: muted backgrounds, neutral tokens
+
+5. **6 Key Moments with Calculations:**
+
+   | Key Moment | Variables | Target | Calculation |
+   |------------|-----------|--------|-------------|
+   | Müşteri Ziyareti (Customer Visit) | visit_count / active_customers | 50% | Visit rate percentage |
+   | Acil Finansal Destek (Urgent Financial Support) | customers_with_open_limit / active_customers | 60% | Open limit customer percentage |
+   | Dijital Kanal (Digital Channel) | login success rate (95%), help desk rate (50%) | 72.5% | Average of both rates |
+   | Kritik Ödemeler (Critical Payments) | digital salary rate (60%), payment success rate (90%) | 75% | Average of both rates |
+   | Nakit Yönetimi (Cash Management) | ete_product_score | 60% | ETE product score directly |
+   | Hızlı Destek (Quick Support) | complaint rate (<5%), NPS rate (80%) | 87.5% | Inverse complaint + NPS average |
+
+6. **Key Moment Detail Dialog**
+   - Opens on card click
+   - Shows status icon + name in header
+   - Current score vs target display
+   - Variables list with individual progress bars
+   - Target marker on each progress bar
+   - Formula display for each variable
+
+7. **AI Action Panel**
+   - Sparkles icon header with "Öneri Oluştur" (Generate) button
+   - Calls `generate-experience-actions` edge function
+   - Only generates for non-success key moments
+   - Displays pending/in-progress actions in scrollable list
+   - Each action card shows:
+     - Priority icon with colored border
+     - Recommendation text
+     - Key moment badge + status badge
+     - AI reasoning (💡 prefix)
+     - Customer link with navigation
+     - Action buttons: Başla (Start), Reddet (Dismiss), Tamamla (Complete)
+   - Status workflow: pending → in_progress → completed/dismissed
+
+8. **Action Priority Configuration:**
+   - High: destructive/10 background, AlertTriangle icon
+   - Medium: warning/10 background, Clock icon
+   - Low: muted background, CheckCircle2 icon
+
+9. **Action Status Labels:**
+   - pending: "Beklemede"
+   - in_progress: "Devam Ediyor"
+   - completed: "Tamamlandı"
+   - dismissed: "Reddedildi"
+
+10. **Key Moment Icons:**
+    - customer-visit: Users
+    - urgent-financial-support: CreditCard
+    - digital-channel: Smartphone
+    - critical-payments: Wallet
+    - cash-management: Banknote
+    - quick-support: HeadphonesIcon
+
+**Overall Score Calculation:**
+```
+overallScore = sum(all keyMoment scores) / 6
+```
+
+**Data Sources:** customer_experience_metrics, customer_experience_actions, customers
+
+**Technical Files:** `src/pages/CustomerExperience.tsx`, `src/components/customer-experience/KeyMomentCard.tsx`, `src/components/customer-experience/AIActionPanel.tsx`, `src/hooks/useCustomerExperienceMetrics.ts`, `src/hooks/useCustomerExperienceActions.ts`, `supabase/functions/generate-experience-actions/index.ts`
+
+---
+
 ### AI Assistant (/ai-assistant)
 
 **Business Purpose:** Conversational AI interface for portfolio intelligence with Plan My Day feature.

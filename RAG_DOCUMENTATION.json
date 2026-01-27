@@ -682,6 +682,163 @@
     },
 
     {
+      "id": "page_customer_experience",
+      "category": "Pages",
+      "audience": ["business", "technical"],
+      "title": "Customer Experience Page",
+      "route": "/customer-experience",
+      "business_description": "Comprehensive customer experience index tracking 9 variables across 6 critical 'key moments' in the customer lifecycle. Provides overall score visualization with trend analysis, detailed breakdowns per moment, and AI-powered action recommendations to improve underperforming metrics.",
+      "technical_description": "Located at src/pages/CustomerExperience.tsx. Uses useCustomerExperienceMetrics, useCustomerExperienceHistory, and useCustomerExperienceActions hooks. Key moment calculations in calculateKeyMoments and calculateOverallScore utility functions. AI recommendations via generate-experience-actions edge function. Corporate neutral design using design system tokens.",
+      "features": [
+        "Back button navigation to Dashboard",
+        "Date selector (current month + last 3 months) syncs all components",
+        "Overall score hero card with circular progress visualization",
+        "3-month trend line chart with value labels and direction indicator",
+        "Status summary badges: Yolunda (success), Riskli (warning), Kritik (critical) counts",
+        "6 Key Moment cards in 3-column responsive grid",
+        "Each card shows: icon, name (TR/EN), score, target, status icon, progress bar with target marker",
+        "Card click opens detail dialog with variable breakdown",
+        "Progress bars capped at 100% with explicit target markers",
+        "AI Action Panel with 'Öneri Oluştur' button",
+        "AI recommendations linked to specific customers and key moments",
+        "Action status workflow: pending → in_progress → completed/dismissed",
+        "Customer navigation from action cards"
+      ],
+      "overall_score_hero": {
+        "left_section": {
+          "icon": "Target",
+          "title": "Genel Deneyim Skoru",
+          "subtitle": "6 kritik an ortalaması",
+          "display": "X/100 format with status-colored text"
+        },
+        "status_badges": {
+          "success": { "label": "Yolunda", "icon": "CheckCircle2", "color": "success" },
+          "warning": { "label": "Riskli", "icon": "AlertCircle", "color": "warning" },
+          "critical": { "label": "Kritik", "icon": "XCircle", "color": "destructive" }
+        },
+        "trend_chart": {
+          "type": "LineChart (recharts)",
+          "data_source": "useCustomerExperienceHistory (last 3 months)",
+          "features": ["Gradient stroke", "Value labels", "Tooltip", "Trend direction indicator"]
+        },
+        "circular_progress": {
+          "type": "SVG donut",
+          "radius": 42,
+          "strokeWidth": 6,
+          "target_line": "75% dashed threshold",
+          "center_display": "score%"
+        }
+      },
+      "score_thresholds": {
+        "success": ">= 75%",
+        "warning": ">= 50% and < 75%",
+        "critical": "< 50%"
+      },
+      "key_moments": [
+        {
+          "id": "customer-visit",
+          "name_tr": "Müşteri Ziyareti",
+          "name_en": "Customer Visit",
+          "icon": "Users",
+          "target": 50,
+          "variables": [
+            { "name": "Ziyaret Sayısı / Aktif Müşteri", "formula": "visit_count / active_customers", "target": 50, "unit": "%" }
+          ]
+        },
+        {
+          "id": "urgent-financial-support",
+          "name_tr": "Acil Finansal Destek",
+          "name_en": "Urgent Financial Support",
+          "icon": "CreditCard",
+          "target": 60,
+          "variables": [
+            { "name": "Açık Limitli Müşteri / Aktif Müşteri", "formula": "customers_with_open_limit / active_customers", "target": 60, "unit": "%" }
+          ]
+        },
+        {
+          "id": "digital-channel",
+          "name_tr": "Dijital Kanal",
+          "name_en": "Digital Channel",
+          "icon": "Smartphone",
+          "target": 72.5,
+          "calculation": "Average of login success rate and help desk rate",
+          "variables": [
+            { "name": "Başarılı Login / Tüm Loginler", "formula": "successful_logins / total_logins", "target": 95, "unit": "%" },
+            { "name": "Yardım Masası / Şube Kayıtları", "formula": "help_desk_tickets / branch_help_tickets", "target": 50, "unit": "%" }
+          ]
+        },
+        {
+          "id": "critical-payments",
+          "name_tr": "Kritik Ödemeler",
+          "name_en": "Critical Payments",
+          "icon": "Wallet",
+          "target": 75,
+          "calculation": "Average of digital salary rate and payment success rate",
+          "variables": [
+            { "name": "Dijital Maaş Ödemeleri / Tüm Maaş Ödemeleri", "formula": "digital_salary_payments / total_salary_payments", "target": 60, "unit": "%" },
+            { "name": "Başarılı Ödemeler / Tüm Ödemeler", "formula": "successful_payments / total_payments", "target": 90, "unit": "%" }
+          ]
+        },
+        {
+          "id": "cash-management",
+          "name_tr": "Nakit Yönetimi",
+          "name_en": "Cash Management",
+          "icon": "Banknote",
+          "target": 60,
+          "variables": [
+            { "name": "ETE Ürünü Skoru", "formula": "ete_product_score", "target": 60, "unit": "%" }
+          ]
+        },
+        {
+          "id": "quick-support",
+          "name_tr": "Hızlı Destek",
+          "name_en": "Quick Support",
+          "icon": "HeadphonesIcon",
+          "target": 87.5,
+          "calculation": "Inverse complaint score (100 - complaint_rate*20) averaged with NPS rate",
+          "variables": [
+            { "name": "Şikayet + Talep / Aktif Müşteri", "formula": "(complaints + requests) / active_customers", "target": 5, "unit": "%", "inverse": true },
+            { "name": "Olumlu NPS / Toplam Anket", "formula": "positive_nps / total_surveys", "target": 80, "unit": "%" }
+          ]
+        }
+      ],
+      "overall_score_calculation": {
+        "formula": "sum(all keyMoment scores) / 6",
+        "description": "Simple average of all 6 key moment scores"
+      },
+      "ai_action_panel": {
+        "trigger": "Öneri Oluştur button",
+        "edge_function": "generate-experience-actions",
+        "input": { "keyMoments": "Non-success key moments only", "customers": "First 20 customers", "recordMonth": "Selected date" },
+        "output": "Array of actions with customer_id, key_moment, recommendation, priority, ai_reasoning",
+        "action_statuses": {
+          "pending": { "label": "Beklemede", "color": "bg-muted" },
+          "in_progress": { "label": "Devam Ediyor", "color": "bg-primary/10 text-primary" },
+          "completed": { "label": "Tamamlandı", "color": "bg-success/10 text-success" },
+          "dismissed": { "label": "Reddedildi", "color": "bg-destructive/10 text-destructive" }
+        },
+        "priority_config": {
+          "high": { "color": "bg-destructive/10 text-destructive border-destructive/20", "icon": "AlertTriangle" },
+          "medium": { "color": "bg-warning/10 text-warning border-warning/20", "icon": "Clock" },
+          "low": { "color": "bg-muted text-muted-foreground border-border", "icon": "CheckCircle2" }
+        },
+        "action_buttons": ["Başla (in_progress)", "Reddet (dismissed)", "Tamamla (completed)"]
+      },
+      "key_moment_card_design": {
+        "style": "Corporate neutral with muted backgrounds",
+        "components": ["Icon with muted background", "Name (TR + EN)", "Score with status color", "Target label", "Progress bar with target marker", "Variable count", "Detay link"],
+        "hover": "border-primary/30, shadow-sm"
+      },
+      "detail_dialog": {
+        "header": "Status icon + key moment name",
+        "content": ["Current score vs target", "Variables list with individual progress bars", "Target markers on bars", "Formula display per variable"]
+      },
+      "data_sources": ["customer_experience_metrics", "customer_experience_actions", "customers"],
+      "hooks_used": ["useCustomerExperienceMetrics", "useCustomerExperienceHistory", "useCustomerExperienceActions", "useCustomers", "usePortfolioManager", "useLanguage"],
+      "related_files": ["src/pages/CustomerExperience.tsx", "src/components/customer-experience/KeyMomentCard.tsx", "src/components/customer-experience/AIActionPanel.tsx", "src/hooks/useCustomerExperienceMetrics.ts", "src/hooks/useCustomerExperienceActions.ts", "supabase/functions/generate-experience-actions/index.ts"]
+    },
+
+    {
       "id": "page_ai_assistant",
       "category": "Pages",
       "audience": ["business", "technical"],
