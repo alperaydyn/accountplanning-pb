@@ -5,7 +5,7 @@
     "domain": "Corporate Banking - Portfolio Management",
     "target_users": ["Portfolio Managers", "Relationship Managers", "Administrators"],
     "technology_stack": "React 18 + TypeScript + Vite + Supabase + TailwindCSS",
-    "last_updated": "2026-01-18"
+    "last_updated": "2026-01-27"
   },
 
   "chunks": [
@@ -33,17 +33,28 @@
       "audience": ["business", "technical"],
       "title": "Dashboard Page",
       "route": "/",
-      "business_description": "The main landing page providing a portfolio overview. Shows personalized greeting with time-based message, key summary metrics, daily plan calendar with action density visualization, and AI-generated portfolio insights.",
-      "technical_description": "Located at src/pages/Dashboard.tsx. Uses usePortfolioManager hook for user data, renders SummaryCards, DailyPlanPanel, and InsightsPanel components. Date selector allows viewing historical data.",
+      "business_description": "The main landing page providing a portfolio overview with personalized greeting, key summary metrics, daily action planning calendar, and AI-generated insights for portfolio optimization.",
+      "technical_description": "Located at src/pages/Dashboard.tsx. Uses usePortfolioManager hook for user data, renders SummaryCards, DailyPlanPanel, and InsightsPanel components. Date selector syncs all components to view historical data.",
       "components": ["SummaryCards", "DailyPlanPanel", "InsightsPanel", "PageBreadcrumb"],
-      "data_sources": ["portfolio_managers", "customers", "actions", "portfolio_targets", "ai_insights"],
+      "data_sources": ["portfolio_managers", "customers", "actions", "portfolio_targets", "ai_insights", "ai_action_insights", "customer_experience_metrics"],
       "hooks_used": ["usePortfolioManager", "useLanguage"],
       "features": [
-        "Time-based personalized greeting (Good morning/afternoon/evening)",
-        "Date selector for historical periods (current month, last 3 months, quarter ends, year ends)",
-        "Summary cards with navigation to detailed pages",
-        "Mini calendar showing action density",
-        "AI insights panel with recommendations"
+        "Personalized time-based greeting (Good morning/afternoon/evening) with user's first name from portfolio_managers",
+        "Decorative gradient header with glassmorphism effects and staggered entrance animations",
+        "Historical date selector: current month, last 3 months, last 4 completed quarter ends, last 2 year ends",
+        "5-column summary cards grid (Benchmark Score, Customer Journey, Primary Bank Score, Customer Experience, Actions)",
+        "Each summary card is clickable and navigates to detailed page",
+        "Daily plan panel with 3-column layout: pending actions list, day's actions with date selector, mini calendar",
+        "Mini calendar with blue intensity gradient for completed actions (darker = more completed)",
+        "Amber background for days with only pending actions",
+        "Circular badge indicators showing planned action counts per day",
+        "Hover tooltips on calendar days showing completed/total ratio",
+        "Calendar legend explaining color meanings (Completed, Pending, Planned)",
+        "AI Product Performance insights panel with critical/warning/info categorization",
+        "AI Action Quality insights panel with sufficiency/alignment/balance/quality categories",
+        "Insight version history dropdown to view and switch between historical versions",
+        "Feedback system (like/dislike buttons) for AI-generated insights",
+        "Refresh button to regenerate AI insights with new version"
       ],
       "related_files": ["src/pages/Dashboard.tsx", "src/components/dashboard/SummaryCards.tsx", "src/components/dashboard/DailyPlanPanel.tsx", "src/components/dashboard/InsightsPanel.tsx"]
     },
@@ -53,37 +64,59 @@
       "category": "Components",
       "audience": ["business", "technical"],
       "title": "Summary Cards Component",
-      "business_description": "Displays four key portfolio metrics: Benchmark Score (HGO achievement), Customer Journey (customer distribution by status), Primary Bank Score (percentage of primary bank customers), and Actions (planned/pending/completed counts).",
-      "technical_description": "Located at src/components/dashboard/SummaryCards.tsx. Calculates metrics from multiple data sources. Each card is clickable and navigates to the relevant detailed page.",
+      "business_description": "Displays five key portfolio metrics in a responsive 5-column grid: Benchmark Score (HGO achievement), Customer Journey (customer distribution by status), Primary Bank Score (percentage of primary bank customers), Customer Experience Score, and Actions (planned/completed counts).",
+      "technical_description": "Located at src/components/dashboard/SummaryCards.tsx. Calculates metrics from multiple data sources. Each card has gradient accents, hover effects (shadow elevation, scale up, arrow indicator), and is clickable to navigate to the relevant detailed page.",
       "metrics_displayed": [
         {
           "name": "Benchmark Score",
-          "calculation": "Count of HGO% >= 75% across all portfolio targets (stock count, stock volume, flow count, flow volume) divided by total HGO count",
+          "calculation": "Count of HGO% >= 75% across all portfolio targets (stock_count, stock_volume, flow_count, flow_volume) divided by total HGO count",
           "formula": "benchmarkScore = (count where HGO >= 75%) / (total HGO metrics)",
+          "display_format": "X/Y (e.g., 12/16) with percentage subtitle",
           "data_source": "portfolio_targets table",
-          "navigation": "/product-performance"
+          "navigation": "/product-performance",
+          "accent_color": "primary"
         },
         {
           "name": "Customer Journey",
-          "calculation": "Count of customers by status: Aktif -> Target -> Strong Target -> Ana Banka",
+          "calculation": "Total count of customers with status progression subtitle showing Aktif -> Target -> Strong Target -> Ana Banka counts",
+          "display_format": "Total count with progression breakdown",
           "data_source": "customers table, status column",
-          "navigation": "/customer-journey"
+          "navigation": "/customer-journey",
+          "accent_color": "accent"
         },
         {
           "name": "Primary Bank Score",
           "calculation": "Percentage of customers with status 'Ana Banka' over total customers",
           "formula": "primaryBankScore = (count where status='Ana Banka') / (total customers) * 100",
+          "display_format": "XX% with count fraction subtitle (e.g., 5/25)",
           "data_source": "customers table",
-          "navigation": "/primary-bank"
+          "navigation": "/primary-bank",
+          "accent_color": "success"
+        },
+        {
+          "name": "Customer Experience",
+          "calculation": "Overall experience score calculated from customer_experience_metrics with key moment analysis",
+          "display_format": "XX% with X/6 key moments on track subtitle",
+          "data_source": "customer_experience_metrics table",
+          "navigation": "/customer-experience",
+          "accent_color": "pink"
         },
         {
           "name": "Actions",
-          "calculation": "Count of actions by status (Planlandy, Beklemede, Tamamlandy)",
+          "calculation": "Count of planned actions with completed count subtitle",
+          "display_format": "Planned count with 'X completed' subtitle",
           "data_source": "actions table, current_status column",
-          "navigation": "/agenda"
+          "navigation": "/agenda",
+          "accent_color": "warning"
         }
       ],
-      "hooks_used": ["usePortfolioSummary", "useCustomers", "useAllCustomerProducts", "useProductThresholds", "useProducts", "usePortfolioTargets"],
+      "visual_design": {
+        "layout": "5-column grid on large screens, responsive on smaller",
+        "card_accents": "Each card has unique gradient accent (primary, accent, success, pink, warning)",
+        "hover_effects": "Shadow elevation, scale up (-translate-y-0.5), arrow indicator appears",
+        "icon_backgrounds": "Rounded icon container with accent color background"
+      },
+      "hooks_used": ["usePortfolioSummary", "useCustomers", "useAllCustomerProducts", "useProductThresholds", "useProducts", "usePortfolioTargets", "useCustomerExperienceMetrics"],
       "related_files": ["src/components/dashboard/SummaryCards.tsx"]
     },
 
@@ -1056,25 +1089,49 @@
       "id": "ui_insights_panel",
       "category": "UI Components",
       "audience": ["business", "technical"],
-      "title": "Insights Panel",
+      "title": "AI Insights Panel",
       "component": "InsightsPanel",
       "file": "src/components/dashboard/InsightsPanel.tsx",
-      "business_description": "Displays AI-generated portfolio insights with type badges (critical/warning/info), analysis, and actionable recommendations. Supports version history and feedback.",
-      "features": [
-        "Insight cards with type badges",
-        "Expandable analysis section",
-        "Recommendations list",
-        "Related products with links",
-        "Version selector",
-        "Regenerate button",
-        "Like/dislike feedback"
+      "business_description": "Two-column AI-powered insights panel showing Product Performance analysis and Action Quality analysis. Provides actionable recommendations with version history and feedback capabilities.",
+      "layout": "2-column grid on large screens",
+      "insight_panels": [
+        {
+          "name": "Product Performance (Ürün Performansı)",
+          "description": "AI-generated analysis of portfolio product metrics",
+          "insight_types": ["critical (red/destructive)", "warning (amber)", "info (blue)"],
+          "data_source": "ai_insights table, portfolio_targets table",
+          "click_behavior": "Opens modal with affected products, analysis, and recommendations",
+          "product_links": "Clicking product name navigates to filtered customer list"
+        },
+        {
+          "name": "Action Quality (Aksiyon Kalitesi)",
+          "description": "AI analysis of action portfolio quality across four categories",
+          "categories": {
+            "sufficiency (Yeterlilik)": "Are there enough actions planned?",
+            "alignment (Uyum)": "Do actions align with product priorities?",
+            "balance (Denge)": "Is the action distribution balanced across customers/products?",
+            "quality (Kalite)": "Are actions high quality with proper detail?"
+          },
+          "data_source": "ai_action_insights table, actions table",
+          "click_behavior": "Opens modal with metrics and suggestions"
+        }
       ],
-      "insight_types": {
-        "critical": "Red badge - urgent action required",
-        "warning": "Amber badge - attention needed",
-        "info": "Blue badge - opportunities"
+      "shared_features": {
+        "version_dropdown": "View and switch between historical insight versions",
+        "feedback_buttons": "Like/dislike buttons with persistence to database",
+        "refresh_button": "Regenerate insights with AI (creates new version)",
+        "model_badge": "Shows AI model name used for generation",
+        "record_date_badge": "Shows which period the insights are for",
+        "loading_skeleton": "Animated skeleton while AI is analyzing",
+        "glassmorphism": "Cards use backdrop blur and gradient overlays for visual polish"
       },
-      "hooks_used": ["useInsights", "useLanguage"]
+      "modal_content": {
+        "product_insights": ["Analysis text", "Recommendations list", "Related products with status badges and navigation links"],
+        "action_insights": ["Category icon and label", "Analysis text", "Metrics display", "Suggestions list"]
+      },
+      "hooks_used": ["useInsights", "useActionInsights", "usePortfolioTargets"],
+      "edge_functions": ["generate-insights", "generate-action-insights"],
+      "related_files": ["src/components/dashboard/InsightsPanel.tsx"]
     },
 
     {
@@ -1084,15 +1141,42 @@
       "title": "Daily Plan Panel",
       "component": "DailyPlanPanel",
       "file": "src/components/dashboard/DailyPlanPanel.tsx",
-      "business_description": "Mini calendar showing action density (completed actions visualized with gradient blue) and daily/weekly/monthly action list. Includes 'Plan My Day' AI integration button.",
-      "features": [
-        "Mini calendar with action density visualization",
-        "View toggle (day/week/month)",
-        "Action list for selected period",
-        "Plan My Day button (navigates to AI Assistant)",
-        "Empty state with AI suggestion"
+      "business_description": "A 3-column action planning interface showing monthly pending actions, selected day's actions, and a visual calendar. The calendar uses color intensity to represent action completion density, helping portfolio managers visualize their performance patterns.",
+      "layout_columns": [
+        {
+          "name": "Monthly Pending Actions (Bekleyen Aksiyonlar)",
+          "description": "Paginated list (4 items per page) of pending/planned actions for the selected month",
+          "sorting": "Pending/planned first, then completed; within each group by date",
+          "features": ["Pagination with dot indicators", "Priority badges", "Customer name and product name display"]
+        },
+        {
+          "name": "Day's Actions (Günün Aksiyonları)",
+          "description": "Actions for the selected day with inline date dropdown selector",
+          "features": ["Week date selector dropdown", "Completed actions shown with strikethrough and success styling", "Priority badges"]
+        },
+        {
+          "name": "Action Calendar (Aksiyon Takvimi)",
+          "description": "Mini calendar with visual density indicators for performance tracking"
+        }
       ],
-      "hooks_used": ["useActions", "useLanguage"]
+      "calendar_visualization": {
+        "completed_color": "Blue gradient intensity (hsl 215 60% - lighter to darker based on count)",
+        "pending_color": "Amber background (hsl 35 90% 85%) for days with only pending actions",
+        "planned_badge": "Circular badge on top-right corner showing planned action count",
+        "badge_colors": "Warning color for days with completed actions, Primary color for pending-only days",
+        "intensity_formula": "lightness = 70 - (completedIntensity * 48), where completedIntensity = completedCount / maxCompletedActions",
+        "hover_behavior": "Shows overlay with completed/total ratio (e.g., 3/5)",
+        "today_highlight": "Ring around current day",
+        "weekend_styling": "Muted background for Saturday/Sunday",
+        "legend": "Shows Completed (blue), Pending (amber), Planned (badge) indicators"
+      },
+      "monthly_stats": {
+        "completed_this_month": "Count of completed actions in selected month",
+        "active_days": "Days with at least one action"
+      },
+      "data_sync": "Syncs with dashboard's global date selector via recordDate prop to show correct month",
+      "hooks_used": ["useActions", "useLanguage"],
+      "related_files": ["src/components/dashboard/DailyPlanPanel.tsx"]
     },
 
     {
