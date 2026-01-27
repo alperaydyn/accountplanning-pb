@@ -8,6 +8,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useUserSettings, AgendaViewMode } from "@/hooks/useUserSettings";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PriorityWeightsPanel from "@/components/preferences/PriorityWeightsPanel";
 
 const Preferences = () => {
   const { t } = useLanguage();
@@ -36,6 +37,9 @@ const Preferences = () => {
         </div>
 
         <div className="grid gap-6">
+          {/* Priority Weights Panel - at the top */}
+          <PriorityWeightsPanel />
+
           {/* Language Settings */}
           <Card>
             <CardHeader>
