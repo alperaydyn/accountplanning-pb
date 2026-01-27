@@ -89,6 +89,92 @@ The Account Planning System is a corporate banking relationship management appli
 
 ---
 
+### Help Inspector Panel (Global Feature)
+
+**Business Purpose:** An interactive help system accessible from any page in the application. Allows users to get contextual help about the application by either selecting a specific UI element or asking questions directly. Uses AI-powered RAG (Retrieval-Augmented Generation) to provide accurate, source-cited answers.
+
+**Activation Methods:**
+
+1. **Header Help Button** - Click the HelpCircle icon in the application header to open a dropdown menu
+2. **Three Actions Available:**
+   - **Inspect Element** (MousePointer2 icon): Enter inspection mode to click on any UI element
+   - **Ask a Question** (MessageCircleQuestion icon): Open the chat sidebar directly without element selection
+   - **Start Tour** (Play icon): Launch the guided dashboard tour
+
+**Key Features:**
+
+1. **Inspection Mode**
+   - Crosshair cursor indicates active inspection mode
+   - Hover over any element to see a highlight box with primary color border
+   - Tooltip shows "Click to ask about this element"
+   - Clicking an element captures its metadata: tag name, CSS selector, ID, text content, data attributes, and position
+   - Press Escape to exit inspection mode without selecting
+
+2. **Element Context Capture**
+   - Selected element info displayed in sidebar header with tag name badge and ID badge (if present)
+   - Text content preview (first 100 characters) shown below
+   - Element context is sent to the AI for contextual answers
+
+3. **Chat Sidebar (InspectorSidebar)**
+   - Fixed-width (w-96 = 384px) right-side panel with full height
+   - Header shows "Help Inspector" title with close button
+   - Example prompts displayed when no messages: "What does this show?", "How is this calculated?"
+   - User messages styled with primary background (right-aligned)
+   - Assistant messages styled with muted background (left-aligned)
+   - Auto-scroll to bottom on new messages
+   - Auto-focus on input when sidebar opens
+   - Messages cleared when sidebar closes
+
+4. **Rate Limiting & Abuse Prevention**
+   - Query classification: business, technical, or out_of_context
+   - Out-of-context queries tracked per user (3 attempts per 24h window)
+   - Warning shown when remaining attempts <= 2
+   - 24-hour block applied after 3 out-of-context queries
+   - Blocked state shown with AlertTriangle icon and unblock timestamp
+
+5. **Feedback System**
+   - ThumbsUp/ThumbsDown buttons appear below each assistant message
+   - Feedback saved to rag_feedback table
+   - Toast confirmation on feedback submission
+   - Buttons disabled after feedback submitted
+   - Query type badge shown for non-standard queries (out_of_scope, needs_review)
+
+6. **AI Response Generation (rag-assistant Edge Function)**
+   - **Query Classification**: First pass classifies query as business/technical/out_of_context using Gemini
+   - **Source Matching**: Scores rag_chunks by keyword matches, route relevance, and query type
+   - **Dynamic Code Analysis**: Falls back to source file analysis when documentation is insufficient
+   - **Context Building**: Combines clicked element info, current route, and matched chunks
+   - **Answer Generation**: Produces concise answers (3-5 sentences for business, longer for technical)
+   - **Source Citation**: Appends raw source excerpts at the end of answers
+   - **Investigation Flagging**: Marks queries with no relevant sources for admin review
+
+**Data Flow:**
+
+```
+User Action → InspectorOverlay (if inspecting) → InspectorContext state update
+           → InspectorSidebar opens
+           → useRAGChat.sendMessage(question)
+           → rag-assistant Edge Function
+                → Query classification (business/technical/out_of_context)
+                → Chunk matching from rag_chunks table
+                → Dynamic code context building (if needed)
+                → AI answer generation
+                → Feedback record creation in rag_feedback table
+           → Response displayed with optional feedback buttons
+```
+
+**Database Tables:**
+
+| Table | Purpose |
+|-------|---------|
+| rag_chunks | Documentation chunks indexed by route, keywords, and category |
+| rag_feedback | Stores Q&A pairs with feedback scores and investigation flags |
+| rag_user_limits | Tracks out-of-context query counts and block status per user |
+
+**Technical Files:** `src/components/inspector/InspectorTrigger.tsx`, `src/components/inspector/InspectorOverlay.tsx`, `src/components/inspector/InspectorSidebar.tsx`, `src/contexts/InspectorContext.tsx`, `src/hooks/useRAGChat.ts`, `supabase/functions/rag-assistant/index.ts`
+
+---
+
 ### Product Performance (/product-performance)
 
 **Business Purpose:** Shows portfolio-level product metrics and target achievement analysis. Products are categorized by status (On Track, At Risk, Critical) with sub-statuses. Features an interactive hero panel for filtering and a detailed metrics table.
