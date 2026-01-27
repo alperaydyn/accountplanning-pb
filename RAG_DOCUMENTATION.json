@@ -300,26 +300,75 @@
       "audience": ["business", "technical"],
       "title": "Primary Bank Page",
       "route": "/primary-bank",
-      "business_description": "Share of wallet analysis and competitive positioning dashboard. Shows overall principality score and breaks it down into external data (from market sources like KKB/TCMB) and internal product metrics across four axes.",
-      "technical_description": "Located at src/pages/PrimaryBank.tsx. Uses usePrimaryBankData and useCustomers hooks. Displays external share metrics and internal product axis scores.",
+      "business_description": "Share of wallet analysis and competitive positioning dashboard. Shows overall principality score aggregated across filtered customers, with breakdowns into external market data (Loans, POS, Cheque, Collateral) and internal product metrics (Products, Transactional, Liabilities, Assets). Provides segment and sector filtering with visual progress bars and navigation to the data generation engine.",
+      "technical_description": "Located at src/pages/PrimaryBank.tsx. Uses usePrimaryBankData hook for share calculations and useCustomers with segment/sector filters. Implements getProgressColor function for color-coded progress bars. Internal axes derived from overall score with ±15% variance. All labels fully localized via useLanguage hook.",
+      "features": [
+        "Back button (ArrowLeft) to return to previous page",
+        "Engine navigation button with Cog icon navigates to /primary-bank/engine",
+        "Segment dropdown filter (MİKRO, Kİ, OBİ, TİCARİ) with Users icon",
+        "Sector dropdown filter (Turizm, Ulaşım, Perakende, etc.) with Factory icon",
+        "'Tümü' (All) option in filters to show all customers",
+        "Main score card with 5xl percentage display and filter labels in subtitle",
+        "External data section (Banka Dışı Veriler) with 4-column grid",
+        "Loans card (Banknote icon), POS card (Receipt icon), Cheque card (FileCheck icon), Collateral card (Shield icon)",
+        "Internal data section (Banka İçi Veriler) with 4-column grid",
+        "Products Axis (Package icon), Transactional Axis (CreditCard icon), Liabilities Axis (PiggyBank icon), Assets Axis (Wallet icon)",
+        "Progress bar color coding: success (>=80%), warning (>=60%), destructive (<60%)",
+        "Loading state displays '...' while data fetching",
+        "Bottom explanation card with contextual description"
+      ],
       "principality_score": {
         "definition": "Weighted average of share of wallet across different banking product categories",
         "formula": "overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateralShare * 0.1",
-        "weights": { "loanShare": 0.4, "posShare": 0.3, "chequeShare": 0.2, "collateralShare": 0.1 }
+        "weights": { "loanShare": 0.4, "posShare": 0.3, "chequeShare": 0.2, "collateralShare": 0.1 },
+        "dynamic_weighting": "If customer lacks data for a category, that weight is excluded from denominator"
+      },
+      "share_calculations": {
+        "loan_share": {
+          "formula": "(our_bank cash + non_cash) / (all banks cash + non_cash) * 100",
+          "data_source": "primary_bank_loan_summary table",
+          "our_bank_flag": "our_bank_flag = true"
+        },
+        "pos_share": {
+          "formula": "Average of pos_share across customers with total_pos_volume > 0",
+          "data_source": "primary_bank_pos table"
+        },
+        "cheque_share": {
+          "formula": "(customers with cheque_volume_12m > 0) / (total customers) * 100",
+          "data_source": "primary_bank_cheque table"
+        },
+        "collateral_share": {
+          "formula": "(our_bank group1-4 amounts) / (all banks group1-4 amounts) * 100",
+          "data_source": "primary_bank_collateral table",
+          "our_bank_flag": "our_bank_flag = true"
+        }
       },
       "external_data_metrics": [
-        { "name": "Loans Share", "description": "Bank's share of customer total loans (cash + non-cash)", "data_source": "primary_bank_loan_summary table" },
-        { "name": "POS Share", "description": "Point-of-sale transaction volume share", "data_source": "primary_bank_pos table" },
-        { "name": "Cheque Share", "description": "Percentage of customers with cheque activity at our bank", "data_source": "primary_bank_cheque table" },
-        { "name": "Collateral Share", "description": "Collateral registration share", "data_source": "primary_bank_collateral table" }
+        { "name": "Krediler (Loans)", "icon": "Banknote", "description": "Bank's share of customer total loans (cash + non-cash)" },
+        { "name": "POS", "icon": "Receipt", "description": "Point-of-sale transaction volume share" },
+        { "name": "Çek (Cheque)", "icon": "FileCheck", "description": "Percentage of customers with cheque activity at our bank" },
+        { "name": "Teminat (Collateral)", "icon": "Shield", "description": "Collateral registration share" }
       ],
       "internal_axes": [
-        { "name": "Products Axis", "description": "Product diversity score" },
-        { "name": "Transactional Axis", "description": "Transaction activity score" },
-        { "name": "Liabilities Axis", "description": "Deposit and liability score" },
-        { "name": "Assets Axis", "description": "Lending and asset score" }
+        { "name": "Ürün Ekseni (Products Axis)", "icon": "Package", "description": "Product diversity score", "calculation": "baseScore ± 15% variance" },
+        { "name": "İşlem Ekseni (Transactional Axis)", "icon": "CreditCard", "description": "Transaction activity score", "calculation": "baseScore ± 15% variance" },
+        { "name": "Pasif Ekseni (Liabilities Axis)", "icon": "PiggyBank", "description": "Deposit and liability score", "calculation": "baseScore ± 15% variance" },
+        { "name": "Aktif Ekseni (Assets Axis)", "icon": "Wallet", "description": "Lending and asset score", "calculation": "baseScore ± 15% variance" }
       ],
-      "hooks_used": ["usePrimaryBankData", "useCustomers", "useLanguage"],
+      "progress_bar_colors": {
+        "success": ">= 80%",
+        "warning": ">= 60% and < 80%",
+        "destructive": "< 60%"
+      },
+      "filters": {
+        "segment": { "options": ["all", "MİKRO", "Kİ", "OBİ", "TİCARİ"], "icon": "Users" },
+        "sector": { "options": ["all", "Turizm", "Ulaşım", "Perakende", "Gayrimenkul", "Tarım Hayvancılık", "Sağlık", "Enerji"], "icon": "Factory" }
+      },
+      "navigation": {
+        "back_button": "navigate(-1)",
+        "engine_button": "navigate('/primary-bank/engine')"
+      },
+      "hooks_used": ["usePrimaryBankData", "useCustomers", "useLanguage", "useNavigate"],
       "related_files": ["src/pages/PrimaryBank.tsx", "src/hooks/usePrimaryBankData.ts"]
     },
 
