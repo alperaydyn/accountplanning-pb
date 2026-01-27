@@ -15,6 +15,7 @@ import { useActionUpdates, useCreateActionUpdate } from "@/hooks/useActionUpdate
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Database } from "@/integrations/supabase/types";
+import { PriorityScoreCard } from "./PriorityScoreCard";
 
 interface ActionPlanningModalProps {
   open: boolean;
@@ -336,34 +337,50 @@ export function ActionPlanningModal({
                 >
                   {action.current_status}
                 </Badge>
-                {(action.creation_reason || action.customer_hints) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 w-6 p-0 ml-auto"
-                    onClick={() => setHintsExpanded(!hintsExpanded)}
-                  >
-                    <Lightbulb className={cn("h-4 w-4", hintsExpanded ? "text-warning" : "text-muted-foreground")} />
-                  </Button>
-                )}
+                {/* Always show lightbulb since we have priority scores */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0 ml-auto"
+                  onClick={() => setHintsExpanded(!hintsExpanded)}
+                >
+                  <Lightbulb className={cn("h-4 w-4", hintsExpanded ? "text-warning" : "text-muted-foreground")} />
+                </Button>
               </div>
               <p className="text-sm text-muted-foreground line-clamp-2 h-10">{action.description}</p>
               
               {/* Hints Panel */}
               <Collapsible open={hintsExpanded}>
-                <CollapsibleContent className="mt-2 space-y-2 p-3 bg-warning/10 border border-warning/20 rounded-md">
-                  {action.creation_reason && (
-                    <div>
-                      <span className="text-xs font-medium text-warning">Creation Reason:</span>
-                      <p className="text-sm text-foreground">{action.creation_reason}</p>
+                <CollapsibleContent className="mt-2 space-y-3">
+                  {/* Creation Reason & Customer Hints */}
+                  {(action.creation_reason || action.customer_hints) && (
+                    <div className="space-y-2 p-3 bg-warning/10 border border-warning/20 rounded-md">
+                      {action.creation_reason && (
+                        <div>
+                          <span className="text-xs font-medium text-warning">Creation Reason:</span>
+                          <p className="text-sm text-foreground">{action.creation_reason}</p>
+                        </div>
+                      )}
+                      {action.customer_hints && (
+                        <div>
+                          <span className="text-xs font-medium text-warning">Customer Hints:</span>
+                          <p className="text-sm text-foreground">{action.customer_hints}</p>
+                        </div>
+                      )}
                     </div>
                   )}
-                  {action.customer_hints && (
-                    <div>
-                      <span className="text-xs font-medium text-warning">Customer Hints:</span>
-                      <p className="text-sm text-foreground">{action.customer_hints}</p>
-                    </div>
-                  )}
+                  
+                  {/* Prioritization Reason */}
+                  <PriorityScoreCard
+                    portfolioScore={action.priority_portfolio_score}
+                    portfolioReason={action.priority_portfolio_reason}
+                    adhocScore={action.priority_adhoc_score}
+                    adhocReason={action.priority_adhoc_reason}
+                    customerScore={action.priority_customer_score}
+                    customerReason={action.priority_customer_reason}
+                    profitabilityScore={action.priority_profitability_score}
+                    profitabilityReason={action.priority_profitability_reason}
+                  />
                 </CollapsibleContent>
               </Collapsible>
             </div>
