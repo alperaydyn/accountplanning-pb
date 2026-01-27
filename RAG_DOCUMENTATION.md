@@ -91,32 +91,80 @@ The Account Planning System is a corporate banking relationship management appli
 
 ### Product Performance (/product-performance)
 
-**Business Purpose:** Shows portfolio-level product metrics and target achievement analysis. Products are categorized by status (On Track, At Risk, Critical) with sub-statuses.
+**Business Purpose:** Shows portfolio-level product metrics and target achievement analysis. Products are categorized by status (On Track, At Risk, Critical) with sub-statuses. Features an interactive hero panel for filtering and a detailed metrics table.
 
-**Product Status Definitions:**
+**Key Features:**
 
-| Status | Definition |
-|--------|------------|
-| On Track | Overall average HGO >= 80% |
-| At Risk | Overall average HGO >= 50% but < 80% |
-| Critical | Overall average HGO < 50% |
-| Melting | Stock metrics good (>=80%) but flow metrics low (<80%) - losing momentum |
-| Growing | Flow metrics good (>=80%) but stock metrics low (<80%) - building up |
-| Ticket Size | Customer count good but volume low - small transactions |
-| Diversity | Volume good but customer count low - few large customers |
+1. **Date Period Selector**
+   - Current month with "(Current)" label
+   - Last 3 months (rolling)
+   - Last 4 completed quarter ends (Q1=March, Q2=June, Q3=September, Q4=December)
+   - Last 2 year ends (December)
+   - All metrics sync with selected date
+
+2. **Hero Panel (4-column KPI grid)**
+   - **Total Products**: Shows total count with primary accent, clicking clears all filters
+   - **On Track (Yolunda)**: Emerald-themed button showing sum of on_track + growing + diversity products
+   - **At Risk (Riskli)**: Amber-themed button showing sum of at_risk + melting + ticket_size products
+   - **Critical (Kritik)**: Destructive-themed button showing critical product count
+   - Gradient background with glassmorphism card styling
+   - Active state highlighting with shadow and border emphasis
+
+3. **Hierarchical Status Filtering System**
+   - 3 base categories (On Track, At Risk, Critical) aggregate sub-statuses for KPI display
+   - Clicking base status expands checkbox panel for sub-status selection
+   - Sub-statuses auto-selected when base status clicked
+   - Multiple sub-statuses can be toggled independently via checkboxes
+   - Filter indicator badge shows active filters with clear button
+
+4. **Sub-Status Definitions**
+   - **On Track (on_track)**: Overall HGO average >= 80%
+   - **Growing (growing)**: Flow metrics good but stock low - building momentum
+   - **Diversity (diversity)**: Volume good but customer count low - few large customers
+   - **At Risk (at_risk)**: Overall HGO average 50-80%
+   - **Melting (melting)**: Stock metrics good but flow low - losing momentum
+   - **Ticket Size (ticket_size)**: Customer count good but volume low - small transactions
+   - **Critical (critical)**: Overall HGO average < 50%
+
+5. **Product Performance Table**
+   - Dual-row structure per product (Stock row + Flow row)
+   - Stock metrics: count, HGO%, YTD delta, MTD delta, volume, volume HGO%
+   - Flow metrics: count, HGO%, YTD delta, MTD delta, volume, volume HGO%
+   - Actions column: planned/pending action counts
+   - Status badge with color-coded styling
+   - Row click navigates to /customers?product={productId}
+   - "Create Records" button to generate sample data for selected period
+   - "Regenerate Insights" button when data exists
 
 **Status Calculation Logic:**
 ```
+stockAvg = (stock_count_tar + stock_volume_tar) / 2
+flowAvg = (flow_count_tar + flow_volume_tar) / 2
+countAvg = (stock_count_tar + flow_count_tar) / 2
+volumeAvg = (stock_volume_tar + flow_volume_tar) / 2
+overallAvg = (all four tar values) / 4
+
 If stockAvg >= 80 && flowAvg < 80: 'melting'
 If stockAvg < 80 && flowAvg >= 80: 'growing'
 If countAvg >= 80 && volumeAvg < 80: 'ticket_size'
 If countAvg < 80 && volumeAvg >= 80: 'diversity'
-Otherwise: use overall average thresholds (GOOD=80, BAD=50)
+If overallAvg < 50: 'critical'
+If overallAvg < 80: 'at_risk'
+Else: 'on_track'
 ```
 
-**Table Columns:** Product Name, Category, Stock Count, Stock Volume, Stock HGO%, Stock YoY%, Stock MoM%, Flow Count, Flow Volume, Flow HGO%, Flow YoY%, Flow MoM%, Status
+**Status Grouping:**
+| Base Category | Sub-Statuses |
+|---------------|--------------|
+| Yolunda (On Track) | on_track, growing, diversity |
+| Riskli (At Risk) | at_risk, melting, ticket_size |
+| Kritik (Critical) | critical |
 
-**Technical Files:** `src/pages/ProductPerformance.tsx`, `src/components/dashboard/ProductPerformanceTable.tsx`
+**Table Columns:** Product Name, Category, Type (Stock/Flow), Count, HGO%, YTD Change, MTD Change, Volume, Volume HGO%, Volume YTD, Volume MTD, Actions, Status
+
+**Data Sources:** portfolio_targets, products, actions
+
+**Technical Files:** `src/pages/ProductPerformance.tsx`, `src/components/dashboard/ProductPerformanceTable.tsx`, `src/hooks/usePortfolioTargets.ts`
 
 ---
 
