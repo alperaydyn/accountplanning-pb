@@ -479,36 +479,103 @@
       "audience": ["business", "technical"],
       "title": "Customer Detail Page",
       "route": "/customers/:customerId",
-      "business_description": "Comprehensive single-customer view with four view modes: Primary Bank (share of wallet), Products (owned products with threshold comparison), Actions (action management), and Autopilot (workflow automation templates).",
-      "technical_description": "Located at src/pages/CustomerDetail.tsx. Uses useCustomerById, useCustomerProducts, useActionsByCustomer hooks. Supports deep-linking with ?action=<actionId> to open specific action.",
-      "view_modes": [
-        {
-          "name": "Primary Bank",
-          "description": "Customer-specific share of wallet analysis with principality score breakdown",
-          "components": ["PrimaryBankPanel", "PrincipalityScoreModal"]
+      "business_description": "Comprehensive single-customer view with four view modes: Primary Bank (share of wallet), Products (owned/not-owned with threshold comparison), Actions (sortable table with AI generation), and Autopilot (workflow automation). Features AI customer summary, deep-linking to specific actions, and multiple interactive modals.",
+      "technical_description": "Located at src/pages/CustomerDetail.tsx. Uses useCustomerById, useCustomerProducts, useActionsByCustomer, useProducts, useProductThresholds hooks. Implements deep-linking via ?action= URL param that auto-opens ActionPlanningModal. Products view shows both owned (from customer_products) and not-owned products with thresholds from product_thresholds. Generate Actions calls generate-actions edge function.",
+      "features": [
+        "Customer header with name, status badge (color-coded), sector/segment subtitle",
+        "Clickable header area opens PrincipalityScoreModal",
+        "AI Customer Summary (collapsed by default, expands to show insights)",
+        "4 view mode tabs: Primary Bank (Building2 icon), Products, Actions, Autopilot (Bot icon)",
+        "Products view: 3-column grid of product cards with owned/not-owned styling",
+        "Owned products show current value, threshold, gap (green TrendingUp or red AlertCircle)",
+        "Not-owned products show threshold from sector/segment lookup, 'Not owned' italic label, muted bg",
+        "Product card action badge: 'X/Y planned' (green) or 'X actions' (info)",
+        "Product card click: if has actions → opens ActionPlanningModal, else → opens AddActionModal",
+        "Products sorted by display_order from products table",
+        "Actions view: priority and status filter dropdowns",
+        "Generate Actions button (Sparkles, violet) calls AI edge function",
+        "Add New Action button (Plus, emerald) opens AddActionModal",
+        "Sortable actions table with 7 columns (Product, Name, Type, Priority, Status, Gap, Planned Date)",
+        "Sort direction toggle (ArrowUp/ArrowDown icons)",
+        "Action row click opens ActionPlanningModal",
+        "Deep-link support: ?action={actionId} switches to Actions view and opens modal",
+        "Empty state for no actions"
+      ],
+      "view_modes": {
+        "primaryBank": {
+          "icon": "Building2",
+          "label": "Primary Bank",
+          "description": "Customer-specific share of wallet analysis",
+          "component": "PrimaryBankPanel"
         },
-        {
-          "name": "Products",
-          "description": "All customer products with current value, threshold comparison, gap analysis, and action counts. Shows non-owned products as cross-sell opportunities.",
-          "features": ["Sorting by product/gap/threshold", "Add Action button from product row", "Non-owned products section"]
+        "products": {
+          "label": "Products",
+          "description": "Product cards with current value, threshold, gap analysis. Shows both owned and not-owned products.",
+          "layout": "3-column responsive grid",
+          "card_click_behavior": "If actions exist: open ActionPlanningModal. If no actions: open AddActionModal with product pre-selected"
         },
-        {
-          "name": "Actions",
-          "description": "All customer actions with priority, status badges, sorting, filtering. Generate Actions button for AI recommendations.",
-          "components": ["ActionPlanningModal"]
+        "actions": {
+          "label": "Actions",
+          "description": "Sortable/filterable action table with AI generation capability",
+          "filters": ["priority (all/high/medium/low)", "status (all + ACTION_STATUSES)"],
+          "buttons": ["Generate Actions (AI)", "Add New Action"],
+          "table_columns": ["Product", "Action Name", "Type", "Priority", "Status", "Gap", "Planned Date"],
+          "sortable_columns": ["product", "name", "type", "priority", "status", "gap", "plannedDate"]
         },
-        {
-          "name": "Autopilot",
-          "description": "Pre-configured workflow templates (Installment Loan, Credit Card, Term Deposit, Trade Finance) with step tracking.",
-          "components": ["AutoPilotPanel"]
+        "autopilot": {
+          "icon": "Bot",
+          "label": "Autopilot",
+          "description": "Pre-configured workflow templates with step tracking",
+          "component": "AutoPilotPanel"
         }
-      ],
-      "additional_features": [
-        "AI Customer Summary (collapsed by default)",
-        "Deep-link support for ?action=<actionId>"
-      ],
-      "hooks_used": ["useCustomerById", "useCustomerProducts", "useActionsByCustomer", "useCustomerPrimaryBankData"],
-      "related_files": ["src/pages/CustomerDetail.tsx", "src/components/customer/PrimaryBankPanel.tsx", "src/components/customer/AICustomerSummary.tsx", "src/components/customer/AutoPilotPanel.tsx"]
+      },
+      "generate_actions": {
+        "edge_function": "generate-actions",
+        "input": {
+          "customer": "name, segment, sector, status, principality_score",
+          "products": "all products with id, name, category",
+          "ownedProductIds": "array of owned product IDs"
+        },
+        "output": "Array of actions with product_id, name, description, creation_reason, customer_hints, target_value, priority",
+        "action_defaults": {
+          "type": "model_based",
+          "creator_name": "AI Action Generator",
+          "source_data_date": "today",
+          "action_target_date": "end of current month"
+        }
+      },
+      "action_deep_linking": {
+        "url_format": "/customers/{customerId}?action={actionId}",
+        "behavior": "useEffect reads actionParam, waits for actions to load, switches to actions view, opens ActionPlanningModal",
+        "deduplication": "handledActionParam state prevents re-handling same param"
+      },
+      "badge_colors": {
+        "priority": {
+          "high": "destructive",
+          "medium": "default",
+          "low": "secondary"
+        },
+        "status": {
+          "Tamamlandı": "default",
+          "Planlandı": "outline",
+          "Beklemede": "secondary"
+        },
+        "customer_status": {
+          "Ana Banka": "bg-emerald-600 text-white",
+          "Strong Target": "bg-amber-500 text-white",
+          "Target": "bg-sky-500 text-white",
+          "Aktif": "bg-slate-400 text-white",
+          "Yeni Müşteri": "bg-slate-200 text-slate-600"
+        }
+      },
+      "modals": {
+        "ActionPlanningModal": "Multi-action planning/editing with navigation between actions",
+        "AddActionModal": "Create new action with optional product pre-selection",
+        "PrincipalityScoreModal": "Detailed principality score breakdown with 4 axes"
+      },
+      "data_sources": ["customers", "customer_products", "products", "product_thresholds", "actions"],
+      "hooks_used": ["useCustomerById", "useCustomerProducts", "useActionsByCustomer", "useProducts", "useProductThresholds", "useCreateAction", "useActionTemplates", "useLanguage"],
+      "related_files": ["src/pages/CustomerDetail.tsx", "src/components/customer/PrimaryBankPanel.tsx", "src/components/customer/AICustomerSummary.tsx", "src/components/customer/AutoPilotPanel.tsx", "src/components/customer/PrincipalityScoreModal.tsx", "src/components/actions/ActionPlanningModal.tsx", "src/components/actions/AddActionModal.tsx"]
     },
 
     {
