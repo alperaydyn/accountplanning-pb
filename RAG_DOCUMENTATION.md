@@ -493,15 +493,96 @@ overallScore = loanShare * 0.4 + posShare * 0.3 + chequeShare * 0.2 + collateral
 
 ### Actions Agenda (/agenda)
 
-**Business Purpose:** Calendar-based action planning and management with multiple view modes.
+**Business Purpose:** Calendar-based action planning and management with multiple view modes (Daily, Weekly, Monthly, List). Provides status filtering, AI-powered day planning, and seamless navigation to action details. View preferences are persisted to user settings.
 
-**View Modes:** Daily, Weekly, Monthly, List
+**Key Features:**
 
-**Filters:** Status (Planlandy, Beklemede), Priority (high, medium, low), Search
+1. **View Mode Tabs (Persisted)**
+   - Daily: Single day view with full action cards
+   - Weekly: 7-day horizontal list with compact action chips
+   - Monthly: Calendar grid with Monday-based week start
+   - List: Searchable, filterable, paginated table view
+   - View preference saved to user_settings.preferred_agenda_view on change
 
-**URL Parameters:** `?status=Planlandy` or `?status=Beklemede`
+2. **Status Filter Row (Multi-Select)**
+   - 6 status filter buttons with checkbox toggles
+   - Statuses: Beklemede (Pending), Planlandı (Planned), Tamamlandı (Completed), Ertelendi (Postponed), İlgilenmiyor (Not Interested), Uygun Değil (Not Suitable)
+   - Each button shows total action count for that status
+   - Multiple statuses can be selected simultaneously
+   - At least one status must remain selected (prevents empty selection)
+   - Default selection: Beklemede + Planlandı
 
-**Technical Files:** `src/pages/ActionsAgenda.tsx`
+3. **Date Navigation**
+   - Previous/Next buttons adjust by day (daily/list), week (weekly), or month (monthly)
+   - "Today" button jumps to current date
+   - Header text adapts: full date (daily), week range (weekly), month/year (monthly)
+   - Clicking a day number in monthly/weekly view switches to daily view for that date
+
+4. **AI Plan My Day Integration**
+   - Empty date cells show "Planla" button with Sparkles icon
+   - Clicking navigates to /ai-assistant?prompt=plan-my-day&date=YYYY-MM-DD
+   - Global empty state also shows AI planning call-to-action
+   - AI suggestions can be saved as actions with the target date
+
+5. **Monthly View Grid**
+   - 7-column grid with Monday-based week start (Mon, Tue, ..., Sun)
+   - Weekend columns styled with muted text color
+   - Today highlighted with primary ring border
+   - Weekend day cells have muted background
+   - Shows up to 3 action links per day with "+N more" overflow
+   - Action links navigate to /customers/{id}?action={actionId}
+   - Priority-colored action badges (destructive/warning/muted)
+
+6. **Weekly View List**
+   - Horizontal layout: date sidebar + actions area
+   - Date sidebar shows day name and clickable date number
+   - Today row has primary background tint
+   - Weekend rows have muted background
+   - Actions displayed as inline chips with customer name, action name, status badge
+   - Empty rows show "Planla" button for AI planning
+
+7. **Daily View Cards**
+   - Full-width action cards with priority-colored borders
+   - Shows action name (link to customer detail), customer name, product name
+   - Status badge with icon (Clock, Calendar, CheckCircle, PauseCircle, XCircle)
+   - Today card highlighted with primary ring border
+
+8. **List View Table**
+   - Search input with magnifying glass icon (filters by action name, customer name, product name)
+   - Priority filter dropdown (All, High, Medium, Low)
+   - Status filter dropdown (All, Beklemede, Planlandı)
+   - 6-column table: Action (with description), Customer, Product, Priority, Status, Date
+   - Action name links to /customers/{id}?action={actionId}
+   - Customer name links to /customers/{id}
+   - Pagination with 10 items per page
+   - Page numbers with Previous/Next navigation
+   - "Showing X-Y of Z" counter
+
+9. **Action Date Logic**
+   - Uses current_planned_date if set
+   - Falls back to action_target_date for pending actions
+   - Actions sorted by date within each view
+
+10. **Status Configuration**
+    - **Beklemede**: Clock icon, amber color, secondary variant
+    - **Planlandı**: Calendar icon, primary color, default variant
+    - **Tamamlandı**: CheckCircle2 icon, emerald color, outline variant
+    - **Ertelendi**: PauseCircle icon, slate color, secondary variant
+    - **İlgilenmiyor**: XCircle icon, destructive color, destructive variant
+    - **Uygun Değil**: XCircle icon, destructive color, destructive variant
+
+**Priority Badge Colors:**
+| Priority | Background | Text |
+|----------|------------|------|
+| high | bg-destructive/10 | text-destructive |
+| medium | bg-warning/10 | text-warning |
+| low | bg-muted | text-muted-foreground |
+
+**URL Parameters:** `?status=Planlandı` or `?status=Beklemede` (pre-filters on load)
+
+**Data Sources:** actions, customers, products
+
+**Technical Files:** `src/pages/ActionsAgenda.tsx`, `src/hooks/useActions.ts`, `src/hooks/useUserSettings.ts`
 
 ---
 
